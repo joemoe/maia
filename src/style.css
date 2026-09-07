@@ -1,0 +1,49 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  background: #1a1a1a;
+  overflow: hidden;
+  /* Verhindert, dass iOS Safari Taps auf den Buttons als Scroll/Zoom-Geste
+     abfängt (Doppel-Tap-Zoom, Pull-to-Refresh, Pinch). */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#app {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+canvas {
+  image-rendering: pixelated;
+}
+
+/* Erzwingt Querformat auf Handys/Tablets: iOS Safari unterstützt die
+   JS-Bildschirmsperren-API (screen.orientation.lock) nicht, daher der
+   CSS-Trick - die ganze Seite wird bei Hochformat um 90° gedreht. Body/#app
+   erben dabei automatisch die vertauschten Maße (html bekommt width:100vh/
+   height:100vw), wodurch Phasers Scale.FIT die Canvas korrekt groß im
+   gedrehten Querformat-Bereich einpasst statt in der schmalen Hochformat-Box.
+   "pointer: coarse" (Touch statt Maus) ist entscheidend, damit ein schmales/
+   hohes Desktop-Browserfenster (Maus = pointer:fine) nicht fälschlich
+   mitgedreht wird - nur echte Touchgeräte sollen betroffen sein. */
+@media screen and (max-width: 1024px) and (orientation: portrait) and (pointer: coarse) {
+  html {
+    transform: rotate(-90deg);
+    transform-origin: left top;
+    width: 100vh;
+    height: 100vw;
+    position: absolute;
+    top: 100%;
+    left: 0;
+  }
+}
