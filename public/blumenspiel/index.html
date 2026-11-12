@@ -1358,10 +1358,10 @@ function updateBee(dt, ps) {
   b.x += mx * dt; b.y += (ty - b.y) * Math.min(1, dt * 3);
   if (Math.abs(mx) > 8) b.face = mx > 0 ? 1 : -1;
 }
-function drawBee(x, y, t, face, s) {
+function drawBee(x, y, t, face, s, sleep) {
   cx.save(); cx.translate(x, y); cx.scale(face * s, s);
   // Flügel
-  const fl = Math.sin(t * 40) * 0.5;
+  const fl = sleep ? 0.3 : Math.sin(t * 40) * 0.5;
   cx.fillStyle = '#ffffffcc'; cx.strokeStyle = '#9fd8ff'; cx.lineWidth = 1.5;
   for (const dx of [-5, 4]) { cx.save(); cx.translate(dx, -10); cx.rotate(-0.4 + fl + (dx > 0 ? 0.3 : 0)); cx.beginPath(); cx.ellipse(0, -10, 8, 13, 0, 0, 7); cx.fill(); cx.stroke(); cx.restore(); }
   // Körper
@@ -1370,7 +1370,8 @@ function drawBee(x, y, t, face, s) {
   cx.fillStyle = '#3a2a1a'; for (const sx of [-9, -1]) cx.fillRect(sx, -14, 5, 28); cx.restore();
   cx.fillStyle = '#3a2a1a'; cx.beginPath(); cx.moveTo(-17, -2); cx.lineTo(-25, 1); cx.lineTo(-17, 4); cx.fill(); // Stachel
   // Gesicht
-  circle(10, -3, 3.2, '#3a2a1a'); circle(11, -4, 1.2, '#fff');
+  if (sleep) { cx.strokeStyle = '#3a2a1a'; cx.lineWidth = 1.8; cx.beginPath(); cx.arc(10, -4, 3, 0.2, Math.PI - 0.2); cx.stroke(); }
+  else { circle(10, -3, 3.2, '#3a2a1a'); circle(11, -4, 1.2, '#fff'); }
   circle(13, 3, 2.4, '#ff9ec7aa');
   cx.strokeStyle = '#3a2a1a'; cx.lineWidth = 1.5; cx.beginPath(); cx.arc(9, 2, 3.5, 0.2, 2.2); cx.stroke();
   // Fühler
@@ -1736,23 +1737,41 @@ function drawHome(t) {
   cx.restore(); cx.strokeStyle = '#fff'; cx.lineWidth = 8 * s; rr(wx, wy, ww, wh, 60 * s); cx.stroke();
   cx.beginPath(); cx.moveTo(W / 2, wy); cx.lineTo(W / 2, wy + wh); cx.stroke();
 
-  // Bett (links)
-  const bx = W * 0.25, by = floor;
-  cx.fillStyle = '#a0623a'; rr(bx - 130 * s, by - 110 * s, 20 * s, 110 * s, 6 * s); cx.fill(); rr(bx + 112 * s, by - 75 * s, 18 * s, 75 * s, 6 * s); cx.fill();
-  rr(bx - 122 * s, by - 46 * s, 244 * s, 24 * s, 6 * s); cx.fill();
-  cx.fillStyle = '#fff'; rr(bx - 110 * s, by - 66 * s, 60 * s, 24 * s, 12 * s); cx.fill();
+  // Hochbett (links): unten schläft Spieler 1, oben Spieler 2
+  const bx = W * 0.25, by = floor, up = 118 * s;
+  cx.fillStyle = '#a0623a';
+  rr(bx - 130 * s, by - 110 * s - up, 20 * s, 110 * s + up, 6 * s); cx.fill(); rr(bx + 112 * s, by - 90 * s - up, 18 * s, 90 * s + up, 6 * s); cx.fill();
+  rr(bx - 122 * s, by - 46 * s, 244 * s, 24 * s, 6 * s); cx.fill(); rr(bx - 122 * s, by - 46 * s - up, 244 * s, 24 * s, 6 * s); cx.fill();
+  // Leiter
+  cx.fillStyle = '#b77a4c'; rr(bx + 136 * s, by - 46 * s - up, 7 * s, 46 * s + up, 3 * s); cx.fill(); rr(bx + 166 * s, by - 46 * s - up, 7 * s, 46 * s + up, 3 * s); cx.fill();
+  for (let yy = by - 22 * s; yy > by - 46 * s - up; yy -= 26 * s) rr(bx + 136 * s, yy, 37 * s, 6 * s, 3 * s), cx.fill();
+  cx.fillStyle = '#fff'; rr(bx - 110 * s, by - 66 * s, 60 * s, 24 * s, 12 * s); cx.fill(); rr(bx - 110 * s, by - 66 * s - up, 60 * s, 24 * s, 12 * s); cx.fill();
+  const zz = (x, y, i0) => { for (let i = 0; i < 3; i++) { const p = ((t * 0.6 + i / 3 + i0) % 1);
+    cx.globalAlpha = 1 - p; cx.fillStyle = '#7a1f5c'; cx.font = `bold ${(16 + i * 7) * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center';
+    cx.fillText('Z', x + p * 50 * s + i * 10 * s, y - p * 60 * s); cx.globalAlpha = 1; } };
   if (mode === 'sleep') {
-    for (const p of players().slice().reverse()) {
-      cx.save(); cx.translate(bx - 165 * s, by - 56 * s - p.id * 16 * s); cx.rotate(-Math.PI / 2);
-      drawFlower(0, 190 * s, kindOf(p), s * 0.85, { bob: Math.sin(t * 1.5 + p.id) * 2 * s, mood: 'sleep' });
+    for (const p of players()) {
+      const ly = p.id ? up : 0;
+      cx.save(); cx.translate(bx - 165 * s, by - 56 * s - ly); cx.rotate(-Math.PI / 2);
+      drawFlower(0, 190 * s, kindOf(p), s * 0.85, { bob: Math.sin(t * 1.5 + p.id) * 2 * s, mood: 'sleep', noBag: true });
       cx.restore();
+      zz(bx - 100 * s, by - 100 * s - ly, p.id * 0.5);
     }
-    for (let i = 0; i < 3; i++) { const p = ((t * 0.6 + i / 3) % 1);
-      cx.globalAlpha = 1 - p; cx.fillStyle = '#7a1f5c'; cx.font = `bold ${(18 + i * 8) * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center';
-      cx.fillText('Z', bx - 110 * s + p * 60 * s + i * 10 * s, by - 110 * s - p * 90 * s); cx.globalAlpha = 1; }
   }
-  cx.fillStyle = '#8fc9ff'; rr(bx - 40 * s, by - 74 * s, 160 * s, 36 * s, 16 * s); cx.fill();
-  for (let i = 0; i < 4; i++) circle(bx - 20 * s + i * 35 * s, by - 56 * s, 6 * s, '#ffffff88');
+  // Decken: unten blau (Spieler 1), oben rot (Spieler 2)
+  for (const [ly, col] of [[0, '#8fc9ff'], [up, '#ff6b6b']]) {
+    cx.fillStyle = col; rr(bx - 40 * s, by - 74 * s - ly, 160 * s, 36 * s, 16 * s); cx.fill();
+    for (let i = 0; i < 4; i++) circle(bx - 20 * s + i * 35 * s, by - 56 * s - ly, 6 * s, '#ffffff88');
+  }
+  cx.fillStyle = '#a0623a'; rr(bx - 30 * s, by - 84 * s - up, 142 * s, 9 * s, 4 * s); cx.fill(); // Rausfallschutz oben
+  // Summsis Körbchen
+  const kx = Math.max(44 * s, bx - 190 * s), ky = by;
+  cx.fillStyle = '#d9a35f'; cx.beginPath(); cx.ellipse(kx, ky - 18 * s, 38 * s, 18 * s, 0, 0, Math.PI); cx.fill();
+  cx.fillStyle = '#ffe9a8'; cx.beginPath(); cx.ellipse(kx, ky - 18 * s, 34 * s, 7 * s, 0, 0, 7); cx.fill();
+  if (mode !== 'menu') { drawBee(kx, ky - 30 * s, t, 1, 0.9 * s, mode === 'sleep'); if (mode === 'sleep') zz(kx + 10 * s, ky - 50 * s, 0.25); }
+  cx.fillStyle = '#d9a35f'; cx.beginPath(); cx.ellipse(kx, ky - 18 * s, 38 * s, 5 * s, 0, 0, Math.PI); cx.fill();
+  cx.strokeStyle = '#b5844f'; cx.lineWidth = 2 * s; for (let i = -2; i <= 2; i++) { cx.beginPath(); cx.moveTo(kx + i * 13 * s, ky - 16 * s); cx.lineTo(kx + i * 10 * s, ky - 2 * s); cx.stroke(); }
+  cx.strokeStyle = '#c48a48'; cx.lineWidth = 4 * s; cx.beginPath(); cx.ellipse(kx, ky - 18 * s, 38 * s, 18 * s, 0, 0, Math.PI); cx.stroke();
 
   // Tisch (rechts) mit Essen
   const tx = W * 0.75, ty = floor - 70 * s;
