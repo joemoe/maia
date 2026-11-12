@@ -2,29 +2,106 @@
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-    />
-    <title>Maia und die große Welt</title>
-
-    <!-- Icons: apple-touch-icon ist der wichtigste - das wird beim
-         "Zum Home-Bildschirm" auf iPad/iPhone als App-Icon verwendet. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>maia.games</title>
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Maia" />
+    <meta name="apple-mobile-web-app-title" content="maia.games" />
     <meta name="theme-color" content="#7ec0ee" />
-
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { min-height: 100%; }
+      body {
+        background: linear-gradient(#7ec0ee, #bfe6ff 70%, #8fd16a 70%, #6bbf4a);
+        background-attachment: fixed;
+        font-family: "Press Start 2P", system-ui, sans-serif;
+        color: #23324a;
+        padding: max(24px, env(safe-area-inset-top)) 16px 32px;
+        -webkit-tap-highlight-color: transparent;
+      }
+      h1 {
+        text-align: center;
+        font-size: clamp(22px, 6vw, 44px);
+        color: #fff;
+        text-shadow: 3px 3px 0 #23324a;
+        margin: 8px 0 8px;
+        letter-spacing: 1px;
+      }
+      p.sub {
+        text-align: center;
+        font-size: clamp(10px, 2.6vw, 14px);
+        color: #23324a;
+        margin-bottom: 28px;
+      }
+      .games {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 24px;
+        max-width: 860px;
+        margin: 0 auto;
+      }
+      a.game {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        text-decoration: none;
+        color: inherit;
+        background: #fffdf5;
+        border: 4px solid #23324a;
+        border-radius: 20px;
+        padding: 22px 16px 24px;
+        box-shadow: 0 8px 0 #23324a;
+        transition: transform 0.12s, box-shadow 0.12s;
+      }
+      a.game:hover { transform: translateY(-4px); box-shadow: 0 12px 0 #23324a; }
+      a.game:active { transform: translateY(6px); box-shadow: 0 2px 0 #23324a; }
+      .pic {
+        width: 100%;
+        height: 180px;
+        border-radius: 12px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        overflow: hidden;
+      }
+      .pic img { height: 92%; image-rendering: pixelated; }
+      .pic svg { height: 100%; }
+      .maia .pic { background: linear-gradient(#7ec0ee, #bfe6ff); }
+      .blumen .pic { background: linear-gradient(#ffd6ec, #fff3b0); }
+      .name { font-size: clamp(13px, 3.4vw, 17px); text-align: center; line-height: 1.5; }
+      .by { font-family: system-ui, sans-serif; font-size: 14px; opacity: 0.7; }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <h1>maia.games</h1>
+    <p class="sub">Such dir ein Spiel aus!</p>
+    <main class="games">
+      <a class="game maia" href="/maia/">
+        <div class="pic"><img src="/maia/img/maia.png" alt="" /></div>
+        <div class="name">Maia und die große Welt</div>
+      </a>
+      <a class="game blumen" href="/blumenspiel/">
+        <div class="pic">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <path d="M60 118 C60 95 58 80 60 62" stroke="#3f9a3a" stroke-width="6" fill="none" stroke-linecap="round" />
+            <path d="M60 98 C44 88 34 92 28 100 C40 104 50 104 60 98Z" fill="#5cbf4f" />
+            <path d="M60 88 C76 78 86 82 92 90 C80 94 70 94 60 88Z" fill="#5cbf4f" />
+            <path d="M40 30 C38 50 46 64 60 66 C74 64 82 50 80 30 C72 40 66 40 60 26 C54 40 48 40 40 30Z" fill="#ff5fa2" stroke="#c2306f" stroke-width="2.5" />
+            <circle cx="52" cy="50" r="3" fill="#23324a" />
+            <circle cx="68" cy="50" r="3" fill="#23324a" />
+            <path d="M54 57 Q60 62 66 57" stroke="#23324a" stroke-width="2.5" fill="none" stroke-linecap="round" />
+          </svg>
+        </div>
+        <div class="name">Blumenspiel</div>
+      </a>
+    </main>
   </body>
 </html>
