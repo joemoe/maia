@@ -18,11 +18,18 @@
   .pad.small { gap: 8px; }
   #padR.small button { border-color: #ff6fae; background: #ff6fae55; }
   #padL.small button { border-color: #36b6f0; background: #36b6f055; }
-  #mute { position: fixed; right: 16px; top: 92px; z-index: 6; width: 48px; height: 48px; border-radius: 50%; border: 3px solid #ffffffcc;
-    background: #ffffff55; font-size: 22px; touch-action: none; }
+  #mute, #quit { position: fixed; right: 16px; top: 92px; z-index: 6; width: 48px; height: 48px; border-radius: 50%; border: 3px solid #ffffffcc;
+    background: #ffffff55; touch-action: none; padding: 0; display: grid; place-items: center; cursor: pointer; }
+  #quit { display: none; }
+  body.ingame #quit { display: grid; }
+  body.ingame #quit { top: 104px; }
+  body.ingame #mute { top: 160px; }
+  #mute svg, #quit svg { width: 26px; height: 26px; }
+  .pad button svg { width: 52%; height: 52%; display: block; margin: auto; pointer-events: none; filter: drop-shadow(0 2px 2px #0005); }
+  #mute svg, #quit svg { filter: drop-shadow(0 1px 2px #0005); }
   .pad .tag { align-self: center; font-weight: bold; font-size: 18px; text-shadow: 0 2px 3px #0008; }
   .pad button { width: 74px; height: 74px; border-radius: 50%; border: 3px solid #ffffffcc; background: #ffffff44;
-    font-size: 32px; color: #fff; text-shadow: 0 2px 3px #0006; touch-action: none; }
+    padding: 0; color: #fff; touch-action: none; }
   .pad button:active, .pad button.on { background: #ffffff88; }
   @media (hover: hover) and (pointer: fine) { .pad { display: none; } }
 </style>
@@ -31,7 +38,8 @@
 <canvas id="c"></canvas>
 <div class="pad left" id="padL"></div>
 <div class="pad right" id="padR"></div>
-<button id="mute" aria-label="Musik an oder aus">🔊</button>
+<button id="quit" aria-label="Zurück zum Startmenü"></button>
+<button id="mute" aria-label="Musik an oder aus"></button>
 <script>
 "use strict";
 const cv = document.getElementById('c'), cx = cv.getContext('2d');
@@ -198,12 +206,33 @@ function musicTick() {
   }
 }
 setInterval(musicTick, 60);
+// gezeichnete Symbole (statt Emojis), alle im gleichen Stil: weiße, runde Linien
+const ICON = {
+  left: '<path d="M15 5 L7 12 L15 19 Z" fill="#fff" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>',
+  right: '<path d="M9 5 L17 12 L9 19 Z" fill="#fff" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>',
+  hop: '<path d="M5 15 L12 7 L19 15 Z" fill="#fff" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>',
+  dig: '<path d="M5 9 L12 17 L19 9 Z" fill="#fff" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>',
+  throw: '<ellipse cx="12" cy="12.5" rx="5.5" ry="7.5" transform="rotate(25 12 12.5)" fill="#9b4dff" stroke="#fff" stroke-width="2"/><ellipse cx="10.3" cy="9.8" rx="1.6" ry="2.6" transform="rotate(25 10.3 9.8)" fill="#fff" opacity=".7"/><path d="M19 3.5 l.8 1.8 1.8 .8 -1.8 .8 -.8 1.8 -.8 -1.8 -1.8 -.8 1.8 -.8z" fill="#fff6c0"/>',
+  soundOn: '<path d="M4 9.5 H8 L13 5 V19 L8 14.5 H4 Z" fill="#fff" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M16 9 Q18 12 16 15 M18.5 6.5 Q22 12 18.5 17.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>',
+  soundOff: '<path d="M4 9.5 H8 L13 5 V19 L8 14.5 H4 Z" fill="#fff" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M16.5 9.5 L21 14.5 M21 9.5 L16.5 14.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>',
+  quit: '<path d="M6.5 6.5 L17.5 17.5 M17.5 6.5 L6.5 17.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>',
+};
+const svgIcon = k => '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICON[k] + '</svg>';
 function toggleMusic() {
   music.on = !music.on; music.song = null;
-  document.getElementById('mute').textContent = music.on ? '🔊' : '🔇';
+  document.getElementById('mute').innerHTML = svgIcon(music.on ? 'soundOn' : 'soundOff');
   try { localStorage.setItem('blumen-musik', music.on ? 'an' : 'aus'); } catch (e) {}
 }
-document.getElementById('mute').textContent = music.on ? '🔊' : '🔇';
+document.getElementById('mute').innerHTML = svgIcon(music.on ? 'soundOn' : 'soundOff');
+document.getElementById('quit').innerHTML = svgIcon('quit');
+document.getElementById('quit').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); toStart(); });
+// X: zurück zum Startmenü (der Spielstand bleibt gespeichert, man kann weiterspielen)
+function toStart() {
+  if (st.screen === 'start') return;
+  if (st.screen === 'play' || st.screen === 'home') saveGame();
+  for (const p of P) for (const k in p.keys) p.keys[k] = false;
+  st.screen = 'start'; st.screenT = 0; st.msgT = 0; st.picker = 0; beep(500, .08);
+}
 document.getElementById('mute').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!ac) beep(1, 0.01, 'sine', 0.0001); toggleMusic(); });
 // Der Browser erlaubt Töne erst nach dem ersten Tippen
 addEventListener('pointerdown', () => { if (!ac) beep(1, 0.01, 'sine', 0.0001); else if (ac.state === 'suspended') ac.resume(); }, true);
@@ -228,6 +257,7 @@ function mapKey(e) {
 }
 addEventListener('keydown', e => {
   if (e.key === 'm' || e.key === 'M') { toggleMusic(); return; }
+  if (e.key === 'Escape' && (st.screen === 'play' || st.screen === 'star' || st.screen === 'win' || (st.screen === 'home' && st.homeMode === 'menu'))) { toStart(); return; }
   if (st.screen === 'home') {
     const m = st.homeMode === 'album' ? ({ Escape: 'back', Backspace: 'back', Enter: 'back' }[e.key]) : st.homeMode === 'doors'
       ? ({ '1': 'w0', '2': 'w1', '3': 'w2', '4': 'w3', '5': 'w4', '6': 'w5', Escape: 'back', Backspace: 'back' }[e.key])
@@ -252,7 +282,7 @@ function buildPads() {
   const L = document.getElementById('padL'), Rr = document.getElementById('padR');
   L.innerHTML = ''; Rr.innerHTML = '';
   const mk = (parent, p, k, label, txt) => {
-    const b = document.createElement('button'); b.textContent = txt; if (k === 'throw') b.className = 'throw'; b.setAttribute('aria-label', label); parent.appendChild(b);
+    const b = document.createElement('button'); b.innerHTML = svgIcon(k); if (k === 'throw') b.className = 'throw'; b.setAttribute('aria-label', label); parent.appendChild(b);
     const on = e => { e.preventDefault(); if (st.screen !== 'play') return; if (k === 'hop') tryHop(p); if (k === 'throw') throwSeed(p); p.keys[k] = true; b.classList.add('on'); };
     const off = e => { e.preventDefault(); p.keys[k] = false; b.classList.remove('on'); };
     b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointerleave', off); b.addEventListener('pointercancel', off);
@@ -431,7 +461,7 @@ function update(dt) {
   if (B && !B.defeated) {
     for (const p of ps) p.x = Math.min(p.x, B.x - 140 * S);
     const near = ps.some(p => B.x - p.x < W * 0.8);
-    if (near && !B.intro) { B.intro = true; say('Der Blätterkönig! Wirf Samen auf ihn (Leertaste / 🌱)!'); }
+    if (near && !B.intro) { B.intro = true; say('Der Blätterkönig! Wirf Samen auf ihn (Leertaste oder lila Samen-Knopf)!'); }
     if (near) {
       B.t += dt; B.atk -= dt;
       if (B.atk <= 0) { st.leaves.push({ type: 'leaf', x: B.x - 70 * S, t: 0, sp: (120 + Math.random() * 40) * S, hit: false }); B.atk = 3 + Math.random() * 1.5; beep(220, .2, 'sawtooth', .05, -60); }
@@ -1681,6 +1711,7 @@ function loop(now) {
   const t = now / 1000;
   update(dt);
   document.body.classList.toggle('playing', st.screen === 'play');
+  document.body.classList.toggle('ingame', st.screen !== 'start');
   document.body.classList.toggle('bossfight', !!(st.screen === 'play' && st.boss && !st.boss.defeated));
   cx.clearRect(0, 0, W, H);
   if (st.screen === 'start') drawStart(t);
