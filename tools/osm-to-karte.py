@@ -70,6 +70,76 @@ ROAD = {  # highway -> (code, breite in Metern)
     'pedestrian': 7, 'footway': 8, 'path': 8, 'cycleway': 9, 'track': 10, 'steps': 8,
 }
 
+# Spielbreite der Straßen in Metern (absichtlich breiter als echt, damit man gut fahren kann)
+RW = {1: 17, 2: 15, 3: 14, 4: 12, 5: 10, 6: 8, 7: 10, 8: 3.5, 9: 4, 10: 5}
+SIDEWALK = 4.0      # Gehsteig in Metern, frei von Häusern
+SHRINK = 0.85       # Häuser etwas kleiner, damit mehr Platz dazwischen ist
+
+
+def seg_dist(px, py, ax, ay, bx, by):
+    dx, dy = bx - ax, by - ay
+    l = dx * dx + dy * dy or 1e-9
+    t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / l))
+    cx, cy = ax + t * dx, ay + t * dy
+    return math.hypot(px - cx, py - cy), cx, cy
+
+
+def fit_buildings(buildings, roads):
+    """Häuser verkleinern bzw. von breiten Spiel-Straßen wegschieben."""
+    CELL = 60 * SCALE
+    grid = {}
+    segs = []
+    for code, _, tunnel, f in roads:
+        if tunnel:
+            continue
+        need = (RW[code] / 2 + (SIDEWALK if code <= 7 else 1.0)) * SCALE
+        for i in range(0, len(f) - 2, 2):
+            ax, ay, bx, by = f[i], f[i + 1], f[i + 2], f[i + 3]
+            k = len(segs); segs.append((ax, ay, bx, by, need))
+            for gy in range(int(min(ay, by) // CELL) - 1, int(max(ay, by) // CELL) + 2):
+                for gx in range(int(min(ax, bx) // CELL) - 1, int(max(ax, bx) // CELL) + 2):
+                    grid.setdefault((gx, gy), []).append(k)
+
+    def worst(pts):
+        w = None
+        for x, y in pts:
+            for k in grid.get((int(x // CELL), int(y // CELL)), ()):
+                ax, ay, bx, by, need = segs[k]
+                d, cx, cy = seg_dist(x, y, ax, ay, bx, by)
+                if d < need and (w is None or need - d > w[0]):
+                    w = (need - d, x - cx, y - cy, d)
+        return w
+
+    out = []
+    dropped = 0
+    for b in buildings:
+        f = b[3]
+        pts = [(f[i], f[i + 1]) for i in range(0, len(f), 2)]
+        mx = sum(x for x, _ in pts) / len(pts); my = sum(y for _, y in pts) / len(pts)
+        sc = SHRINK
+        ox = oy = 0.0
+        ok = False
+        for _ in range(14):
+            cur = [(mx + ox + (x - mx) * sc, my + oy + (y - my) * sc) for x, y in pts]
+            w = worst(cur)
+            if not w:
+                ok = True; break
+            over, nx, ny, d = w
+            moved = math.hypot(ox, oy)
+            if d > 0.5 and moved < 8 * SCALE:
+                l = math.hypot(nx, ny) or 1
+                ox += nx / l * (over + 1); oy += ny / l * (over + 1)
+            else:
+                sc *= 0.85
+            if sc < 0.3:
+                break
+        if not ok:
+            dropped += 1
+            continue
+        out.append([b[0], b[1], b[2], flat(cur)])
+    return out, dropped
+
+
 AREA = {  # tag=value -> code
     ('landuse', 'grass'): 'g', ('landuse', 'meadow'): 'm', ('landuse', 'farmland'): 'f',
     ('landuse', 'orchard'): 'o', ('landuse', 'forest'): 'w', ('natural', 'wood'): 'w',
@@ -172,7 +242,13 @@ def main(src, dst):
             if t.get('area') == 'yes' and closed:
                 areas.append(['P', flat(simplify_ring(pts, 1.5)[:-1])])
                 continue
-            roads.append([ROAD[hw], nid(t.get('name')), 1 if t.get('tunnel') == 'yes' or t.get('layer', '0').startswith('-') else 0, flat(simplify(pts, 1.0))])
+            name = t.get('name')
+            # unwichtige Wege weglassen (Zufahrten, Feldwege, namenlose Fußwege)
+            if not name and hw in ('service', 'track', 'path', 'footway', 'cycleway', 'steps'):
+                continue
+            if t.get('access') in ('private', 'no') and hw in ('service', 'track'):
+                continue
+            roads.append([ROAD[hw], nid(name), 1 if t.get('tunnel') == 'yes' or t.get('layer', '0').startswith('-') else 0, flat(simplify(pts, 1.0))])
             continue
         if 'railway' in t and t['railway'] in ('rail', 'light_rail'):
             if t.get('tunnel') != 'yes':
@@ -196,6 +272,9 @@ def main(src, dst):
                 cx = sum(x for x, _ in p[:-1]) / (len(p) - 1); cy = sum(y for _, y in p[:-1]) / (len(p) - 1)
                 pois.append({'n': t['name'], 'x': round(cx), 'y': round(cy), 'k': t.get('leisure') or t.get('amenity') or t.get('landuse'), 'a': ''})
 
+    buildings, dropped = fit_buildings(buildings, roads)
+    print(f'{dropped} Häuser passten nicht neben die breiteren Straßen und wurden weggelassen')
+
     # große Flächen zuerst zeichnen
     def area_size(a):
         f = a[1]; xs = f[0::2]; ys = f[1::2]
@@ -205,7 +284,7 @@ def main(src, dst):
 
     out = {
         'src': '(c) OpenStreetMap-Mitwirkende, ODbL',
-        'origin': [LAT0, LON0], 'scale': SCALE,
+        'origin': [LAT0, LON0], 'scale': SCALE, 'rw': RW, 'sidewalk': SIDEWALK,
         'bounds': [XMIN * SCALE, YMIN * SCALE, XMAX * SCALE, YMAX * SCALE],
         'names': names, 'roads': roads, 'buildings': buildings, 'areas': areas,
         'water': water, 'rail': rail, 'pois': pois, 'boundary': boundary,
