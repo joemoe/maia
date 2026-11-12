@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""Wandelt einen Overpass-Export (JSON mit `out geom`) von Schwarzach in die
+kompakte Spielkarte public/schwarzach/karte.js um.
+
+Aufruf:  python3 tools/osm-to-karte.py schwarzach.json public/schwarzach/karte.js
+
+Koordinaten werden in Meter um den Dorfplatz projiziert und mit SCALE
+(Pixel pro Meter) in Spielpixel umgerechnet. Daten: (c) OpenStreetMap-Mitwirkende, ODbL.
+"""
+import json, math, sys
+
+LAT0, LON0 = 47.44746, 9.76400  # Dorfplatz (Gemeindeamt, Am Dorfplatz 2)
+SCALE = 3.0  # Pixel pro Meter
+KX = math.cos(math.radians(LAT0)) * 111320.0
+KY = 110540.0
+# Spielbereich (Meter um den Dorfplatz)
+XMIN, XMAX, YMIN, YMAX = -1700, 1500, -1500, 1500
+
+
+def proj(lat, lon):
+    return ((lon - LON0) * KX * SCALE, -(lat - LAT0) * KY * SCALE)
+
+
+def inside_m(x, y, pad=0):
+    return XMIN * SCALE - pad <= x <= XMAX * SCALE + pad and YMIN * SCALE - pad <= y <= YMAX * SCALE + pad
+
+
+def simplify(pts, eps):
+    """Douglas-Peucker, pts = [(x,y),...]"""
+    if len(pts) < 3:
+        return pts
+    ax, ay = pts[0]; bx, by = pts[-1]
+    dx, dy = bx - ax, by - ay
+    L = math.hypot(dx, dy) or 1e-9
+    imax, dmax = 0, -1
+    for i in range(1, len(pts) - 1):
+        px, py = pts[i]
+        d = abs(dy * px - dx * py + bx * ay - by * ax) / L
+        if d > dmax:
+            imax, dmax = i, d
+    if dmax > eps:
+        a = simplify(pts[: imax + 1], eps)
+        b = simplify(pts[imax:], eps)
+        return a[:-1] + b
+    return [pts[0], pts[-1]]
+
+
+def simplify_ring(pts, eps):
+    """Geschlossener Ring: am weitesten entfernten Punkt teilen, dann beide Hälften vereinfachen."""
+    if len(pts) < 5:
+        return pts
+    ax, ay = pts[0]
+    k = max(range(len(pts)), key=lambda i: (pts[i][0] - ax) ** 2 + (pts[i][1] - ay) ** 2)
+    a = simplify(pts[: k + 1], eps)
+    b = simplify(pts[k:], eps)
+    return a[:-1] + b
+
+
+def flat(pts):
+    out = []
+    for x, y in pts:
+        out += [round(x), round(y)]
+    return out
+
+
+ROAD = {  # highway -> (code, breite in Metern)
+    'motorway': 1, 'trunk': 1, 'primary': 1, 'secondary': 2, 'tertiary': 3,
+    'primary_link': 2, 'secondary_link': 3, 'tertiary_link': 3,
+    'residential': 4, 'unclassified': 4, 'living_street': 5, 'service': 6,
+    'pedestrian': 7, 'footway': 8, 'path': 8, 'cycleway': 9, 'track': 10, 'steps': 8,
+}
+
+AREA = {  # tag=value -> code
+    ('landuse', 'grass'): 'g', ('landuse', 'meadow'): 'm', ('landuse', 'farmland'): 'f',
+    ('landuse', 'orchard'): 'o', ('landuse', 'forest'): 'w', ('natural', 'wood'): 'w',
+    ('landuse', 'residential'): 'r', ('landuse', 'commercial'): 'c', ('landuse', 'retail'): 'c',
+    ('landuse', 'industrial'): 'i', ('landuse', 'cemetery'): 'k', ('amenity', 'grave_yard'): 'k',
+    ('landuse', 'construction'): 'b', ('landuse', 'religious'): 'k',
+    ('leisure', 'park'): 'p', ('leisure', 'playground'): 'y', ('leisure', 'pitch'): 's',
+    ('leisure', 'sports_centre'): 's', ('leisure', 'garden'): 'p', ('leisure', 'swimming_pool'): 'a',
+    ('natural', 'water'): 'a', ('landuse', 'basin'): 'a', ('natural', 'scrub'): 'w',
+    ('natural', 'grassland'): 'm', ('landuse', 'village_green'): 'g', ('amenity', 'parking'): 'P',
+    ('amenity', 'school'): 'S', ('amenity', 'kindergarten'): 'S', ('landuse', 'railway'): 'i',
+}
+
+
+def area_code(t):
+    for k in ('leisure', 'amenity', 'natural', 'landuse'):
+        if k in t and (k, t[k]) in AREA:
+            return AREA[(k, t[k])]
+    return None
+
+
+def bkind(t):
+    b = t.get('building', 'yes')
+    a = t.get('amenity', '')
+    if b in ('church', 'chapel', 'cathedral') or a == 'place_of_worship':
+        return 'K'
+    if a in ('townhall',) or t.get('office') == 'government':
+        return 'R'
+    if b in ('school', 'kindergarten') or a in ('school', 'kindergarten'):
+        return 'S'
+    if b in ('industrial', 'warehouse', 'manufacture'):
+        return 'I'
+    if b in ('commercial', 'retail', 'supermarket', 'office') or 'shop' in t:
+        return 'C'
+    if b in ('garage', 'garages', 'shed', 'carport', 'roof', 'hut'):
+        return 'G'
+    if b in ('farm', 'barn', 'farm_auxiliary', 'stable'):
+        return 'F'
+    if b in ('apartments',):
+        return 'A'
+    return 'H'
+
+
+def main(src, dst):
+    data = json.load(open(src, encoding='utf-8'))
+    names, name_ix = [], {}
+
+    def nid(n):
+        if not n:
+            return -1
+        if n not in name_ix:
+            name_ix[n] = len(names); names.append(n)
+        return name_ix[n]
+
+    roads, buildings, areas, water, rail, pois, boundary = [], [], [], [], [], [], []
+    for el in data.get('elements', []):
+        t = el.get('tags', {})
+        typ = el['type']
+        if typ == 'node':
+            if 'lat' not in el or not t.get('name'):
+                continue
+            x, y = proj(el['lat'], el['lon'])
+            if inside_m(x, y):
+                pois.append({'n': t['name'], 'x': round(x), 'y': round(y), 'k': t.get('amenity') or t.get('shop') or t.get('tourism') or t.get('historic') or t.get('office') or t.get('craft') or '',
+                             'a': (t.get('addr:street', '') + ' ' + t.get('addr:housenumber', '')).strip()})
+            continue
+        if typ == 'relation':
+            if t.get('boundary') == 'administrative' and t.get('name') == 'Schwarzach':
+                for m in el.get('members', []):
+                    if m.get('role') == 'outer' and 'geometry' in m:
+                        boundary.append(flat([proj(g['lat'], g['lon']) for g in m['geometry']]))
+            elif t.get('name') and 'center' in el:
+                pass
+            continue
+        geom = el.get('geometry')
+        if not geom:
+            continue
+        pts = [proj(g['lat'], g['lon']) for g in geom if g]
+        if not any(inside_m(x, y, 300) for x, y in pts):
+            continue
+        closed = len(pts) > 3 and pts[0] == pts[-1]
+        if 'building' in t:
+            if not closed:
+                continue
+            p = simplify_ring(pts, 0.8)
+            if len(p) < 4:
+                continue
+            lv = t.get('building:levels')
+            try:
+                lv = max(1, min(12, int(float(lv))))
+            except (TypeError, ValueError):
+                lv = 0
+            buildings.append([bkind(t), lv, nid(t.get('name')), flat(p[:-1])])
+            if t.get('name'):
+                cx = sum(x for x, _ in p[:-1]) / (len(p) - 1); cy = sum(y for _, y in p[:-1]) / (len(p) - 1)
+                pois.append({'n': t['name'], 'x': round(cx), 'y': round(cy), 'k': t.get('amenity') or t.get('shop') or t.get('building'), 'a': (t.get('addr:street', '') + ' ' + t.get('addr:housenumber', '')).strip()})
+            continue
+        hw = t.get('highway')
+        if hw in ROAD:
+            if t.get('area') == 'yes' and closed:
+                areas.append(['P', flat(simplify_ring(pts, 1.5)[:-1])])
+                continue
+            roads.append([ROAD[hw], nid(t.get('name')), 1 if t.get('tunnel') == 'yes' or t.get('layer', '0').startswith('-') else 0, flat(simplify(pts, 1.0))])
+            continue
+        if 'railway' in t and t['railway'] in ('rail', 'light_rail'):
+            if t.get('tunnel') != 'yes':
+                rail.append(flat(simplify(pts, 1.0)))
+            continue
+        if 'railway' in t and t['railway'] == 'platform' and closed:
+            areas.append(['P', flat(simplify_ring(pts, 1.0)[:-1])])
+            continue
+        if t.get('waterway') in ('river', 'stream', 'canal', 'ditch', 'drain'):
+            if t.get('tunnel') in ('culvert', 'yes'):
+                continue
+            w = {'river': 14, 'canal': 8, 'stream': 5}.get(t['waterway'], 2.5)
+            water.append([w, nid(t.get('name')), flat(simplify(pts, 1.5))])
+            continue
+        c = area_code(t)
+        if c and closed:
+            p = simplify_ring(pts, 2.0)
+            if len(p) >= 4:
+                areas.append([c, flat(p[:-1])])
+            if t.get('name') and c in 'psykS':
+                cx = sum(x for x, _ in p[:-1]) / (len(p) - 1); cy = sum(y for _, y in p[:-1]) / (len(p) - 1)
+                pois.append({'n': t['name'], 'x': round(cx), 'y': round(cy), 'k': t.get('leisure') or t.get('amenity') or t.get('landuse'), 'a': ''})
+
+    # große Flächen zuerst zeichnen
+    def area_size(a):
+        f = a[1]; xs = f[0::2]; ys = f[1::2]
+        return (max(xs) - min(xs)) * (max(ys) - min(ys))
+    areas.sort(key=area_size, reverse=True)
+    roads.sort(key=lambda r: -r[0])  # kleine Wege zuerst, Hauptstraßen oben
+
+    out = {
+        'src': '(c) OpenStreetMap-Mitwirkende, ODbL',
+        'origin': [LAT0, LON0], 'scale': SCALE,
+        'bounds': [XMIN * SCALE, YMIN * SCALE, XMAX * SCALE, YMAX * SCALE],
+        'names': names, 'roads': roads, 'buildings': buildings, 'areas': areas,
+        'water': water, 'rail': rail, 'pois': pois, 'boundary': boundary,
+    }
+    js = '// Automatisch erzeugt aus OpenStreetMap-Daten (c) OpenStreetMap-Mitwirkende, ODbL.\n' \
+         '// Neu erzeugen: python3 tools/osm-to-karte.py <overpass.json> public/schwarzach/karte.js\n' \
+         'window.KARTE=' + json.dumps(out, ensure_ascii=False, separators=(',', ':')) + ';\n'
+    open(dst, 'w', encoding='utf-8').write(js)
+    print(f'{len(roads)} Straßen, {len(buildings)} Gebäude, {len(areas)} Flächen, {len(water)} Gewässer, {len(rail)} Gleise, {len(pois)} Orte, {len(js)//1024} KB')
+
+
+if __name__ == '__main__':
+    main(sys.argv[1], sys.argv[2])
