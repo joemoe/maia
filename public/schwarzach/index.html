@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Schwarzach Flitzer</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#ffcf3f">
+<style>
+  :root { --ink: #23324a; --paper: #fffdf5; --gelb: #ffcf3f; --pink: #ff5fa2; --blau: #36b6f0; --gruen: #5cbf4f; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #9be07a; color: var(--ink);
+    font-family: "Comic Sans MS", "Chalkboard SE", "Trebuchet MS", system-ui, sans-serif;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  canvas#c { display: block; position: fixed; inset: 0; width: 100%; height: 100%; }
+
+  /* HUD */
+  .hud { position: fixed; z-index: 4; pointer-events: none; }
+  #auftrag { left: 12px; top: max(12px, env(safe-area-inset-top)); max-width: min(420px, calc(100vw - 190px));
+    background: var(--paper); border: 3px solid var(--ink); border-radius: 14px; padding: 8px 12px; box-shadow: 0 4px 0 var(--ink);
+    font-size: 15px; line-height: 1.3; }
+  #auftrag b { color: #c2306f; }
+  #auftrag .ziel { font-size: 13px; opacity: .8; margin-top: 2px; }
+  #punkte { left: 12px; bottom: max(12px, env(safe-area-inset-bottom)); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .chip { background: var(--paper); border: 3px solid var(--ink); border-radius: 999px; padding: 4px 12px; font-size: 15px; font-weight: bold; box-shadow: 0 3px 0 var(--ink); white-space: nowrap; }
+  .chip.strasse { background: #fff; border-color: #2a4d8f; color: #2a4d8f; box-shadow: 0 3px 0 #2a4d8f; }
+  #toast { left: 50%; top: 22%; transform: translateX(-50%); font-size: clamp(24px, 6vw, 46px); font-weight: bold; color: #fff;
+    text-shadow: 3px 3px 0 var(--ink), -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink); opacity: 0; transition: opacity .25s; text-align: center; white-space: nowrap; }
+  #toast.on { opacity: 1; }
+
+  /* Buttons rechts oben */
+  .rund { position: fixed; right: 12px; z-index: 6; width: 46px; height: 46px; border-radius: 50%; border: 3px solid var(--ink);
+    background: var(--paper); box-shadow: 0 3px 0 var(--ink); font-size: 22px; display: grid; place-items: center; cursor: pointer; padding: 0; }
+  #quit { top: calc(max(12px, env(safe-area-inset-top)) + 178px); }
+  #mute { top: calc(max(12px, env(safe-area-inset-top)) + 232px); }
+  #karteBtn { top: calc(max(12px, env(safe-area-inset-top)) + 286px); }
+  body:not(.ingame) .rund { display: none; }
+
+  /* Touch */
+  #aktion { position: fixed; right: 22px; bottom: max(22px, env(safe-area-inset-bottom)); z-index: 5; width: 86px; height: 86px; border-radius: 50%;
+    border: 4px solid #fff; background: #ff5fa2cc; color: #fff; font-size: 34px; display: none; place-items: center; box-shadow: 0 5px 0 #0004; touch-action: none; }
+  #aktion.zeigen { display: grid; }
+  #aktion small { position: absolute; bottom: -22px; font-size: 13px; font-weight: bold; color: var(--ink); text-shadow: 0 0 4px #fff; white-space: nowrap; }
+  @media (hover: hover) and (pointer: fine) { #aktion { display: none !important; } }
+
+  /* Dialoge */
+  .overlay { position: fixed; inset: 0; z-index: 10; display: none; align-items: center; justify-content: center; padding: 16px; background: #23324a66; }
+  .overlay.on { display: flex; }
+  .karte-box { background: var(--paper); border: 4px solid var(--ink); border-radius: 22px; box-shadow: 0 8px 0 var(--ink); padding: 18px 20px 20px; max-width: 520px; width: 100%; }
+  .karte-box h2 { margin: 0 0 8px; font-size: 24px; display: flex; gap: 10px; align-items: center; }
+  .karte-box h2 .emo { font-size: 40px; }
+  .karte-box p { margin: 6px 0; font-size: 17px; line-height: 1.4; }
+  .karte-box .quelle { font-size: 12px; opacity: .65; }
+  .knopf { display: inline-block; margin-top: 12px; font: inherit; font-size: 19px; font-weight: bold; color: #fff; background: var(--pink); border: 3px solid var(--ink);
+    border-radius: 14px; padding: 10px 20px; box-shadow: 0 5px 0 var(--ink); cursor: pointer; }
+  .knopf:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
+  .knopf.blau { background: var(--blau); }
+
+  #start { background: linear-gradient(#ffe89a, #ffcf3f 60%, #ff9f43); }
+  #start .karte-box { text-align: center; }
+  #start h1 { margin: 0; font-size: clamp(34px, 9vw, 58px); color: #fff; line-height: 1;
+    text-shadow: 4px 4px 0 var(--ink), -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink); transform: rotate(-3deg); }
+  #start .unter { font-size: 18px; margin: 14px 0 6px; }
+  #start .steuerung { font-size: 14px; opacity: .8; margin-top: 12px; }
+  #start a.zurueck { display: block; margin-top: 14px; color: var(--ink); font-size: 14px; }
+  #grosseKarte canvas { width: min(92vw, 92vh); height: min(92vw, 92vh); border: 4px solid var(--ink); border-radius: 18px; background: #9be07a; box-shadow: 0 8px 0 var(--ink); }
+  .osm { position: fixed; left: 50%; transform: translateX(-50%); bottom: 2px; white-space: nowrap; z-index: 3; font-size: 10px; opacity: .7; font-family: system-ui, sans-serif; }
+  .osm a { color: inherit; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="hud" id="auftrag"></div>
+<div class="hud" id="punkte">
+  <span class="chip" id="hi5">✋ 0</span>
+  <span class="chip" id="wissen">📜 0</span>
+  <span class="chip strasse" id="strasse">📍 Schwarzach</span>
+</div>
+<div class="hud" id="toast"></div>
+
+<button class="rund" id="quit" aria-label="Zurück zum Startbildschirm">✖</button>
+<button class="rund" id="mute" aria-label="Ton an oder aus">🔊</button>
+<button class="rund" id="karteBtn" aria-label="Karte">🗺️</button>
+<button id="aktion" aria-label="Aktion">🛴<small>aufsteigen</small></button>
+<div class="osm">Karte: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende</div>
+
+<div class="overlay on" id="start">
+  <div class="karte-box">
+    <h1>Schwarzach<br>Flitzer</h1>
+    <p class="unter">Flitz mit dem Leihscooter durchs Dorf,<br>verteil High fives und hilf den Leuten in Schwarzach!</p>
+    <button class="knopf" id="los">Los geht's! 🛴</button>
+    <p class="steuerung">↑ vorwärts · ↓ bremsen · ← → drehen (oder WASD) &nbsp;·&nbsp; Leertaste: Scooter auf/ab<br>M: Karte &nbsp;·&nbsp; Auf dem Tablet: links den Daumen nach oben schieben und lenken, rechts der Knopf</p>
+    <a class="zurueck" href="/">⟵ zurück zu maia.games</a>
+  </div>
+</div>
+
+<div class="overlay" id="dialog">
+  <div class="karte-box">
+    <h2><span class="emo" id="dEmo"></span><span id="dTitel"></span></h2>
+    <div id="dText"></div>
+    <button class="knopf" id="dOk">Okay!</button>
+  </div>
+</div>
+
+<div class="overlay" id="grosseKarte"><canvas id="gk" width="900" height="900"></canvas></div>
+
+<script src="karte.js"></script>
+<script>
+"use strict";
+/* =====================================================================
+   Schwarzach Flitzer – ein kindgerechtes, gewaltfreies Dorf-Abenteuer
+   in Schwarzach (Vorarlberg). Straßen und Gebäude: OpenStreetMap.
+   ===================================================================== */
+const K = window.KARTE;
+const cv = document.getElementById('c'), cx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+}
+addEventListener('resize', resize); resize();
+
+const SC = K.scale;              // Pixel pro Meter
+const [BX0, BY0, BX1, BY1] = K.bounds;
+const KX = Math.cos(K.origin[0] * Math.PI / 180) * 111320, KY = 110540;
+function proj(lat, lon) { return [(lon - K.origin[1]) * KX * SC, -(lat - K.origin[0]) * KY * SC]; }
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
+function hash(n) { n = Math.imul(n ^ 0x9e3779b9, 0x85ebca6b); n ^= n >>> 13; n = Math.imul(n, 0xc2b2ae35); return ((n ^ (n >>> 16)) >>> 0) / 4294967296; }
+
+/* ---------------- Karte aufbereiten ---------------- */
+// Straßen-Code -> Breite (m), Farbe
+const RW = K.rw || { 1: 17, 2: 15, 3: 14, 4: 12, 5: 10, 6: 8, 7: 10, 8: 3.5, 9: 4, 10: 5 };
+const GEHSTEIG = (K.sidewalk || 4) * SC;
+const DRIVE = c => c <= 6;
+const AREA_COL = { g: '#a8e683', m: '#b9ea8a', f: '#d7ef9a', o: '#a3dc78', w: '#5fb35a', r: '#cfe9b0', c: '#f3d9e8', i: '#e2dcef',
+  k: '#9fd39a', b: '#f2d6a2', p: '#86d873', y: '#ffe58a', s: '#6fcf6a', a: '#5ec8f5', P: '#e8e4dc', S: '#ffe9c7' };
+
+const roads = K.roads.map(([code, ni, tunnel, f]) => {
+  const pts = []; for (let i = 0; i < f.length; i += 2) pts.push([f[i], f[i + 1]]);
+  return { code, name: ni >= 0 ? K.names[ni] : '', tunnel, pts, w: RW[code] * SC };
+});
+const buildings = K.buildings.map(([kind, lv, ni, f], i) => {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, mx = 0, my = 0;
+  for (let j = 0; j < f.length; j += 2) { x0 = Math.min(x0, f[j]); x1 = Math.max(x1, f[j]); y0 = Math.min(y0, f[j + 1]); y1 = Math.max(y1, f[j + 1]); mx += f[j]; my += f[j + 1]; }
+  const n = f.length / 2;
+  const base = { H: 2, A: 4, C: 2, I: 2, K: 5, R: 3, S: 3, G: 1, F: 1.5 }[kind] || 2;
+  const lvl = lv || base;
+  const roofs = { H: ['#ff7b6b', '#ff9f5a', '#f2685f', '#ffb36b', '#e8786c', '#ff8fa3'], A: ['#b8a4ff', '#8ec5ff', '#ffd36b'], C: ['#5ad1c8', '#7fc8ff', '#ff9ed2'],
+    I: ['#b9c3d6', '#a8b8cc'], K: ['#f3e1b5'], R: ['#ffcf3f'], S: ['#ffb84d'], G: ['#c9b8a6', '#bfb2a3'], F: ['#c98e5a', '#b97c4c'] }[kind] || ['#ff8a70'];
+  return { kind, name: ni >= 0 ? K.names[ni] : '', f, n, x0, y0, x1, y1, cx: mx / n, cy: my / n,
+    h: lvl * 3.2 * SC, roof: roofs[Math.floor(hash(i + 7) * roofs.length)] };
+});
+const areas = K.areas.map(([c, f]) => {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (let j = 0; j < f.length; j += 2) { x0 = Math.min(x0, f[j]); x1 = Math.max(x1, f[j]); y0 = Math.min(y0, f[j + 1]); y1 = Math.max(y1, f[j + 1]); }
+  return { c, f, x0, y0, x1, y1 };
+});
+const waters = K.water.map(([w, ni, f]) => ({ w: w * SC, name: ni >= 0 ? K.names[ni] : '', f }));
+
+// Raster für Gebäude (Kollision + Zeichnen) und Straßen (Straßennamen)
+const CELL = 256;
+const GW = Math.ceil((BX1 - BX0 + 1200) / CELL), GH = Math.ceil((BY1 - BY0 + 1200) / CELL);
+const gx = x => clamp(Math.floor((x - BX0 + 600) / CELL), 0, GW - 1), gy = y => clamp(Math.floor((y - BY0 + 600) / CELL), 0, GH - 1);
+const bGrid = new Array(GW * GH), rGrid = new Array(GW * GH);
+buildings.forEach((b, i) => { for (let y = gy(b.y0); y <= gy(b.y1); y++) for (let x = gx(b.x0); x <= gx(b.x1); x++) (bGrid[y * GW + x] ||= []).push(i); });
+roads.forEach((r, ri) => { if (!r.name) return; for (let k = 0; k < r.pts.length - 1; k++) {
+  const [ax, ay] = r.pts[k], [bx, by] = r.pts[k + 1];
+  for (let y = gy(Math.min(ay, by)); y <= gy(Math.max(ay, by)); y++) for (let x = gx(Math.min(ax, bx)); x <= gx(Math.max(ax, bx)); x++) (rGrid[y * GW + x] ||= []).push(ri * 4096 + k);
+} });
+
+function inPoly(f, px, py) {
+  let c = false;
+  for (let i = 0, j = f.length - 2; i < f.length; j = i, i += 2) {
+    const xi = f[i], yi = f[i + 1], xj = f[j], yj = f[j + 1];
+    if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+function blocked(x, y) {
+  if (x < BX0 || x > BX1 || y < BY0 || y > BY1) return true;
+  const list = bGrid[gy(y) * GW + gx(x)]; if (!list) return false;
+  for (const i of list) { const b = buildings[i]; if (x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1 && inPoly(b.f, x, y)) return true; }
+  return false;
+}
+function segDist(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy || 1;
+  const t = clamp(((px - ax) * dx + (py - ay) * dy) / l, 0, 1);
+  return [Math.hypot(px - ax - t * dx, py - ay - t * dy), ax + t * dx, ay + t * dy];
+}
+function nearestRoadName(x, y) {
+  let best = 1e9, name = '';
+  for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
+    const X = gx(x) + ox, Y = gy(y) + oy; if (X < 0 || Y < 0 || X >= GW || Y >= GH) continue;
+    const list = rGrid[Y * GW + X]; if (!list) continue;
+    for (const v of list) { const r = roads[v >> 12], k = v & 4095; const [d] = segDist(x, y, ...r.pts[k], ...r.pts[k + 1]);
+      if (d < best && !r.tunnel) { best = d; name = r.name; } }
+  }
+  return best < 60 ? name : '';
+}
+
+// Wegenetz (für Autos und Fußgänger)
+function makeGraph(filter) {
+  const nodes = new Map(), list = [];
+  const key = (x, y) => (Math.round(x / 2)) + ',' + (Math.round(y / 2));
+  const node = (x, y) => { const k = key(x, y); let n = nodes.get(k); if (!n) { n = { x, y, nb: [], w: 0 }; nodes.set(k, n); list.push(n); } return n; };
+  for (const r of roads) {
+    if (!filter(r)) continue;
+    let prev = null;
+    for (const [x, y] of r.pts) { const n = node(x, y); n.w = Math.max(n.w, r.w); n.main = n.main || r.code <= 3;
+      if (prev && prev !== n) { prev.nb.push(n); n.nb.push(prev); } prev = n; }
+  }
+  return list.filter(n => n.nb.length && n.x > BX0 && n.x < BX1 && n.y > BY0 && n.y < BY1);
+}
+const carNodes = makeGraph(r => DRIVE(r.code) && r.code !== 6 && !r.tunnel);
+const walkNodes = makeGraph(r => !r.tunnel && r.code !== 1);
+
+/* ---------------- Orte im Dorf ---------------- */
+function findPoi(re, kindRe) { // bei mehreren Treffern (z. B. auch in Dornbirn) den nächsten zum Dorfplatz
+  let best = null;
+  for (const p of K.pois) if (re.test(p.n) && (!kindRe || kindRe.test(p.k)) && (!best || Math.hypot(p.x, p.y) < Math.hypot(best.x, best.y))) best = p;
+  return best && Math.hypot(best.x, best.y) < 3500 ? best : null;
+}
+function roadMid(re) {
+  const rs = roads.filter(r => re.test(r.name)); if (!rs.length) return null;
+  const r = rs.reduce((a, b) => (b.pts.length > a.pts.length ? b : a));
+  return r.pts[Math.floor(r.pts.length / 2)];
+}
+// Punkt auf die nächste begehbare Stelle neben der Straße schieben
+function snap(x, y) {
+  let best = 1e9, bx = x, by = y;
+  for (const n of walkNodes) { const d = dist(x, y, n.x, n.y); if (d < best) { best = d; bx = n.x; by = n.y; } }
+  if (best > 160) return [x, y];
+  // ein Stück Richtung Gebäude, aber nicht hinein
+  for (let t = 0.6; t >= 0; t -= 0.1) { const px = bx + (x - bx) * t, py = by + (y - by) * t; if (!blocked(px, py)) return [px, py]; }
+  return [bx, by];
+}
+function ort(def) {
+  let p = null;
+  for (const re of def.re || []) { const q = findPoi(re, def.kind); if (q) { p = [q.x, q.y]; break; } }
+  if (!p && def.road) p = roadMid(def.road);
+  if (!p && def.ll) p = proj(...def.ll);
+  if (!p) return null;
+  const [x, y] = snap(p[0], p[1]);
+  return { name: def.name, emo: def.emo, x, y, bx: p[0], by: p[1] };
+}
+const ORTE = {
+  gemeindeamt: ort({ name: 'Gemeindeamt', emo: '🏛️', re: [/gemeinde(amt|haus)|rathaus/i], ll: [47.44752, 9.76418] }),
+  gorani: ort({ name: 'Pizza Gorani', emo: '🍕', re: [/gorani/i], ll: [47.43865, 9.75908] }),
+  spar: ort({ name: 'Spar', emo: '🛒', re: [/^spar\b/i], ll: [47.44746, 9.76324] }),
+  sutter: ort({ name: 'Sutterlüty', emo: '🥨', re: [/sutterl/i], ll: [47.43875, 9.75791] }),
+  baustelle: ort({ name: 'Baustelle Untere Staudachstraße', emo: '🚧', road: /untere staudach/i, ll: [47.4418, 9.7668] }),
+  bauhof: ort({ name: 'Bauhof (Gleisweg)', emo: '🧰', road: /gleisweg/i, ll: [47.4455, 9.7560] }),
+  dorfplatz: ort({ name: 'Dorfplatz', emo: '🎄', road: /dorfplatz/i, ll: [47.44730, 9.76390] }),
+  kirche: ort({ name: 'Pfarrkirche St. Sebastian', emo: '⛪', re: [/sebastian/i], kind: /worship|church/, ll: [47.4479, 9.7651] }),
+  bahnhof: ort({ name: 'Bahnhof Schwarzach', emo: '🚆', re: [/bahnhof/i], ll: [47.4461, 9.7542] }),
+  buecherei: ort({ name: 'Bücherei', emo: '📚', re: [/bücherei|bibliothek/i], kind: /library/, ll: [47.4446, 9.7627] }),
+  schule: ort({ name: 'Mittelschule', emo: '🏫', re: [/mittelschule schwarzach/i, /mittelschule/i], kind: /school/, ll: [47.4432, 9.7620] }),
+  rieger: ort({ name: 'Rieger Orgelbau', emo: '🎹', re: [/rieger/i] }),
+  bach: (() => { const w = waters.filter(w => /schwarzach/i.test(w.name)); if (!w.length) return null; let best = null, bd = 1e9;
+    for (const ww of w) for (let i = 0; i < ww.f.length; i += 2) { const d = dist(ww.f[i], ww.f[i + 1], 0, 0); if (d < bd) { bd = d; best = [ww.f[i], ww.f[i + 1]]; } }
+    const [x, y] = snap(...best); return { name: 'Die Schwarzach (Bach)', emo: '🐟', x, y, bx: best[0], by: best[1] }; })(),
+  tunnel: (() => { const t = roads.filter(r => r.tunnel && r.code <= 3); if (!t.length) return null; const r = t.reduce((a, b) => b.pts.length > a.pts.length ? b : a);
+    const p = r.pts[0]; const [x, y] = snap(p[0], p[1]); return { name: 'Achraintunnel', emo: '🚇', x, y, bx: p[0], by: p[1] }; })(),
+};
+
+/* ---------------- Wissenstafeln (Geschichte) ---------------- */
+const WP = 'Quelle: Wikipedia, Artikel „Schwarzach (Vorarlberg)“';
+const TAFELN = [
+  { ort: 'gemeindeamt', titel: 'Schon über 775 Jahre alt!', text: 'Im Jahr <b>1249</b> wird Schwarzach zum ersten Mal in einem Brief von Papst Innozenz IV. erwähnt. Damals schrieb man den Namen „<b>Swarzahe</b>“.', q: WP },
+  { ort: 'kirche', titel: 'Ein Turm wie ein Riese', text: 'Die Pfarrkirche St. Sebastian wurde <b>1901 bis 1905</b> aus Sandstein gebaut. Ihr Turm ist <b>64 Meter</b> hoch, einer der höchsten Kirchtürme in ganz Vorarlberg!', q: 'Quelle: Wikipedia, „Pfarrkirche Schwarzach (Vorarlberg)“' },
+  { ort: 'dorfplatz', titel: 'Preis fürs Dorfzentrum', text: 'Für das neue Dorfzentrum bekam Schwarzach <b>2010</b> den <b>Europäischen Dorferneuerungspreis</b>. Hier steht im Advent auch der große Weihnachtsbaum.', q: WP + ' · Schwarzach-Post Nov. 2026' },
+  { ort: 'bach', titel: 'Drei Fische im Wappen', text: 'Das Gemeindewappen von Schwarzach zeigt seit <b>1928</b> drei silberne <b>Barsche</b>. Der Bach Schwarzach war jahrhundertelang eine Grenze.', q: WP },
+  { ort: 'bahnhof', titel: 'Mit der S-Bahn nach Bregenz', text: 'Vom Bahnhof Schwarzach fährt die <b>S1</b> durchs Rheintal: nach Norden bis Bregenz und Lindau, nach Süden bis Bludenz.', q: 'Quelle: Wikipedia, „Schwarzach in Vorarlberg railway station“' },
+  { ort: 'spar', titel: 'Die „Schlifar“', text: 'Früher machten viele Leute in Schwarzach <b>Wetzsteine</b> zum Schärfen von Sensen und Messern. Die Handwerker hießen „<b>Schlifar</b>“.', q: WP },
+  { ort: 'tunnel', titel: 'Ab in den Berg', text: 'Seit <b>2009</b> fahren die Autos der Bregenzerwaldstraße durch den <b>Achraintunnel</b>, statt sich durchs Dorf zu schlängeln.', q: WP },
+  { ort: 'rieger', titel: 'Hier wachsen Orgeln', text: 'Seit <b>1946</b> baut die Firma <b>Rieger Orgelbau</b> in Schwarzach riesige Kirchenorgeln, die in der ganzen Welt spielen.', q: WP },
+  { ort: 'schule', titel: 'Erste Schule 1774', text: 'Schon <b>1774</b> wurde in Schwarzach eine Volksschule gegründet. <b>1787</b> bekam sie ihr eigenes Schulhaus.', q: WP },
+  { ort: 'buecherei', titel: 'Ausstellung 1869', text: '<b>1869</b> fand in Schwarzach die <b>erste Vorarlberger Industrieausstellung</b> statt. Ganz schön modern für ein Dorf!', q: WP },
+].filter(t => ORTE[t.ort]).map(t => ({ ...t, x: ORTE[t.ort].x + 14, y: ORTE[t.ort].y + 10, gefunden: false }));
+
+/* ---------------- Aufträge ---------------- */
+const AUFTRAEGE = [
+  { id: 'pizza', titel: 'Der Bürgermeister hat Hunger', emo: '🍕',
+    schritte: [
+      { ort: 'gemeindeamt', sag: ['🧑‍💼', 'Im Gemeindeamt', 'Der Bürgermeister sitzt seit dem Morgen in Sitzungen und sein Bauch knurrt laut. <b>„Holst du mir bitte eine Pizza vom Gorani? Mit extra viel Käse!“</b>'] },
+      { ort: 'gorani', hol: '🍕', sag: ['🍕', 'Pizza Gorani', 'Frisch aus dem Ofen! Die Pizza ist heiß, also flitz schnell zurück zum Gemeindeamt.'] },
+      { ort: 'gemeindeamt', gib: '🍕', sag: ['🧑‍💼', 'Mahlzeit!', '<b>„Mmmh, danke! Jetzt kann ich wieder denken.“</b> Der Bürgermeister gibt dir ein feierliches High five.'] },
+    ] },
+  { id: 'leberkaes', titel: 'Leberkäs-Alarm auf der Baustelle', emo: '🚧',
+    schritte: [
+      { ort: 'baustelle', sag: ['👷', 'Baustelle', 'Auf der Unteren Staudachstraße ist gerade gesperrt, weil gebaut wird. <b>„Wir haben Mordshunger! Bringst du uns Leberkässemmeln? Zwei vom Spar und zwei vom Sutterlüty, bitte!“</b>'] },
+      { ort: ['spar', 'sutter'], hol: '🥪', sag: ['🥪', 'Leberkässemmeln', 'Zwei warme Leberkässemmeln eingepackt. Fehlt noch das andere Geschäft!'] },
+      { ort: 'baustelle', gib: '🥪', sag: ['👷', 'Brotzeit!', '<b>„Juhuu, Brotzeit!“</b> Die Bauarbeiter klatschen dich alle ab. Vier High fives auf einmal!'], bonus: 4 },
+    ] },
+  { id: 'lichter', titel: 'Lichter für den Weihnachtsbaum', emo: '🎄',
+    schritte: [
+      { ort: 'dorfplatz', sag: ['🎄', 'Am Dorfplatz', 'Bald wird der große Weihnachtsbaum am Dorfplatz beleuchtet, und dann ist am Parkplatz beim Gemeindesaal Weihnachtsmarkt. Aber die Lichterkette fehlt! <b>Hol sie vom Bauhof am Gleisweg.</b>'] },
+      { ort: 'bauhof', hol: '💡', sag: ['🧰', 'Bauhof', 'Hier ist die Lichterkette, ganz schön lang! Ab zum Dorfplatz damit.'] },
+      { ort: 'dorfplatz', gib: '💡', sag: ['✨', 'Es leuchtet!', 'Der Baum strahlt in allen Farben. Die Leute am Dorfplatz jubeln!'] },
+    ] },
+  { id: 'buch', titel: 'Bücher für die Mittelschule', emo: '📚',
+    schritte: [
+      { ort: 'schule', sag: ['🧑‍🏫', 'Mittelschule', 'Beim Schnuppervormittag kommen die Kinder aus der Volksschule zu Besuch. <b>„Holst du uns Lesebücher aus der Bücherei?“</b>'] },
+      { ort: 'buecherei', hol: '📚', sag: ['📚', 'Bücherei', 'Ein Stapel Bücher, gut festhalten beim Scooterfahren!'] },
+      { ort: 'schule', gib: '📚', sag: ['🧑‍🏫', 'Danke!', 'Die Kinder stürzen sich auf die Bücher. Du bist der beste Bücherbote von Schwarzach!'] },
+    ] },
+].filter(a => a.schritte.every(s => [].concat(s.ort).every(o => ORTE[o])));
+
+/* ---------------- Spielzustand ---------------- */
+let state = {
+  hi5: 0, wissen: 0, fertig: [],
+};
+try { const s = JSON.parse(localStorage.getItem('schwarzach-flitzer') || 'null'); if (s) state = { ...state, ...s }; } catch (e) {}
+function save() { try { localStorage.setItem('schwarzach-flitzer', JSON.stringify(state)); } catch (e) {} }
+for (const t of TAFELN) if ((state.tafeln || []).includes(t.titel)) t.gefunden = true;
+
+const start0 = (() => { const o = ORTE.dorfplatz || { x: 0, y: 0 }; // ein paar Schritte neben dem Dorfplatz starten
+  let best = null; for (const n of walkNodes) { const d = dist(n.x, n.y, o.x, o.y); if (d > 110 && d < 200 && (!best || n.w > best.w)) best = n; } return best || o; })();
+const P = { x: start0.x, y: start0.y, dir: Math.PI / 2, vx: 0, vy: 0, speed: 0, scooter: null, walk: 0, tragen: null };
+let auftrag = null; // { a, schritt, erledigt:Set }
+let cam = { x: P.x, y: P.y, z: 1 };
+
+/* ---------------- Figuren ---------------- */
+const SHIRTS = ['#ff5fa2', '#36b6f0', '#ffcf3f', '#5cbf4f', '#c77dff', '#ff9f43', '#ff6b6b', '#2ec4b6'];
+const HAIR = ['#3b2a20', '#7a4e2d', '#f2c14e', '#d9534f', '#222', '#a0a0a0', '#e8a87c'];
+const SKIN = ['#f5d0b0', '#e8b896', '#c98e6a', '#8d5a3b', '#f7dcc4'];
+const CARCOL = ['#ff5fa2', '#36b6f0', '#ffcf3f', '#5cbf4f', '#ff9f43', '#c77dff', '#ffffff', '#2ec4b6', '#ff6b6b'];
+
+function nodeNear(nodes, x, y, rmin, rmax) {
+  for (let t = 0; t < 30; t++) { const n = pick(nodes); const d = dist(n.x, n.y, x, y); if (d > rmin && d < rmax) return n; }
+  return null;
+}
+const peds = [], cars = [], scooters = [];
+function newPed(n) {
+  const nb = pick(n.nb);
+  return { x: n.x, y: n.y, from: n, to: nb, side: Math.random() < .5 ? 1 : -1, sp: rnd(18, 32), shirt: pick(SHIRTS), hair: pick(HAIR), skin: pick(SKIN), happy: 0, cool: 0, walk: rnd(0, 6), dir: 0, wait: 0 };
+}
+function newCar(n) {
+  const nb = pick(n.nb);
+  return { x: n.x, y: n.y, from: n, to: nb, sp: 0, max: n.main ? rnd(150, 190) : rnd(90, 120), col: pick(CARCOL), dir: 0, honk: 0, kind: Math.random() < .12 ? 'bus' : 'auto' };
+}
+// Scooter überall im Dorf (inflationär!)
+function streuScooter() {
+  scooters.length = 0;
+  const N = Math.min(260, Math.floor(walkNodes.length / 6));
+  for (let i = 0; i < N; i++) {
+    const n = pick(walkNodes); const a = Math.random() * Math.PI * 2; const r = n.w / 2 + rnd(4, 12);
+    let x = n.x + Math.cos(a) * r, y = n.y + Math.sin(a) * r;
+    if (blocked(x, y)) { x = n.x; y = n.y; }
+    scooters.push({ x, y, dir: rnd(0, Math.PI * 2), col: pick(['#2ec4b6', '#ff5fa2', '#ffcf3f', '#36b6f0', '#5cbf4f']), umgefallen: Math.random() < .3, frei: true });
+  }
+}
+
+/* ---------------- Eingabe ---------------- */
+const keys = {};
+addEventListener('keydown', e => {
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+  keys[e.key.toLowerCase()] = true;
+  if (e.repeat) return;
+  if (e.key === ' ' || e.key === 'Enter' || e.key === 'e') aktion();
+  if (e.key.toLowerCase() === 'm') toggleKarte();
+  if (e.key === 'Escape') { if (gkOn) toggleKarte(); }
+});
+addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
+cv.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse') return;
+  if (joy.id === null && e.clientX < W * 0.65) { joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY; joy.x = 0; joy.y = 0; }
+});
+addEventListener('pointermove', e => {
+  if (e.pointerId !== joy.id) return;
+  let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy; const l = Math.hypot(dx, dy), m = 60;
+  if (l > m) { joy.ox += dx * (1 - m / l); joy.oy += dy * (1 - m / l); dx *= m / l; dy *= m / l; }
+  joy.x = dx / m; joy.y = dy / m;
+});
+const joyEnd = e => { if (e.pointerId === joy.id) { joy.id = null; joy.x = joy.y = 0; } };
+addEventListener('pointerup', joyEnd); addEventListener('pointercancel', joyEnd);
+document.getElementById('aktion').addEventListener('pointerdown', e => { e.preventDefault(); aktion(); });
+function eingabe() {
+  let x = 0, y = 0;
+  if (keys['arrowleft'] || keys['a']) x -= 1; if (keys['arrowright'] || keys['d']) x += 1;
+  if (keys['arrowup'] || keys['w']) y -= 1; if (keys['arrowdown'] || keys['s']) y += 1;
+  if (joy.id !== null) { x = joy.x; y = joy.y; }
+  return [clamp(x, -1, 1), clamp(y, -1, 1)];
+}
+
+/* ---------------- Ton ---------------- */
+let AC = null, laut = true; try { laut = localStorage.getItem('schwarzach-ton') !== 'aus'; } catch (e) {}
+function ac() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (AC && AC.state === 'suspended') AC.resume(); return AC; }
+function ton(f, d = .12, typ = 'square', vol = .06, slide = 0, when = 0) {
+  if (!laut || !ac()) return; const t = AC.currentTime + when;
+  const o = AC.createOscillator(), g = AC.createGain(); o.type = typ; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + d);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(g).connect(AC.destination); o.start(t); o.stop(t + d + .02);
+}
+function klatsch() {
+  if (!laut || !ac()) return; const t = AC.currentTime, n = AC.sampleRate * .12, b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 4);
+  const s = AC.createBufferSource(), g = AC.createGain(), fl = AC.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = 1800; fl.Q.value = .8;
+  s.buffer = b; g.gain.value = .5; s.connect(fl).connect(g).connect(AC.destination); s.start(t);
+  ton(880, .1, 'triangle', .05, 1320, .03);
+}
+const jingle = () => { [523, 659, 784, 1047].forEach((f, i) => ton(f, .16, 'triangle', .07, 0, i * .09)); };
+const hupe = () => { ton(392, .18, 'square', .03); ton(494, .18, 'square', .03, 0, .02); };
+const plopp = () => ton(300, .1, 'sine', .08, 700);
+
+/* ---------------- Boden-Kacheln (gecacht) ---------------- */
+const CH = 512, chunks = new Map(); let chunkTick = 0;
+const chunkLists = new Map();
+function chunkKey(i, j) { return i + ':' + j; }
+function addToChunks(bb, item, type) {
+  for (let j = Math.floor(bb[1] / CH); j <= Math.floor(bb[3] / CH); j++) for (let i = Math.floor(bb[0] / CH); i <= Math.floor(bb[2] / CH); i++) {
+    const k = chunkKey(i, j); let l = chunkLists.get(k); if (!l) chunkLists.set(k, l = { a: [], w: [], r: [], rail: [] }); l[type].push(item);
+  }
+}
+function bbOf(f, pad = 0) { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (let i = 0; i < f.length; i += 2) { x0 = Math.min(x0, f[i]); x1 = Math.max(x1, f[i]); y0 = Math.min(y0, f[i + 1]); y1 = Math.max(y1, f[i + 1]); } return [x0 - pad, y0 - pad, x1 + pad, y1 + pad]; }
+areas.forEach(a => addToChunks([a.x0, a.y0, a.x1, a.y1], a, 'a'));
+waters.forEach(w => addToChunks(bbOf(w.f, w.w), w, 'w'));
+roads.forEach(r => { if (!r.tunnel) addToChunks(bbOf(r.pts.flat(), r.w + GEHSTEIG * 2), r, 'r'); });
+K.rail.forEach(f => addToChunks(bbOf(f, 12), f, 'rail'));
+
+function polyPath(g, f) { g.beginPath(); g.moveTo(f[0], f[1]); for (let i = 2; i < f.length; i += 2) g.lineTo(f[i], f[i + 1]); g.closePath(); }
+function linePath(g, f) { g.beginPath(); g.moveTo(f[0], f[1]); for (let i = 2; i < f.length; i += 2) g.lineTo(f[i], f[i + 1]); }
+function renderChunk(i, j) {
+  const c = document.createElement('canvas'); c.width = CH; c.height = CH; const g = c.getContext('2d');
+  g.translate(-i * CH, -j * CH);
+  // Wiese mit Muster
+  g.fillStyle = '#9be07a'; g.fillRect(i * CH, j * CH, CH, CH);
+  for (let t = 0; t < 70; t++) { const h = hash(i * 7919 + j * 104729 + t); g.fillStyle = h < .5 ? '#8fd66d' : '#a9e88a';
+    g.beginPath(); g.arc(i * CH + hash(t * 31 + i) * CH, j * CH + hash(t * 17 + j * 3) * CH, 2 + h * 3, 0, 7); g.fill(); }
+  const L = chunkLists.get(chunkKey(i, j)) || { a: [], w: [], r: [], rail: [] };
+  for (const a of L.a) {
+    g.fillStyle = AREA_COL[a.c] || '#b5e39a'; polyPath(g, a.f); g.fill();
+    if (a.c === 'w') { // Bäume
+      g.save(); polyPath(g, a.f); g.clip();
+      for (let y = Math.floor(a.y0 / 26) * 26; y < a.y1; y += 26) for (let x = Math.floor(a.x0 / 26) * 26; x < a.x1; x += 26) {
+        if (x < i * CH - 30 || x > i * CH + CH + 30 || y < j * CH - 30 || y > j * CH + CH + 30) continue;
+        const h = hash(x * 13 + y * 7); const px = x + h * 12, py = y + hash(x + y * 3) * 12;
+        g.fillStyle = '#3f8f45'; g.beginPath(); g.arc(px + 2, py + 3, 11, 0, 7); g.fill();
+        g.fillStyle = h < .5 ? '#4fae4f' : '#5cbf5a'; g.beginPath(); g.arc(px, py, 11, 0, 7); g.fill();
+        g.fillStyle = '#7bd36f'; g.beginPath(); g.arc(px - 3, py - 3, 4, 0, 7); g.fill();
+      }
+      g.restore();
+    } else if (a.c === 'f' || a.c === 'm') { g.save(); polyPath(g, a.f); g.clip(); g.strokeStyle = a.c === 'f' ? '#c9e386' : '#a9df7c'; g.lineWidth = 3;
+      for (let x = Math.floor((i * CH - 600) / 18) * 18; x < i * CH + CH + 600; x += 18) { g.beginPath(); g.moveTo(x, j * CH); g.lineTo(x + 300, j * CH + CH); g.stroke(); } g.restore(); }
+    else if (a.c === 'k') { g.save(); polyPath(g, a.f); g.clip(); g.fillStyle = '#d8d3c8';
+      for (let y = Math.floor(a.y0 / 16) * 16; y < a.y1; y += 16) for (let x = Math.floor(a.x0 / 12) * 12; x < a.x1; x += 12) g.fillRect(x, y, 5, 8); g.restore(); }
+    else if (a.c === 's') { g.strokeStyle = '#ffffffaa'; g.lineWidth = 3; polyPath(g, a.f); g.stroke(); }
+    else if (a.c === 'P') { g.strokeStyle = '#cfc8bb'; g.lineWidth = 2; polyPath(g, a.f); g.stroke(); }
+  }
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  for (const w of L.w) { g.strokeStyle = '#3aa6e0'; g.lineWidth = w.w + 6; linePath(g, w.f); g.stroke(); g.strokeStyle = '#5ec8f5'; g.lineWidth = w.w; linePath(g, w.f); g.stroke();
+    g.strokeStyle = '#a5e4ff'; g.lineWidth = Math.max(1, w.w / 5); g.setLineDash([6, 14]); linePath(g, w.f); g.stroke(); g.setLineDash([]); }
+  for (const f of L.rail) { g.strokeStyle = '#8f8576'; g.lineWidth = 16; linePath(g, f); g.stroke(); g.strokeStyle = '#6b5a48'; g.lineWidth = 12; g.setLineDash([3, 6]); linePath(g, f); g.stroke(); g.setLineDash([]);
+    g.strokeStyle = '#d9d9e3'; g.lineWidth = 2; for (const o of [-3.5, 3.5]) { g.save(); g.translate(o * .7, o * .7); linePath(g, f); g.stroke(); g.restore(); } }
+  const rs = L.r;
+  // Ränder (Gehsteig) – erst alle, dann Fahrbahnen
+  for (const r of rs) { if (r.code >= 8) continue; g.strokeStyle = r.code <= 6 ? '#efe7d6' : '#f5e2b8'; g.lineWidth = r.w + (r.code <= 7 ? GEHSTEIG * 1.6 : 4); linePath(g, r.pts.flat()); g.stroke(); }
+  for (const r of rs) {
+    const f = r.pts.flat();
+    if (r.code >= 8) { g.strokeStyle = r.code === 9 ? '#f7a6a6' : r.code === 10 ? '#d8b98a' : '#f3dfb2'; g.lineWidth = r.w; g.setLineDash(r.code === 10 ? [8, 5] : []); linePath(g, f); g.stroke(); g.setLineDash([]); continue; }
+    g.strokeStyle = r.code === 7 ? '#f9e9c8' : r.code <= 3 ? '#6d7486' : '#7d8496'; g.lineWidth = r.w; linePath(g, f); g.stroke();
+  }
+  for (const r of rs) { if (r.code > 3) continue; g.strokeStyle = '#fff6c2'; g.lineWidth = 2; g.setLineDash([14, 14]); linePath(g, r.pts.flat()); g.stroke(); g.setLineDash([]); }
+  return c;
+}
+function getChunk(i, j, allowRender) {
+  const k = chunkKey(i, j); let c = chunks.get(k);
+  if (c) { c.t = chunkTick; return c.cv; }
+  if (!allowRender) return null;
+  c = { cv: renderChunk(i, j), t: chunkTick }; chunks.set(k, c);
+  if (chunks.size > 60) { let old = null; for (const [kk, v] of chunks) if (!old || v.t < old[1].t) old = [kk, v]; chunks.delete(old[0]); }
+  return c.cv;
+}
+
+/* ---------------- Mini-Karte ---------------- */
+function renderUebersicht(size) {
+  const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d');
+  const s = size / Math.max(BX1 - BX0, BY1 - BY0);
+  g.fillStyle = '#9be07a'; g.fillRect(0, 0, size, size);
+  g.save(); g.scale(s, s); g.translate(-BX0, -BY0);
+  for (const a of areas) { g.fillStyle = AREA_COL[a.c] || '#b5e39a'; polyPath(g, a.f); g.fill(); }
+  g.lineCap = 'round';
+  for (const w of waters) { g.strokeStyle = '#3aa6e0'; g.lineWidth = Math.max(w.w, 2 / s); linePath(g, w.f); g.stroke(); }
+  for (const r of roads) { if (r.tunnel || r.code >= 8) continue; g.strokeStyle = r.code <= 3 ? '#fff6c2' : '#ffffff'; g.lineWidth = Math.max(r.w, (r.code <= 3 ? 3 : 1.6) / s); linePath(g, r.pts.flat()); g.stroke(); }
+  for (const f of K.rail) { g.strokeStyle = '#6b5a48'; g.lineWidth = 2.2 / s; linePath(g, f); g.stroke(); }
+  for (const b of buildings) { g.fillStyle = b.roof; polyPath(g, b.f); g.fill(); }
+  if (K.boundary) { g.strokeStyle = '#c2306f'; g.lineWidth = 2.5 / s; g.setLineDash([8 / s, 6 / s]); for (const f of K.boundary) { linePath(g, f); g.stroke(); } g.setLineDash([]); }
+  g.restore();
+  return { c, s };
+}
+const mini = renderUebersicht(512);
+let gkOn = false;
+function toggleKarte() {
+  gkOn = !gkOn; document.getElementById('grosseKarte').classList.toggle('on', gkOn);
+  if (gkOn) zeichneGrosseKarte();
+}
+let gross = null;
+function zeichneGrosseKarte() {
+  if (!gross) gross = renderUebersicht(900);
+  const g = document.getElementById('gk').getContext('2d'); g.drawImage(gross.c, 0, 0);
+  const tp = (x, y) => [(x - BX0) * gross.s, (y - BY0) * gross.s];
+  g.font = 'bold 15px "Comic Sans MS", sans-serif'; g.textAlign = 'center';
+  const belegt = [];
+  for (const k in ORTE) { const o = ORTE[k]; if (!o) continue; const [x, y] = tp(o.x, o.y);
+    g.font = '22px sans-serif'; g.fillText(o.emo, x, y + 7); g.font = 'bold 13px "Comic Sans MS", sans-serif';
+    const tw = g.measureText(o.name).width; let ly = y + 24; for (let t = 0; t < 6 && belegt.some(([bx, by, bw]) => Math.abs(by - ly) < 15 && Math.abs(bx - x) < (bw + tw) / 2); t++) ly += 15;
+    belegt.push([x, ly, tw]); g.lineWidth = 4; g.strokeStyle = '#fff'; g.strokeText(o.name, x, ly); g.fillStyle = '#23324a'; g.fillText(o.name, x, ly); }
+  for (const t of TAFELN) if (!t.gefunden) { const [x, y] = tp(t.x, t.y); g.font = '18px sans-serif'; g.fillText('📜', x + 16, y - 6); }
+  const z = ziel(); if (z) { const [x, y] = tp(z.x, z.y); g.strokeStyle = '#ff5fa2'; g.lineWidth = 5; g.beginPath(); g.arc(x, y, 18, 0, 7); g.stroke(); }
+  const [px, py] = tp(P.x, P.y); g.fillStyle = '#ff5fa2'; g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.arc(px, py, 9, 0, 7); g.fill(); g.stroke();
+  g.font = 'bold 14px "Comic Sans MS", sans-serif'; g.fillStyle = '#23324a'; g.textAlign = 'left'; g.fillText('Schwarzach · M oder tippen zum Schließen', 14, 886);
+}
+document.getElementById('grosseKarte').addEventListener('pointerdown', toggleKarte);
+
+/* ---------------- Auftrags-Logik ---------------- */
+function ziel() {
+  if (!auftrag) return null;
+  const s = auftrag.a.schritte[auftrag.schritt];
+  const os = [].concat(s.ort).filter(o => !auftrag.erledigt.has(o));
+  let best = null; for (const o of os) { const p = ORTE[o]; if (!best || dist(P.x, P.y, p.x, p.y) < dist(P.x, P.y, best.x, best.y)) best = p; }
+  return best;
+}
+function naechsterAuftrag() {
+  return AUFTRAEGE.find(a => !state.fertig.includes(a.id)) || null;
+}
+function auftragsGeber() { // Sterne an Orten, wo ein Auftrag startet
+  if (auftrag) return [];
+  const a = naechsterAuftrag(); return a ? [{ a, o: ORTE[a.schritte[0].ort] }] : [];
+}
+let dialogOffen = false, dialogWeiter = null;
+function zeigeDialog(emo, titel, text, knopf, weiter) {
+  dialogOffen = true; dialogWeiter = weiter || null;
+  document.getElementById('dEmo').textContent = emo; document.getElementById('dTitel').textContent = titel;
+  document.getElementById('dText').innerHTML = (Array.isArray(text) ? text : [text]).map(t => '<p>' + t + '</p>').join('');
+  document.getElementById('dOk').textContent = knopf || 'Okay!';
+  document.getElementById('dialog').classList.add('on');
+}
+function schliesseDialog() {
+  if (!dialogOffen) return; dialogOffen = false; document.getElementById('dialog').classList.remove('on');
+  const w = dialogWeiter; dialogWeiter = null; if (w) w();
+}
+document.getElementById('dOk').addEventListener('click', schliesseDialog);
+function pruefeAuftrag() {
+  if (dialogOffen) return;
+  // Auftrag annehmen
+  for (const { a, o } of auftragsGeber()) {
+    if (dist(P.x, P.y, o.x, o.y) < 34) {
+      const s = a.schritte[0];
+      auftrag = { a, schritt: 0, erledigt: new Set() };
+      jingle();
+      zeigeDialog(s.sag[0], s.sag[1], s.sag[2], 'Mach ich!', () => { auftrag.schritt = 1; hudAuftrag(); });
+      return;
+    }
+  }
+  if (!auftrag || auftrag.schritt === 0) return;
+  const s = auftrag.a.schritte[auftrag.schritt];
+  const z = ziel(); if (!z || dist(P.x, P.y, z.x, z.y) > 34) return;
+  const okey = Object.keys(ORTE).find(k => ORTE[k] === z);
+  if (s.hol) {
+    auftrag.erledigt.add(okey); P.tragen = s.hol; plopp();
+    const offen = [].concat(s.ort).filter(o => !auftrag.erledigt.has(o));
+    if (offen.length) { zeigeDialog(s.sag[0], z.name, s.sag[2].replace('dem anderen Geschäft', ORTE[offen[0]].name), 'Weiter!'); hudAuftrag(); return; }
+    zeigeDialog(s.sag[0], s.sag[1], s.sag[2].replace('Fehlt noch das andere Geschäft!', 'Jetzt hast du alle beisammen. Ab zur Baustelle!'), 'Los!', () => { auftrag.schritt++; auftrag.erledigt = new Set(); hudAuftrag(); });
+  } else if (s.gib) {
+    P.tragen = null; jingle(); state.hi5 += 1 + (s.bonus || 0); state.fertig.push(auftrag.a.id); save(); hudPunkte();
+    const id = auftrag.a.id;
+    zeigeDialog(s.sag[0], s.sag[1], [s.sag[2], '⭐ Auftrag erledigt! ' + state.fertig.length + ' von ' + AUFTRAEGE.length], 'Juhu!', () => {
+      auftrag = null; hudAuftrag(); toast('Auftrag geschafft! ⭐');
+      if (id === 'lichter') baumLeuchtet = true;
+      if (state.fertig.length === AUFTRAEGE.length) setTimeout(() => zeigeDialog('🏆', 'Held von Schwarzach!', ['Du hast alle Aufträge geschafft! Sammle noch alle 📜 Wissenstafeln und verteil High fives, so viele du kannst.'], 'Weiterflitzen'), 600);
+    });
+  }
+}
+let baumLeuchtet = false;
+function hudAuftrag() {
+  const el = document.getElementById('auftrag');
+  if (!auftrag) { const a = naechsterAuftrag();
+    if (!a) { el.innerHTML = '🏆 <b>Alle Aufträge geschafft!</b><div class="ziel">Finde noch alle 📜 Wissenstafeln.</div>'; return; }
+    el.innerHTML = '⭐ <b>Neuer Auftrag</b><div class="ziel">Komm zum Stern: ' + ORTE[a.schritte[0].ort].emo + ' ' + ORTE[a.schritte[0].ort].name + '</div>'; return; }
+  const s = auftrag.a.schritte[auftrag.schritt]; const z = ziel();
+  let was = s.hol ? 'Hol ' + s.hol + ' bei ' : s.gib ? 'Bring ' + s.gib + ' zu: ' : '';
+  if (s.hol && [].concat(s.ort).length > 1) was = 'Hol ' + s.hol + ' bei ' + [].concat(s.ort).map(o => (auftrag.erledigt.has(o) ? '✅ ' : '') + ORTE[o].name).join(' und ') + ' · nächstes: ';
+  el.innerHTML = auftrag.a.emo + ' <b>' + auftrag.a.titel + '</b><div class="ziel">' + was + (z ? z.emo + ' ' + z.name : '') + '</div>';
+}
+function hudPunkte() {
+  document.getElementById('hi5').textContent = '✋ ' + state.hi5;
+  document.getElementById('wissen').textContent = '📜 ' + TAFELN.filter(t => t.gefunden).length + '/' + TAFELN.length;
+}
+let toastT = 0;
+function toast(t) { const el = document.getElementById('toast'); el.textContent = t; el.classList.add('on'); toastT = 1.6; }
+
+/* ---------------- Aktion (Scooter auf/ab) ---------------- */
+function naechsterScooter() { let b = null, bd = 30; for (const s of scooters) { if (!s.frei) continue; const d = dist(P.x, P.y, s.x, s.y); if (d < bd) { bd = d; b = s; } } return b; }
+function aktion() {
+  if (!laeuft) return;
+  if (dialogOffen) { schliesseDialog(); return; }
+  if (gkOn) { toggleKarte(); return; }
+  if (P.scooter) { // absteigen
+    const s = P.scooter; s.frei = true; s.x = P.x; s.y = P.y; s.dir = P.dir; s.umgefallen = false; P.scooter = null; P.speed = 0; ton(500, .12, 'triangle', .06, 250); return;
+  }
+  const s = naechsterScooter();
+  if (s) { s.frei = false; P.scooter = s; P.x = s.x; P.y = s.y; P.dir = s.dir; ton(400, .15, 'triangle', .06, 900); toast('Los, flitzen! 🛴'); }
+}
+
+/* ---------------- Simulation ---------------- */
+let hiCombo = 0, hiComboT = 0;
+const funken = [];
+function highFive(p) {
+  p.happy = 1.4; p.cool = 6; state.hi5++; save(); hudPunkte(); klatsch();
+  hiCombo = hiComboT > 0 ? hiCombo + 1 : 1; hiComboT = 2.2;
+  toast(hiCombo >= 4 ? 'MEGA-FIVE! ✋✋✋' : hiCombo === 3 ? 'Dreifach-Five! ✋✋' : hiCombo === 2 ? 'Doppel-Five! ✋✋' : 'HIGH FIVE! ✋');
+  for (let i = 0; i < 12; i++) { const a = Math.random() * 7; funken.push({ x: (p.x + P.x) / 2, y: (p.y + P.y) / 2, vx: Math.cos(a) * rnd(40, 120), vy: Math.sin(a) * rnd(40, 120), t: rnd(.4, .8), c: pick(['#ffcf3f', '#ff5fa2', '#36b6f0', '#fff']), s: pick(['✦', '★', '♥']) }); }
+}
+function bewege(e, nx, ny) { // Achsenweise mit Gebäude-Kollision
+  let moved = false;
+  if (!blocked(nx, e.y)) { e.x = nx; moved = true; }
+  if (!blocked(e.x, ny)) { e.y = ny; moved = true; }
+  return moved;
+}
+function folge(e, nodes, dt, offset) {
+  const tx = e.to.x, ty = e.to.y;
+  const dx = tx - e.from.x, dy = ty - e.from.y, l = Math.hypot(dx, dy) || 1;
+  const nxp = -dy / l, nyp = dx / l; // rechts
+  const zx = tx + nxp * offset, zy = ty + nyp * offset;
+  const ddx = zx - e.x, ddy = zy - e.y, dd = Math.hypot(ddx, ddy);
+  const step = e.sp * dt;
+  if (dd <= step + 1) {
+    e.x = zx; e.y = zy;
+    const opts = e.to.nb.filter(n => n !== e.from);
+    const nx = opts.length ? pick(opts) : e.from; e.from = e.to; e.to = nx;
+  } else { e.x += ddx / dd * step; e.y += ddy / dd * step; e.dir = Math.atan2(ddy, ddx); }
+}
+function update(dt) {
+  // Spieler: oben = vorwärts, unten = bremsen/zurück, links/rechts = drehen (aus Sicht der Figur)
+  const [ix, iy] = eingabe(); const gas = -iy, lenk = ix;
+  if (P.scooter) {
+    const max = 230;
+    // je schneller, desto ruhiger lenkt der Scooter; im Stand dreht er sich trotzdem
+    const dreh = 3.4 - Math.min(Math.abs(P.speed) / max, 1) * 1.2;
+    P.dir += lenk * dreh * dt * (P.speed < -5 ? -1 : 1);
+    if (gas > .1) P.speed = Math.min(max * gas, P.speed + 240 * dt);
+    else if (gas < -.1) P.speed = Math.max(-60, P.speed - 380 * dt);
+    else P.speed = P.speed > 0 ? Math.max(0, P.speed - 160 * dt) : Math.min(0, P.speed + 160 * dt);
+    const nx = P.x + Math.cos(P.dir) * P.speed * dt, ny = P.y + Math.sin(P.dir) * P.speed * dt;
+    if (!bewege(P, nx, ny)) { P.speed *= -.3; ton(150, .08, 'sine', .05); }
+    else if (blocked(nx, ny)) P.speed *= .9;
+    P.scooter.x = P.x; P.scooter.y = P.y; P.scooter.dir = P.dir;
+    P.walk += Math.abs(P.speed) * dt * .02;
+  } else {
+    P.dir += lenk * 3.6 * dt;
+    const sp = gas > .1 ? 80 * gas : gas < -.1 ? 40 * gas : 0;
+    if (sp) { bewege(P, P.x + Math.cos(P.dir) * sp * dt, P.y + Math.sin(P.dir) * sp * dt); P.walk += dt * 10 * Math.abs(gas); }
+    else if (Math.abs(lenk) > .1) P.walk += dt * 5;
+    P.speed = sp;
+  }
+  // Kamera: zoomt beim Flitzen etwas raus (wie in klassischen Top-Down-Spielen)
+  const baseZ = Math.min(W, H) < 600 ? 1.0 : 1.25;
+  const zz = baseZ * (P.scooter ? 1 - Math.min(Math.abs(P.speed) / 230, 1) * .22 : 1);
+  cam.z += (zz - cam.z) * Math.min(1, dt * 2);
+  const lead = P.scooter ? .45 : .15;
+  cam.x += (P.x + Math.cos(P.dir) * P.speed * lead - cam.x) * Math.min(1, dt * 4);
+  cam.y += (P.y + Math.sin(P.dir) * P.speed * lead - cam.y) * Math.min(1, dt * 4);
+
+  // Fußgänger & Autos um den Spieler herum am Leben halten
+  const R = Math.max(W, H) / cam.z * .8 + 300;
+  for (let i = peds.length - 1; i >= 0; i--) if (dist(peds[i].x, peds[i].y, P.x, P.y) > R + 400) peds.splice(i, 1);
+  for (let i = cars.length - 1; i >= 0; i--) if (dist(cars[i].x, cars[i].y, P.x, P.y) > R + 600) cars.splice(i, 1);
+  while (peds.length < 70) { const n = nodeNear(walkNodes, P.x, P.y, peds.length < 35 ? 70 : R * .6, R + 300); if (!n) break; peds.push(newPed(n)); }
+  while (cars.length < 16) { const n = nodeNear(carNodes, P.x, P.y, R * .7, R + 500); if (!n) break; cars.push(newCar(n)); }
+
+  for (const p of peds) {
+    p.cool -= dt; p.happy = Math.max(0, p.happy - dt);
+    if (p.wait > 0) { p.wait -= dt; } else {
+      if (p.happy <= 0) folge(p, walkNodes, dt, (Math.min(p.from.w, p.to.w) / 2 + (Math.min(p.from.w, p.to.w) > 20 ? GEHSTEIG * .4 : 0)) * p.side);
+      if (Math.random() < dt * .02) p.wait = rnd(1, 3);
+    }
+    p.walk += dt * p.sp * .25;
+    const d = dist(p.x, p.y, P.x, P.y);
+    if (d < (P.scooter ? 26 : 22) && p.cool <= 0) highFive(p);
+  }
+  for (const c of cars) {
+    // vor einem Hindernis bremsen
+    const ax = c.x + Math.cos(c.dir) * 40, ay = c.y + Math.sin(c.dir) * 40;
+    let stop = dist(ax, ay, P.x, P.y) < 26;
+    if (!stop) for (const o of cars) if (o !== c && dist(ax, ay, o.x, o.y) < 28) { stop = true; break; }
+    if (!stop) for (const p of peds) if (dist(ax, ay, p.x, p.y) < 14) { stop = true; break; }
+    c.sp = stop ? Math.max(0, c.sp - 600 * dt) : Math.min(c.max, c.sp + 120 * dt);
+    if (stop && dist(ax, ay, P.x, P.y) < 26 && c.honk <= 0) { hupe(); c.honk = 3; }
+    c.honk -= dt;
+    folge(c, carNodes, dt, Math.min(c.from.w, c.to.w) / 4);
+  }
+  // Spieler sanft von Autos wegschubsen (niemand wird verletzt!)
+  for (const c of cars) { const d = dist(c.x, c.y, P.x, P.y); if (d < 24) { const a = Math.atan2(P.y - c.y, P.x - c.x); bewege(P, P.x + Math.cos(a) * (24 - d), P.y + Math.sin(a) * (24 - d)); if (P.scooter) P.speed *= .5; } }
+
+  hiComboT -= dt;
+  for (let i = funken.length - 1; i >= 0; i--) { const f = funken[i]; f.t -= dt; f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 60 * dt; if (f.t <= 0) funken.splice(i, 1); }
+  if (toastT > 0) { toastT -= dt; if (toastT <= 0) document.getElementById('toast').classList.remove('on'); }
+
+  // Wissenstafeln
+  for (const t of TAFELN) if (!t.gefunden && dist(P.x, P.y, t.x, t.y) < 22) {
+    t.gefunden = true; state.tafeln = TAFELN.filter(x => x.gefunden).map(x => x.titel); save(); hudPunkte(); jingle();
+    zeigeDialog('📜', t.titel, [t.text, '<span class="quelle">' + t.q + '</span>'], 'Spannend!');
+  }
+  pruefeAuftrag();
+
+  // Straßenname
+  strTick -= dt; if (strTick <= 0) { strTick = .4; const n = nearestRoadName(P.x, P.y); const el = document.getElementById('strasse'); const t = '📍 ' + (n || 'Schwarzach'); if (el.textContent !== t) el.textContent = t; }
+  const btn = document.getElementById('aktion');
+  const zeigen = !!P.scooter || !!naechsterScooter();
+  btn.classList.toggle('zeigen', zeigen); btn.innerHTML = P.scooter ? '🚶<small>absteigen</small>' : '🛴<small>aufsteigen</small>';
+}
+let strTick = 0;
+
+/* ---------------- Zeichnen ---------------- */
+let T = 0;
+function draw() {
+  cx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  cx.fillStyle = '#9be07a'; cx.fillRect(0, 0, W, H);
+  const z = cam.z;
+  cx.setTransform(DPR * z, 0, 0, DPR * z, DPR * (W / 2 - cam.x * z), DPR * (H / 2 - cam.y * z));
+  const vx0 = cam.x - W / 2 / z, vy0 = cam.y - H / 2 / z, vx1 = cam.x + W / 2 / z, vy1 = cam.y + H / 2 / z;
+  chunkTick++; let budget = 2;
+  for (let j = Math.floor(vy0 / CH); j <= Math.floor(vy1 / CH); j++) for (let i = Math.floor(vx0 / CH); i <= Math.floor(vx1 / CH); i++) {
+    const neu = !chunks.has(chunkKey(i, j));
+    const c = getChunk(i, j, budget > 0 || !laeuftSchon); if (!c) continue;
+    if (neu) budget--; // nur neu gezeichnete Kacheln zählen, sonst bleiben Lücken stehen
+    cx.drawImage(c, i * CH, j * CH, CH + .5, CH + .5);
+  }
+  const vis = (x, y, m = 60) => x > vx0 - m && x < vx1 + m && y > vy0 - m && y < vy1 + m;
+
+  // Straßennamen auf der Fahrbahn
+  cx.font = 'bold 11px "Comic Sans MS", sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+  for (const r of roads) { if (!r.name || r.code > 5 || r.tunnel) continue;
+    for (let k = 0; k < r.pts.length - 1; k++) { const [ax, ay] = r.pts[k], [bx, by] = r.pts[k + 1]; const l = Math.hypot(bx - ax, by - ay);
+      if (l < r.name.length * 7 + 20) continue; const mx = (ax + bx) / 2, my = (ay + by) / 2; if (!vis(mx, my)) continue;
+      let a = Math.atan2(by - ay, bx - ax); if (a > Math.PI / 2) a -= Math.PI; if (a < -Math.PI / 2) a += Math.PI;
+      cx.save(); cx.translate(mx, my); cx.rotate(a); cx.fillStyle = '#ffffffdd'; cx.fillText(r.name, 0, 0); cx.restore(); k += 3; } }
+
+  // Wissenstafeln
+  for (const t of TAFELN) { if (t.gefunden || !vis(t.x, t.y)) continue; const b = Math.sin(T * 4) * 2;
+    cx.fillStyle = '#7a4e2d'; cx.fillRect(t.x - 1.5, t.y - 4, 3, 10); cx.fillStyle = '#fff3c4'; cx.strokeStyle = '#7a4e2d'; cx.lineWidth = 2;
+    cx.beginPath(); cx.roundRect(t.x - 9, t.y - 18 + b, 18, 13, 3); cx.fill(); cx.stroke(); cx.font = '10px sans-serif'; cx.fillText('📜', t.x, t.y - 11 + b); }
+
+  // Ziel- und Auftragsmarker
+  const zl = ziel();
+  const marker = (o, col, emo) => { if (!vis(o.x, o.y, 80)) return; const r = 18 + Math.sin(T * 5) * 3;
+    cx.fillStyle = col + '44'; cx.beginPath(); cx.arc(o.x, o.y, r + 8, 0, 7); cx.fill(); cx.strokeStyle = col; cx.lineWidth = 4; cx.beginPath(); cx.arc(o.x, o.y, r, 0, 7); cx.stroke();
+    cx.font = '22px sans-serif'; cx.fillStyle = '#000'; cx.fillText(emo, o.x, o.y - 30 + Math.sin(T * 3) * 4); };
+  if (zl) marker(zl, '#ff5fa2', zl.emo);
+  for (const { o } of auftragsGeber()) marker(o, '#ffcf3f', '⭐');
+
+  // Scooter
+  for (const s of scooters) if (s.frei && vis(s.x, s.y)) zeichneScooter(s.x, s.y, s.umgefallen ? s.dir + 1.2 : s.dir, s.col, s.umgefallen);
+
+  // Gebäude mit "Dach-Perspektive": je weiter vom Bildmitte, desto mehr sieht man die Wände
+  const list = [];
+  const seen = new Set();
+  for (let y = gy(vy0 - 80); y <= gy(vy1 + 80); y++) for (let x = gx(vx0 - 80); x <= gx(vx1 + 80); x++) { const l = bGrid[y * GW + x]; if (l) for (const i of l) if (!seen.has(i)) { seen.add(i); const b = buildings[i]; if (b.x1 > vx0 - 80 && b.x0 < vx1 + 80 && b.y1 > vy0 - 80 && b.y0 < vy1 + 80) list.push(b); } }
+  list.sort((a, b) => dist(b.cx, b.cy, cam.x, cam.y) - dist(a.cx, a.cy, cam.x, cam.y));
+  const HC = 700 / z;
+  for (const b of list) zeichneGebaeude(b, HC);
+  // Leute, Autos und Spieler über den Häusern, damit nichts verschwindet
+  for (const p of peds) if (vis(p.x, p.y)) zeichneFigur(p.x, p.y - (p.happy > 0 ? Math.abs(Math.sin(p.happy * 9)) * 6 : 0), p.dir, p.shirt, p.hair, p.skin, p.walk, p.happy > 0);
+  for (const c of cars) if (vis(c.x, c.y, 80)) zeichneAuto(c);
+  if (P.scooter) zeichneScooter(P.x, P.y, P.dir, P.scooter.col, false);
+  zeichneFigur(P.x, P.y, P.dir, '#ff5fa2', '#3b2a20', '#f5d0b0', P.walk, false, true);
+  if (P.tragen) { cx.font = '22px sans-serif'; cx.fillText(P.tragen, P.x + 14, P.y - 22); }
+
+  // Funken
+  for (const f of funken) { cx.globalAlpha = clamp(f.t * 2, 0, 1); cx.fillStyle = f.c; cx.font = 'bold 14px sans-serif'; cx.fillText(f.s, f.x, f.y); }
+  cx.globalAlpha = 1;
+  // Ortsnamen schweben über wichtigen Orten
+  cx.font = 'bold 13px "Comic Sans MS", sans-serif';
+  const belegt = [];
+  for (const k in ORTE) { const o = ORTE[k]; if (!o || !vis(o.bx, o.by)) continue; const tw = cx.measureText(o.name).width + 30;
+    let ly = o.by - 34; for (let t = 0; t < 6 && belegt.some(([bx, by, bw]) => Math.abs(by - ly) < 24 && Math.abs(bx - o.bx) < (bw + tw) / 2); t++) ly -= 26;
+    belegt.push([o.bx, ly, tw]); cx.fillStyle = '#fffdf5ee'; cx.strokeStyle = '#23324a'; cx.lineWidth = 2; cx.beginPath(); cx.roundRect(o.bx - tw / 2, ly - 11, tw, 22, 11); cx.fill(); cx.stroke();
+    cx.fillStyle = '#23324a'; cx.fillText(o.emo + ' ' + o.name, o.bx, ly + 1); }
+  if (baumLeuchtet && ORTE.dorfplatz && vis(ORTE.dorfplatz.bx, ORTE.dorfplatz.by)) { const o = ORTE.dorfplatz; for (let i = 0; i < 14; i++) { const a = i / 14 * 7 + T; cx.fillStyle = pick(['#ffcf3f', '#ff5fa2', '#36b6f0', '#fff']); cx.beginPath(); cx.arc(o.bx + Math.cos(a) * 16, o.by - 4 + Math.sin(a) * 16, 2.5, 0, 7); cx.fill(); } }
+
+  // Bildschirm-Ebene: Zielpfeil, Minikarte, Joystick
+  cx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (zl || auftragsGeber().length) zeichnePfeil(zl || auftragsGeber()[0].o);
+  zeichneMini();
+  if (joy.id !== null) { cx.globalAlpha = .5; cx.fillStyle = '#fff'; cx.beginPath(); cx.arc(joy.ox, joy.oy, 60, 0, 7); cx.fill(); cx.fillStyle = '#ff5fa2'; cx.beginPath(); cx.arc(joy.ox + joy.x * 60, joy.oy + joy.y * 60, 26, 0, 7); cx.fill(); cx.globalAlpha = 1; }
+}
+function zeichneGebaeude(b, HC) {
+  const f = b.f, n = b.n, h = b.h;
+  const k = h / HC;
+  const rx = new Array(n), ry = new Array(n);
+  for (let i = 0; i < n; i++) { rx[i] = f[2 * i] + (f[2 * i] - cam.x) * k; ry[i] = f[2 * i + 1] + (f[2 * i + 1] - cam.y) * k; }
+  // Schatten
+  cx.fillStyle = '#00000022'; cx.beginPath(); for (let i = 0; i < n; i++) cx[i ? 'lineTo' : 'moveTo'](f[2 * i] + 5, f[2 * i + 1] + 6); cx.closePath(); cx.fill();
+  // Wände
+  const wall = b.kind === 'K' ? '#d9c79c' : b.kind === 'I' ? '#9aa6bb' : b.kind === 'G' ? '#a8998a' : '#f4ead8';
+  const wall2 = b.kind === 'K' ? '#c4b083' : b.kind === 'I' ? '#8592a8' : b.kind === 'G' ? '#948677' : '#e3d5bd';
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    const ex = f[2 * j] - f[2 * i], ey = f[2 * j + 1] - f[2 * i + 1];
+    cx.fillStyle = (ex * 0.6 - ey * 0.8) > 0 ? wall : wall2;
+    cx.beginPath(); cx.moveTo(f[2 * i], f[2 * i + 1]); cx.lineTo(f[2 * j], f[2 * j + 1]); cx.lineTo(rx[j], ry[j]); cx.lineTo(rx[i], ry[i]); cx.closePath(); cx.fill();
+  }
+  // Dach
+  cx.fillStyle = b.roof; cx.strokeStyle = '#23324a55'; cx.lineWidth = 1.5;
+  cx.beginPath(); for (let i = 0; i < n; i++) cx[i ? 'lineTo' : 'moveTo'](rx[i], ry[i]); cx.closePath(); cx.fill(); cx.stroke();
+  // Dachfirst-Andeutung / Muster
+  let mx = 0, my = 0; for (let i = 0; i < n; i++) { mx += rx[i]; my += ry[i]; } mx /= n; my /= n;
+  if (b.kind === 'H' || b.kind === 'F') { cx.strokeStyle = '#ffffff55'; cx.lineWidth = 2; cx.beginPath(); for (let i = 0; i < n; i++) { cx.moveTo(mx, my); cx.lineTo(rx[i], ry[i]); } cx.stroke(); }
+  if (b.kind === 'K') { cx.font = 'bold 20px sans-serif'; cx.fillStyle = '#c2306f'; cx.fillText('✚', mx, my); }
+  if (b.kind === 'C' || b.kind === 'A' || b.kind === 'S' || b.kind === 'R') { cx.fillStyle = '#ffffff66'; const s = Math.min(b.x1 - b.x0, b.y1 - b.y0) * .18; if (s > 3) { cx.fillRect(mx - s, my - s, s * .8, s * .8); cx.fillRect(mx + s * .2, my + s * .2, s * .8, s * .8); } }
+}
+function zeichneFigur(x, y, dir, shirt, hair, skin, walk, happy, spieler) {
+  cx.save(); cx.translate(x, y); cx.scale(spieler ? 1.9 : 1.6, spieler ? 1.9 : 1.6); cx.rotate(dir);
+  cx.fillStyle = '#00000025'; cx.beginPath(); cx.ellipse(1, 2, 7, 6, 0, 0, 7); cx.fill();
+  const sw = Math.sin(walk) * 3.2;
+  cx.fillStyle = '#3d4a66'; cx.beginPath(); cx.arc(sw, -3, 2.3, 0, 7); cx.arc(-sw, 3, 2.3, 0, 7); cx.fill(); // Füße
+  cx.fillStyle = shirt; cx.beginPath(); cx.ellipse(0, 0, 4.5, 6.5, 0, 0, 7); cx.fill();
+  if (happy) { cx.fillStyle = skin; cx.beginPath(); cx.arc(3, -8, 2.4, 0, 7); cx.arc(3, 8, 2.4, 0, 7); cx.fill(); }
+  else { cx.fillStyle = skin; cx.beginPath(); cx.arc(-sw * .6, -6.5, 2, 0, 7); cx.arc(sw * .6, 6.5, 2, 0, 7); cx.fill(); }
+  cx.fillStyle = skin; cx.beginPath(); cx.arc(.5, 0, 3.8, 0, 7); cx.fill();
+  cx.fillStyle = hair; cx.beginPath(); cx.arc(-.8, 0, 3.7, Math.PI * .5, Math.PI * 1.5); cx.fill();
+  if (spieler) { cx.fillStyle = '#ffcf3f'; cx.beginPath(); cx.arc(-.5, 0, 4, Math.PI * .55, Math.PI * 1.45); cx.fill(); cx.fillRect(2, -2.5, 3, 5); }
+  cx.restore();
+  if (happy) { cx.font = '16px sans-serif'; cx.fillText('♥', x, y - 20); }
+  if (spieler) { const r = 18 + Math.sin(T * 6) * 1.5; cx.strokeStyle = '#ffffff'; cx.lineWidth = 3; cx.beginPath(); cx.arc(x, y, r, 0, 7); cx.stroke();
+    cx.save(); cx.translate(x, y); cx.rotate(dir); cx.fillStyle = '#ffffff'; cx.beginPath(); cx.moveTo(r + 9, 0); cx.lineTo(r + 1, -6); cx.lineTo(r + 1, 6); cx.closePath(); cx.fill(); cx.restore(); }
+}
+function zeichneScooter(x, y, dir, col, liegt) {
+  cx.save(); cx.translate(x, y); cx.rotate(dir); cx.scale(1.5, 1.5);
+  cx.fillStyle = '#00000025'; cx.fillRect(-9, -2, 20, 6);
+  cx.fillStyle = '#23324a'; cx.beginPath(); cx.arc(-8, 0, 2.6, 0, 7); cx.arc(9, 0, 2.6, 0, 7); cx.fill();
+  cx.fillStyle = col; cx.beginPath(); cx.roundRect(-9, -2.6, 16, 5.2, 2.5); cx.fill();
+  cx.strokeStyle = '#23324a'; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(8, 0); cx.lineTo(10, 0); cx.moveTo(10, -5.5); cx.lineTo(10, 5.5); cx.stroke();
+  cx.fillStyle = '#fff'; cx.fillRect(-6, -1, 7, 2);
+  cx.restore();
+}
+function zeichneAuto(c) {
+  cx.save(); cx.translate(c.x, c.y); cx.rotate(c.dir); cx.scale(1.35, 1.35);
+  const L = c.kind === 'bus' ? 34 : 22, B = c.kind === 'bus' ? 11 : 11;
+  cx.fillStyle = '#00000030'; cx.beginPath(); cx.roundRect(-L / 2 + 3, -B / 2 + 3, L, B, 4); cx.fill();
+  cx.fillStyle = c.kind === 'bus' ? '#ff3b3b' : c.col; cx.strokeStyle = '#23324a'; cx.lineWidth = 1.5;
+  cx.beginPath(); cx.roundRect(-L / 2, -B / 2, L, B, 4); cx.fill(); cx.stroke();
+  cx.fillStyle = '#bfe6ff'; if (c.kind === 'bus') { for (let i = -12; i < 12; i += 6) cx.fillRect(i, -B / 2 + 1.5, 4, B - 3); }
+  else { cx.beginPath(); cx.roundRect(2, -B / 2 + 1.5, 5, B - 3, 1.5); cx.fill(); cx.beginPath(); cx.roundRect(-8, -B / 2 + 2, 3.5, B - 4, 1.5); cx.fill(); cx.fillStyle = '#ffffff55'; cx.fillRect(-4.5, -B / 2 + 2, 6, B - 4); }
+  cx.fillStyle = '#fff6a0'; cx.fillRect(L / 2 - 2, -B / 2 + 1, 2, 2.5); cx.fillRect(L / 2 - 2, B / 2 - 3.5, 2, 2.5);
+  cx.restore();
+  if (c.honk > 2.2) { cx.font = 'bold 12px "Comic Sans MS", sans-serif'; cx.fillStyle = '#23324a'; cx.fillText('Tüüt! 📯', c.x, c.y - 16); }
+}
+function zeichnePfeil(o) {
+  const z = cam.z; const sx = W / 2 + (o.x - cam.x) * z, sy = H / 2 + (o.y - cam.y) * z;
+  const m = 46; if (sx > m && sx < W - m && sy > m + 60 && sy < H - m) return;
+  const a = Math.atan2(sy - H / 2, sx - W / 2);
+  const ex = clamp(W / 2 + Math.cos(a) * W, m, W - m), ey = clamp(H / 2 + Math.sin(a) * H, m + 70, H - m - 30);
+  cx.save(); cx.translate(ex, ey); cx.rotate(a);
+  cx.fillStyle = '#ff5fa2'; cx.strokeStyle = '#fff'; cx.lineWidth = 3; cx.beginPath(); cx.moveTo(22, 0); cx.lineTo(-10, -15); cx.lineTo(-4, 0); cx.lineTo(-10, 15); cx.closePath(); cx.fill(); cx.stroke();
+  cx.restore();
+  const meter = Math.round(dist(P.x, P.y, o.x, o.y) / SC / 10) * 10;
+  cx.font = 'bold 14px "Comic Sans MS", sans-serif'; cx.textAlign = 'center'; cx.lineWidth = 4; cx.strokeStyle = '#fff'; cx.fillStyle = '#23324a';
+  const tx = ex - Math.cos(a) * 34, ty = ey - Math.sin(a) * 34; cx.strokeText(meter + ' m', tx, ty); cx.fillText(meter + ' m', tx, ty);
+}
+function zeichneMini() {
+  const S = 160, x0 = W - S - 12, y0 = Math.max(12, 0) ;
+  const s = mini.s * (512 / mini.c.width);
+  // Ausschnitt: 1200x1200 Weltpixel um den Spieler
+  const span = 1500, sx = (P.x - span / 2 - BX0) * mini.s, sy = (P.y - span / 2 - BY0) * mini.s, sw = span * mini.s;
+  cx.save(); cx.beginPath(); cx.roundRect(x0, y0, S, S, 16); cx.fillStyle = '#9be07a'; cx.fill(); cx.clip();
+  cx.drawImage(mini.c, sx, sy, sw, sw, x0, y0, S, S);
+  const tp = (x, y) => [x0 + (x - P.x + span / 2) / span * S, y0 + (y - P.y + span / 2) / span * S];
+  const zl = ziel() || (auftragsGeber()[0] || {}).o;
+  if (zl) { let [mx, my] = tp(zl.x, zl.y); mx = clamp(mx, x0 + 8, x0 + S - 8); my = clamp(my, y0 + 8, y0 + S - 8); cx.fillStyle = zl === ziel() ? '#ff5fa2' : '#ffcf3f'; cx.strokeStyle = '#fff'; cx.lineWidth = 2; cx.beginPath(); cx.arc(mx, my, 6, 0, 7); cx.fill(); cx.stroke(); }
+  cx.save(); cx.translate(x0 + S / 2, y0 + S / 2); cx.rotate(P.dir); cx.fillStyle = '#23324a'; cx.beginPath(); cx.moveTo(7, 0); cx.lineTo(-5, -5); cx.lineTo(-5, 5); cx.closePath(); cx.fill(); cx.restore();
+  cx.restore();
+  cx.strokeStyle = '#23324a'; cx.lineWidth = 3; cx.beginPath(); cx.roundRect(x0, y0, S, S, 16); cx.stroke();
+}
+
+/* ---------------- Ablauf ---------------- */
+let laeuft = false, laeuftSchon = false, last = 0;
+function loop(t) {
+  const dt = Math.min(.05, (t - last) / 1000 || 0); last = t; T += dt;
+  if (laeuft && !dialogOffen && !gkOn) update(dt);
+  draw(); laeuftSchon = true;
+  requestAnimationFrame(loop);
+}
+function starte() {
+  ac(); document.getElementById('start').classList.remove('on'); document.body.classList.add('ingame'); laeuft = true;
+  hudAuftrag(); hudPunkte();
+  if (!state.gesehen) {
+    state.gesehen = true; save();
+    zeigeDialog('👋', 'Servus in Schwarzach!', ['Du stehst am <b>Dorfplatz</b> mitten in Schwarzach. Überall stehen <b>Leihscooter</b> herum: Geh hin und drück <b>Leertaste</b> (oder den 🛴-Knopf), dann flitzt du los.',
+      'Lauf oder fahr an Leuten vorbei, dann gibt es ein <b>High five</b>! ✋ Der ⭐ Stern zeigt dir deinen ersten Auftrag, und 📜 Tafeln erzählen dir Geschichten aus Schwarzach.'], 'Los!');
+  }
+}
+function zumStart() { laeuft = false; document.body.classList.remove('ingame'); document.getElementById('start').classList.add('on'); }
+document.getElementById('los').addEventListener('click', starte);
+document.getElementById('quit').addEventListener('click', zumStart);
+const muteBtn = document.getElementById('mute');
+const setMute = () => { muteBtn.textContent = laut ? '🔊' : '🔈'; };
+muteBtn.addEventListener('click', () => { laut = !laut; try { localStorage.setItem('schwarzach-ton', laut ? 'an' : 'aus'); } catch (e) {} setMute(); });
+setMute();
+document.getElementById('karteBtn').addEventListener('click', toggleKarte);
+streuScooter();
+// gleich neben dem Start ein Scooter, damit man's sofort probieren kann
+scooters.push({ x: P.x + 22, y: P.y + 4, dir: 0, col: '#ff5fa2', umgefallen: false, frei: true });
+hudPunkte();
+requestAnimationFrame(loop);
+// Hilfe für automatische Tests
+window.__spiel = { blocked, P, ORTE, AUFTRAEGE, TAFELN, cars, peds, scooters, state, starte, aktion };
+</script>
+</body>
+</html>
