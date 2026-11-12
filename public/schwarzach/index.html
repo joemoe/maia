@@ -727,8 +727,10 @@ function draw() {
   const vx0 = cam.x - W / 2 / z, vy0 = cam.y - H / 2 / z, vx1 = cam.x + W / 2 / z, vy1 = cam.y + H / 2 / z;
   chunkTick++; let budget = 2;
   for (let j = Math.floor(vy0 / CH); j <= Math.floor(vy1 / CH); j++) for (let i = Math.floor(vx0 / CH); i <= Math.floor(vx1 / CH); i++) {
-    const c = getChunk(i, j, budget > 0 || !laeuftSchon); if (!chunks.has(chunkKey(i, j))) continue; budget--;
-    if (c) cx.drawImage(c, i * CH, j * CH, CH + .5, CH + .5);
+    const neu = !chunks.has(chunkKey(i, j));
+    const c = getChunk(i, j, budget > 0 || !laeuftSchon); if (!c) continue;
+    if (neu) budget--; // nur neu gezeichnete Kacheln zählen, sonst bleiben Lücken stehen
+    cx.drawImage(c, i * CH, j * CH, CH + .5, CH + .5);
   }
   const vis = (x, y, m = 60) => x > vx0 - m && x < vx1 + m && y > vy0 - m && y < vy1 + m;
 
