@@ -1,7 +1,20 @@
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import { resolve } from "node:path";
 
 export default defineConfig({
+  // maia.games ist ein Spiele-Hub: "/" ist die Auswahlseite, jedes Spiel
+  // hat seinen eigenen Unterordner. Spiele mit Build (wie Maia) brauchen
+  // hier einen Eintrag; fertige Einzeldatei-Spiele (wie das Blumenspiel)
+  // liegen einfach in public/<spiel>/index.html.
+  build: {
+    rollupOptions: {
+      input: {
+        hub: resolve(__dirname, "index.html"),
+        maia: resolve(__dirname, "maia/index.html"),
+      },
+    },
+  },
   plugins: [
     VitePWA({
       registerType: "autoUpdate",
