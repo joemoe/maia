@@ -825,10 +825,12 @@ function neuerRufer() {
   const frei = ZUFALL.filter(z => !rufer.some(r => r.z === z) && !(auftrag && auftrag.z === z)); if (!frei.length) return;
   const offen = frei.filter(z => !state.zufall.includes(z.id));
   const z = pick(offen.length ? offen : frei);
-  const n = nodeNear(walkNodes, P.x, P.y, 260, 760); if (!n) return;
-  const a = Math.random() * 7; let x = n.x + Math.cos(a) * (n.w / 2 + 4), y = n.y + Math.sin(a) * (n.w / 2 + 4);
-  if (blocked(x, y) || imWasser(x, y)) { x = n.x; y = n.y; }
-  if (Object.values(ORTE).some(o => dist(o.x, o.y, x, y) < 70) || rufer.some(r => dist(r.x, r.y, x, y) < 160)) return;
+  let x, y, ok = false;
+  for (let v = 0; v < 12 && !ok; v++) { const n = nodeNear(walkNodes, P.x, P.y, 260, 760); if (!n) continue;
+    const a = Math.random() * 7; x = n.x + Math.cos(a) * (n.w / 2 + 4); y = n.y + Math.sin(a) * (n.w / 2 + 4);
+    if (blocked(x, y) || imWasser(x, y)) { x = n.x; y = n.y; }
+    ok = !Object.values(ORTE).some(o => dist(o.x, o.y, x, y) < 60) && !rufer.some(r => dist(r.x, r.y, x, y) < 160); }
+  if (!ok) return;
   rufer.push({ x, y, z, name: z.rolle, emo: z.wer, shirt: pick(SHIRTS), hair: pick(HAIR), skin: pick(SKIN), t: 0, weg: false, dir: 0 });
   if (dist(x, y, P.x, P.y) < 650) hilfeTon();
 }
@@ -1151,12 +1153,6 @@ function draw() {
     cx.font = '22px sans-serif'; cx.fillStyle = '#000'; cx.fillText(emo, o.x, o.y - 30 + Math.sin(T * 3) * 4); };
   if (zl) marker(zl, '#ff5fa2', zl.emo);
   for (const { o } of auftragsGeber()) marker(o, '#ffcf3f', '⭐');
-  // Orte: runde Plakette dort, wo man etwas machen kann
-  cx.textAlign = 'center'; cx.textBaseline = 'middle';
-  for (const k in ORTE) { const o = ORTE[k]; if (!vis(o.x, o.y)) continue;
-    cx.fillStyle = state.stempel.includes(k) ? '#fffdf5' : '#ffe58a'; cx.strokeStyle = '#23324a'; cx.lineWidth = 2; cx.beginPath(); cx.arc(o.x, o.y, 13, 0, 7); cx.fill(); cx.stroke();
-    cx.font = '15px sans-serif'; cx.fillStyle = '#000'; cx.fillText(o.emo, o.x, o.y + 1); }
-
   // Scooter
   for (const s of scooters) if (s.frei && vis(s.x, s.y)) zeichneScooter(s.x, s.y, s.umgefallen ? s.dir + 1.2 : s.dir, s.col, s.umgefallen);
 
@@ -1167,6 +1163,11 @@ function draw() {
   list.sort((a, b) => dist(b.cx, b.cy, cam.x, cam.y) - dist(a.cx, a.cy, cam.x, cam.y));
   const HC = 700 / z;
   for (const b of list) zeichneGebaeude(b, HC);
+  // Orte: runde Plakette dort, wo man etwas machen kann
+  cx.textAlign = 'center'; cx.textBaseline = 'middle';
+  for (const k in ORTE) { const o = ORTE[k]; if (!vis(o.x, o.y)) continue;
+    cx.fillStyle = state.stempel.includes(k) ? '#fffdf5' : '#ffe58a'; cx.strokeStyle = '#23324a'; cx.lineWidth = 2; cx.beginPath(); cx.arc(o.x, o.y, 13, 0, 7); cx.fill(); cx.stroke();
+    cx.font = '15px sans-serif'; cx.fillStyle = '#000'; cx.fillText(o.emo, o.x, o.y + 1); }
   // Leute, Autos und Spieler über den Häusern, damit nichts verschwindet
   for (const p of peds) if (vis(p.x, p.y)) zeichneFigur(p.x, p.y - (p.happy > 0 ? Math.abs(Math.sin(p.happy * 9)) * 6 : 0), p.dir, p.shirt, p.hair, p.skin, p.walk, p.happy > 0);
   for (const c of cars) if (vis(c.x, c.y, 80)) zeichneAuto(c);
@@ -1191,18 +1192,17 @@ function draw() {
   // Funken
   for (const f of funken) { cx.globalAlpha = clamp(f.t * 2, 0, 1); cx.fillStyle = f.c; cx.font = 'bold 14px sans-serif'; cx.fillText(f.s, f.x, f.y); }
   cx.globalAlpha = 1;
-  // Ortsnamen: nur in der Nähe ausgeschrieben, sonst reicht die Plakette
+  // Ortsname: nur beim nächsten Ort ausgeschrieben, sonst reicht die Plakette
   cx.font = 'bold 13px "Comic Sans MS", sans-serif';
-  const belegt = [];
-  for (const k in ORTE) { const o = ORTE[k]; if (!vis(o.x, o.y) || dist(o.x, o.y, P.x, P.y) > 300) continue; const tw = cx.measureText(o.name).width + 16;
-    let ly = o.y - 30; for (let t = 0; t < 6 && belegt.some(([bx, by, bw]) => Math.abs(by - ly) < 22 && Math.abs(bx - o.x) < (bw + tw) / 2); t++) ly -= 23;
-    belegt.push([o.x, ly, tw]); cx.fillStyle = '#fffdf5ee'; cx.strokeStyle = '#23324a'; cx.lineWidth = 2; cx.beginPath(); cx.roundRect(o.x - tw / 2, ly - 10, tw, 20, 10); cx.fill(); cx.stroke();
-    cx.fillStyle = '#23324a'; cx.fillText(o.name, o.x, ly + 1); }
+  { let o = null, bd = 120; for (const k in ORTE) { const q = ORTE[k], d = dist(q.x, q.y, P.x, P.y); if (d < bd) { bd = d; o = q; } }
+    if (o) { const tw = cx.measureText(o.name).width + 16, ly = o.y - 28; cx.fillStyle = '#fffdf5ee'; cx.strokeStyle = '#23324a'; cx.lineWidth = 2; cx.beginPath(); cx.roundRect(o.x - tw / 2, ly - 10, tw, 20, 10); cx.fill(); cx.stroke();
+      cx.fillStyle = '#23324a'; cx.fillText(o.name, o.x, ly + 1); } }
   if (baumLeuchtet && ORTE.dorfplatz && vis(ORTE.dorfplatz.x, ORTE.dorfplatz.y)) { const o = { bx: ORTE.dorfplatz.x, by: ORTE.dorfplatz.y }; for (let i = 0; i < 14; i++) { const a = i / 14 * 7 + T; cx.fillStyle = pick(['#ffcf3f', '#ff5fa2', '#36b6f0', '#fff']); cx.beginPath(); cx.arc(o.bx + Math.cos(a) * 16, o.by - 4 + Math.sin(a) * 16, 2.5, 0, 7); cx.fill(); } }
 
   // Bildschirm-Ebene: Zielpfeil, Minikarte, Joystick
   cx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  if (zl || auftragsGeber().length) zeichnePfeil(zl || auftragsGeber()[0].o);
+  if (zl) zeichnePfeil(zl, '#ff5fa2', zl.emo);
+  else { for (const r of rufer) zeichnePfeil(r, '#ffcf3f', '🆘'); for (const { o } of auftragsGeber()) zeichnePfeil(o, '#ff5fa2', '⭐'); }
   zeichneMini();
   if (joy.id !== null) { cx.globalAlpha = .5; cx.fillStyle = '#fff'; cx.beginPath(); cx.arc(joy.ox, joy.oy, 60, 0, 7); cx.fill(); cx.fillStyle = '#ff5fa2'; cx.beginPath(); cx.arc(joy.ox + joy.x * 60, joy.oy + joy.y * 60, 26, 0, 7); cx.fill(); cx.globalAlpha = 1; }
 }
@@ -1268,17 +1268,17 @@ function zeichneAuto(c) {
   cx.restore();
   if (c.honk > 2.2) { cx.font = 'bold 12px "Comic Sans MS", sans-serif'; cx.fillStyle = '#23324a'; cx.fillText('Tüüt! 📯', c.x, c.y - 16); }
 }
-function zeichnePfeil(o) {
+function zeichnePfeil(o, col, emo) {
   const z = cam.z; const sx = W / 2 + (o.x - cam.x) * z, sy = H / 2 + (o.y - cam.y) * z;
   const m = 46; if (sx > m && sx < W - m && sy > m + 60 && sy < H - m) return;
   const a = Math.atan2(sy - H / 2, sx - W / 2);
   const ex = clamp(W / 2 + Math.cos(a) * W, m, W - m), ey = clamp(H / 2 + Math.sin(a) * H, m + 70, H - m - 30);
   cx.save(); cx.translate(ex, ey); cx.rotate(a);
-  cx.fillStyle = '#ff5fa2'; cx.strokeStyle = '#fff'; cx.lineWidth = 3; cx.beginPath(); cx.moveTo(22, 0); cx.lineTo(-10, -15); cx.lineTo(-4, 0); cx.lineTo(-10, 15); cx.closePath(); cx.fill(); cx.stroke();
+  cx.fillStyle = col || '#ff5fa2'; cx.strokeStyle = '#23324a'; cx.lineWidth = 3; cx.lineJoin = 'round'; cx.beginPath(); cx.moveTo(22, 0); cx.lineTo(-10, -15); cx.lineTo(-4, 0); cx.lineTo(-10, 15); cx.closePath(); cx.fill(); cx.stroke();
   cx.restore();
   const meter = Math.round(dist(P.x, P.y, o.x, o.y) / SC / 10) * 10;
   cx.font = 'bold 14px "Comic Sans MS", sans-serif'; cx.textAlign = 'center'; cx.lineWidth = 4; cx.strokeStyle = '#fff'; cx.fillStyle = '#23324a';
-  const tx = ex - Math.cos(a) * 34, ty = ey - Math.sin(a) * 34; cx.strokeText(meter + ' m', tx, ty); cx.fillText(meter + ' m', tx, ty);
+  const tx = ex - Math.cos(a) * 36, ty = ey - Math.sin(a) * 36; cx.textBaseline = 'middle'; const txt = (emo ? emo + ' ' : '') + meter + ' m'; cx.strokeText(txt, tx, ty); cx.fillText(txt, tx, ty);
 }
 function zeichneMini() {
   const S = 160, x0 = W - S - 12, y0 = Math.max(12, 0) ;
@@ -1328,7 +1328,7 @@ scooters.push({ x: P.x + 22, y: P.y + 4, dir: 0, col: '#ff5fa2', umgefallen: fal
 hudPunkte();
 requestAnimationFrame(loop);
 // Hilfe für automatische Tests
-window.__spiel = { blocked, imWasser, aufStrasse, imGarten, rufer, fences, ZUFALL, tun, spur, get auftrag() { return auftrag; }, get oma() { return oma; }, P, ORTE, AUFTRAEGE, TAFELN, cars, peds, scooters, state, starte, aktion, abbrechen };
+window.__spiel = { blocked, imWasser, aufStrasse, imGarten, rufer, fences, ZUFALL, tun, spur, get auftrag() { return auftrag; }, get oma() { return oma; }, P, ORTE, AUFTRAEGE, TAFELN, cars, peds, scooters, state, starte, aktion, abbrechen, neuerRufer };
 </script>
 </body>
 </html>
