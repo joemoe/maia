@@ -64,7 +64,7 @@ const WORLDS = [
   { name: 'Wüste', sky: ['#ffb36b', '#ffe6a8'], hill: '#e9b35f', hill2: '#d89a45', ground: '#f3c977', dirt: '#c98f45', deco: 'wueste', len: 15000,
     foes: ['troll', 'troll', 'leaf'], helper: { kind: 'kaktusbluete', name: 'Kaktusblüte', tip: 'Pass auf, hier wohnen gemeine Trolle! Spring drüber oder grab dich ein.' } },
   { name: 'Schneeberg', sky: ['#9fb8ff', '#f2f6ff'], hill: '#c9d6f2', hill2: '#aebfe6', ground: '#ffffff', dirt: '#9aa9c9', deco: 'schnee', len: 16000,
-    foes: ['yeti', 'yeti', 'leaf'], helper: { kind: 'schneegloeckchen', name: 'Schneeglöckchen', tip: 'Brrr! Die Schneemonster sind gemein. Hüpf drüber oder grab dich ein!' } },
+    foes: ['yeti', 'yeti', 'leaf'], helper: { kind: 'schneegloeckchen', name: 'Schneeglöckchen', tip: 'Brrr! Die Schneemonster sind gemein. Und wenn ein Schneesturm kommt: grab dich ein oder geh ins Blumenhaus!' } },
   { name: 'Blumenparty', sky: ['#ffb3e6', '#fff0fa'], hill: '#ff8ad8', hill2: '#c77dff', ground: '#9be07a', dirt: '#8a5a33', deco: 'party', len: 7000,
     foes: [], boss: true, secretAt: [0.45, 0.8],
     helper: { kind: 'hibiskus', name: 'Partyblume', tip: 'Juhuu! Willkommen auf der großen Blumenparty! Psst, hier sind auch zwei Geheimtüren versteckt.' } },
@@ -98,6 +98,10 @@ function groundY(x) {
 }
 
 const HOUSE_X = 240;
+const OBST_KIND = { wiese: 'stamm', strand: 'wal', wueste: 'loewe', schnee: 'yeti' };
+const OBST = { stamm: { w: 96, h: 52, name: 'Ein Baumstamm' }, wal: { w: 130, h: 64, name: 'Ein Wal' }, loewe: { w: 110, h: 70, name: 'Ein Löwe' }, yeti: { w: 96, h: 86, name: 'Ein großer Yeti' } };
+const obHalf = o => (o.w / 2 + 14) * S;
+function onObstacle(p) { return st.obst && st.obst.some(o => Math.abs(p.x - o.x) < obHalf(o) && Math.abs(p.jumpY - o.h * S) < 3 && p.vy <= 0); }
 function startWorld(i, fromX) {
   if (i !== st.world || fromX == null) st.checkpoint = 140;
   st.world = i;
@@ -111,6 +115,17 @@ function startWorld(i, fromX) {
   st.helperX = Math.round(w.len * 0.4); st.helperTalk = 0; st.helperMet = false;
   // zwei geheime Eingänge ins Blumenhaus
   st.secrets = (w.secretAt || [0.24, 0.7]).map((f, n) => ({ x: Math.round(w.len * f + (Math.random() - 0.5) * 600), found: false, n }));
+  // Hindernisse: passend zum Land (Wald und Party haben keine)
+  st.obst = []; st.storm = null; st.stormAt = null; st.stormSheltered = false;
+  const OB = OBST_KIND[w.deco];
+  if (OB) for (let x = 1800 + Math.random() * 400; x < w.len - 800; x += 1700 + Math.random() * 900) {
+    if (Math.abs(x - st.helperX) < 400 || st.secrets.some(q => Math.abs(x - q.x) < 320) || Math.abs(x - base) < 300) continue;
+    st.obst.push({ x, kind: OB, w: OBST[OB].w, h: OBST[OB].h, t: Math.random() * 6 });
+    // ein Samen liegt immer vor dem Hindernis, damit man drüberhüpfen kann
+    st.seedsOnMap.push({ x: x - 330, t: Math.random() * 6, got: false, up: 70 });
+    if (st.two) st.seedsOnMap.push({ x: x - 430, t: Math.random() * 6, got: false, up: 90 });
+  }
+  if (w.deco === 'schnee' && st.secrets[1]) st.stormAt = st.secrets[1].x - 900; // Schneesturm, kurz vor dem 2. Geheimgang
   st.shots = [];
   st.boss = w.boss ? { x: 1700, hp: st.two ? 10 : 8, max: st.two ? 10 : 8, t: 0, atk: 4, hitT: 0, gone: 0, defeated: false, seedT: 0, intro: false } : null;
   st.flakes = [];
@@ -320,6 +335,7 @@ function onTapScreen(e) {
   }
 }
 function goHome(why) {
+  if (st.storm) { st.storm = null; st.stormSheltered = why === 'visit'; }
   st.homeFrom = why; st.screen = 'home'; st.screenT = 0; st.sleepT = 0; st.msgT = 0; beep(520, .15, 'triangle');
   st.hidCount = st.leaves.filter(L => !L.hit && Math.abs(L.x - P[0].x) < W * 1.2).length;
   st.homeMode = why === 'die' ? 'sleep' : 'menu';
@@ -363,7 +379,7 @@ function homeAction(id) {
     st.leaves = []; // die Blätter sind weitergeflogen, während du drinnen warst
     if (st.homeFrom === 'visit') {
       st.screen = 'play'; P[0].x = (st.returnX || HOUSE_X) + 50; P[1].x = (st.returnX || HOUSE_X) + 120;
-      say(st.hidCount ? 'Puh! Die Blätter sind weitergeflogen.' : 'Tschüss, Blumenhaus!');
+      say(st.stormSheltered ? 'Der Schneesturm ist vorbei! Gut versteckt!' : st.hidCount ? 'Puh! Die Blätter sind weitergeflogen.' : 'Tschüss, Blumenhaus!'); st.stormSheltered = false;
     }
     else { startWorld(st.world, st.checkpoint); say('Weiter geht\'s!'); }
   }
@@ -383,10 +399,10 @@ function continueGame() {
 function begin() { st.hearts = 4; st.seeds = 0; st.stars = 0; beep(660, .1); startWorld(st.startWorld || 0); }
 
 function tryHop(p) {
-  if (st.screen !== 'play' || p.jumpY > 0 || p.digging > 0.2) return;
+  if (st.screen !== 'play' || (p.jumpY > 0 && !onObstacle(p)) || p.digging > 0.2) return;
   if (p.nearDoor) { st.returnX = p.nearDoor; goHome('visit'); return; }
   if (st.seeds > 0) {
-    st.seeds--; p.vy = 640 * S; p.jumpY = 0.01; sfx.hop();
+    st.seeds--; p.vy = 640 * S; p.jumpY = Math.max(0.01, p.jumpY); sfx.hop();
     for (let i = 0; i < 12; i++) st.sparkles.push(spark(p.x, groundY(p.x) - 10 * S, '#c77dff'));
   } else say('Sammle lila Samen, dann kannst du hüpfen!');
 }
@@ -435,9 +451,16 @@ function update(dt) {
     let mv = 0;
     if (p.digging < 0.3) { if (k.left) mv -= 1; if (k.right) mv += 1; }
     if (mv) { p.face = mv; p.walk += dt * 9; }
+    const oldX = p.x, oldJ = p.jumpY;
     p.x = Math.max(60, Math.min(w.len, p.x + mv * speed * dt));
+    // Hindernisse: man kommt nur drüber, wenn man hoch genug hüpft (oder oben drauf steht)
+    for (const o of st.obst) { const hw = obHalf(o);
+      if (Math.abs(p.x - o.x) < hw && p.jumpY < o.h * S - 3) { p.x = oldX <= o.x ? o.x - hw : o.x + hw;
+        if (!o.bumped && p.jumpY <= 0) { o.bumped = true; say(OBST[o.kind].name + '! Hüpf drüber!'); } } }
     // hüpfen
-    if (p.jumpY > 0) { p.jumpY += p.vy * dt; p.vy -= 1500 * S * dt; if (p.jumpY <= 0) { p.jumpY = 0; p.vy = 0; } }
+    if (p.jumpY > 0) { p.jumpY += p.vy * dt; p.vy -= 1500 * S * dt;
+      for (const o of st.obst) if (Math.abs(p.x - o.x) < obHalf(o) && p.vy < 0 && p.jumpY < o.h * S && oldJ >= o.h * S - 3) { p.jumpY = o.h * S; p.vy = 0; } // oben drauf landen
+      if (p.jumpY <= 0) { p.jumpY = 0; p.vy = 0; } }
     p.nearDoor = 0;
     if (p.digging < .3 && p.jumpY <= 0) {
       if (st.world === 0 && Math.abs(p.x - HOUSE_X) < 110) p.nearDoor = HOUSE_X;
@@ -519,7 +542,7 @@ function update(dt) {
   st.leafTimer -= dt;
   const lead = leadX();
   const safeZone = st.world === 0 && lead < 1000; // im Blumendorf ist es sicher
-  if (w.foes.length && st.leafTimer <= 0 && lead < w.len - 500 && !safeZone && Math.abs(lead - st.helperX) > 400) {
+  if (w.foes.length && st.leafTimer <= 0 && !st.storm && lead < w.len - 500 && !safeZone && Math.abs(lead - st.helperX) > 400) {
     const type = w.foes[Math.floor(Math.random() * w.foes.length)];
     const base = type === 'leaf' ? 95 : 80;
     st.leaves.push({ type, x: st.camX + W + 60, t: Math.random() * 6, sp: (base + Math.random() * 40 + st.world * 6) * S, hit: false });
@@ -544,6 +567,26 @@ function update(dt) {
     }
   }
   st.leaves = st.leaves.filter(L => L.x > st.camX - 100);
+  for (const o of st.obst) o.t += dt;
+
+  // Schneesturm am Schneeberg: eingraben oder ins Blumenhaus, sonst wird es kalt
+  if (st.stormAt && !st.storm && lead > st.stormAt) {
+    st.storm = { t: 0, warn: 4, dur: 14, cold: [0, 0] }; st.stormAt = null;
+    say('Achtung, ein Schneesturm kommt! Grab dich ein oder lauf zum Geheimgang ins Blumenhaus!');
+    if (st.seeds < (st.two ? 2 : 1)) { st.seeds = st.two ? 2 : 1; setTimeout(() => say('Summsi bringt dir einen Samen zum Eingraben!'), 3000); }
+    beep(300, 0.8, 'sawtooth', 0.04, -150);
+  }
+  if (st.storm) {
+    const sm = st.storm; sm.t += dt;
+    if (sm.t > sm.warn + sm.dur) { st.storm = null; say('Der Schneesturm ist vorbei!'); sfx.star(); }
+    else if (sm.t > sm.warn) for (const p of ps) {
+      if (p.digging > 0.7) { sm.cold[p.id] = Math.max(0, sm.cold[p.id] - dt); continue; }
+      sm.cold[p.id] += dt;
+      if (sm.cold[p.id] >= 3) { sm.cold[p.id] = 0; p.hurt = 1; st.hearts--; sfx.hurt();
+        if (st.hearts <= 0) { goHome('die'); return; }
+        say('Brrr, ist das kalt! Grab dich ein!'); }
+    }
+  }
 
   // bunter Blumen-Jet saust ab und zu über den Himmel
   st.jetTimer = (st.jetTimer == null ? 6 : st.jetTimer) - dt;
@@ -1297,11 +1340,11 @@ function sky(w) {
 function updateBee(dt, ps) {
   const b = st.bee; if (!b) return; b.t += dt;
   const lead = ps.reduce((a, p) => (p.x > a.x ? p : a), ps[0]);
-  const sc = st.secrets.find(q => !q.found && Math.abs(q.x - lead.x) < 1300);
+  const sc = st.storm ? st.secrets.slice().sort((a, c) => Math.abs(a.x - lead.x) - Math.abs(c.x - lead.x))[0] : st.secrets.find(q => !q.found && Math.abs(q.x - lead.x) < 1300);
   let tx, ty;
   if (sc) {
     tx = sc.x; ty = groundY(sc.x) - 120 * S + Math.sin(b.t * 6) * 8 * S;
-    if (!sc.hinted && Math.abs(sc.x - lead.x) < 650) { sc.hinted = true; say('Summsi: Summ summ! Da vorne ist ein Geheimgang!'); beep(1320, .06, 'square', .05); setTimeout(() => beep(1480, .08, 'square', .05), 90); }
+    if (!st.storm && !sc.hinted && Math.abs(sc.x - lead.x) < 650) { sc.hinted = true; say('Summsi: Summ summ! Da vorne ist ein Geheimgang!'); beep(1320, .06, 'square', .05); setTimeout(() => beep(1480, .08, 'square', .05), 90); }
   } else {
     tx = lead.x - 70 * S * (lead.face || 1); ty = groundY(lead.x) - lead.jumpY - 175 * S + Math.sin(b.t * 3) * 12 * S;
   }
@@ -1347,10 +1390,66 @@ function drawFeet(px, fy, kind, t, alpha, stem) {
       }
   cx.globalAlpha = 1;
 }
+// Hindernisse zeichnen (x = Mitte, gy = Boden)
+function drawObstacle(o, x, gy, t) {
+  const s = S;
+  if (o.kind === 'stamm') { // Baumstamm
+    cx.fillStyle = '#8a5a2b'; rr(x - 48 * s, gy - 50 * s, 96 * s, 46 * s, 20 * s); cx.fill();
+    cx.strokeStyle = '#6b4220'; cx.lineWidth = 2.5 * s; for (const yy of [-38, -26, -14]) { cx.beginPath(); cx.moveTo(x - 30 * s, gy + yy * s); cx.lineTo(x + 20 * s, gy + (yy + 1) * s); cx.stroke(); }
+    cx.fillStyle = '#e0b07a'; cx.beginPath(); cx.ellipse(x + 46 * s, gy - 27 * s, 11 * s, 23 * s, 0, 0, 7); cx.fill();
+    cx.strokeStyle = '#b5844f'; cx.lineWidth = 2 * s; cx.beginPath(); cx.ellipse(x + 46 * s, gy - 27 * s, 6 * s, 13 * s, 0, 0, 7); cx.stroke();
+    cx.fillStyle = '#5cb84f'; cx.beginPath(); cx.ellipse(x - 20 * s, gy - 52 * s, 9 * s, 4 * s, -0.4, 0, 7); cx.fill(); // Blättchen
+    circle(x - 6 * s, gy - 54 * s, 4 * s, '#ff6fae'); circle(x - 6 * s, gy - 54 * s, 1.6 * s, '#ffd23f');
+  } else if (o.kind === 'wal') { // Wal liegt im Sand und spritzt Wasser
+    cx.fillStyle = '#4a7fd4'; cx.beginPath(); cx.ellipse(x, gy - 30 * s, 62 * s, 32 * s, 0, Math.PI, 0); cx.lineTo(x + 62 * s, gy - 4 * s); cx.lineTo(x - 62 * s, gy - 4 * s); cx.fill();
+    cx.beginPath(); cx.moveTo(x - 55 * s, gy - 22 * s); cx.lineTo(x - 82 * s, gy - 48 * s); cx.lineTo(x - 72 * s, gy - 20 * s); cx.lineTo(x - 84 * s, gy - 6 * s); cx.fill(); // Schwanz
+    cx.fillStyle = '#cfe3ff'; cx.beginPath(); cx.ellipse(x + 10 * s, gy - 8 * s, 46 * s, 9 * s, 0, Math.PI, 0); cx.fill();
+    circle(x + 34 * s, gy - 36 * s, 5 * s, '#fff'); circle(x + 35 * s, gy - 36 * s, 2.6 * s, '#123'); circle(x + 44 * s, gy - 24 * s, 4 * s, '#ff9ec7aa');
+    cx.strokeStyle = '#123'; cx.lineWidth = 2 * s; cx.beginPath(); cx.arc(x + 40 * s, gy - 22 * s, 8 * s, 0.3, 1.6); cx.stroke();
+    const sp = (t * 1.2) % 1.6; if (sp < 1) { cx.globalAlpha = 1 - sp; for (const d of [-1, 0, 1]) circle(x + 6 * s + d * sp * 22 * s, gy - 64 * s - sp * 40 * s + Math.abs(d) * sp * 20 * s, 5 * s, '#9fdcff'); cx.globalAlpha = 1; }
+  } else if (o.kind === 'loewe') { // schlafender Löwe
+    cx.fillStyle = '#e8a33d'; cx.beginPath(); cx.ellipse(x - 12 * s, gy - 24 * s, 46 * s, 22 * s, 0, 0, 7); cx.fill();
+    cx.strokeStyle = '#e8a33d'; cx.lineWidth = 6 * s; cx.lineCap = 'round'; cx.beginPath(); cx.moveTo(x - 56 * s, gy - 20 * s); cx.quadraticCurveTo(x - 72 * s, gy - 40 * s, x - 64 * s, gy - 50 * s); cx.stroke();
+    circle(x - 64 * s, gy - 52 * s, 6 * s, '#a8641f');
+    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; circle(x + 34 * s + Math.cos(a) * 24 * s, gy - 42 * s + Math.sin(a) * 24 * s, 12 * s, '#a8641f'); }
+    circle(x + 34 * s, gy - 42 * s, 22 * s, '#f2b552');
+    circle(x + 20 * s, gy - 60 * s, 6 * s, '#f2b552'); circle(x + 48 * s, gy - 60 * s, 6 * s, '#f2b552');
+    cx.strokeStyle = '#5a3a1a'; cx.lineWidth = 2.2 * s; for (const d of [-8, 8]) { cx.beginPath(); cx.arc(x + 34 * s + d * s, gy - 46 * s, 4 * s, 0.2, Math.PI - 0.2); cx.stroke(); }
+    circle(x + 34 * s, gy - 38 * s, 3.5 * s, '#5a3a1a');
+    cx.fillStyle = '#e8a33d'; rr(x - 40 * s, gy - 10 * s, 18 * s, 10 * s, 5 * s); cx.fill(); rr(x + 8 * s, gy - 10 * s, 18 * s, 10 * s, 5 * s); cx.fill();
+    zzz(x + 50 * s, gy - 72 * s, t);
+  } else { // großer, schlafender Yeti
+    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; circle(x + Math.cos(a) * 38 * s, gy - 44 * s + Math.sin(a) * 38 * s, 16 * s, '#f4f8ff'); }
+    cx.fillStyle = '#f4f8ff'; cx.beginPath(); cx.ellipse(x, gy - 44 * s, 46 * s, 44 * s, 0, 0, 7); cx.fill();
+    cx.fillStyle = '#7fa6e8'; cx.beginPath(); cx.ellipse(x, gy - 54 * s, 26 * s, 20 * s, 0, 0, 7); cx.fill();
+    cx.strokeStyle = '#123'; cx.lineWidth = 2.5 * s; for (const d of [-10, 10]) { cx.beginPath(); cx.arc(x + d * s, gy - 58 * s, 5 * s, 0.2, Math.PI - 0.2); cx.stroke(); }
+    cx.beginPath(); cx.ellipse(x, gy - 44 * s, 5 * s, 3 * s + Math.sin(t * 2) * 1.5 * s, 0, 0, 7); cx.stroke();
+    zzz(x + 34 * s, gy - 96 * s, t);
+  }
+}
+function zzz(x, y, t) {
+  for (let i = 0; i < 3; i++) { const q = (t * 0.5 + i / 3) % 1; cx.globalAlpha = 1 - q; cx.fillStyle = '#5a1745';
+    cx.font = `bold ${(12 + i * 4) * S}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    cx.fillText('z', x + q * 24 * S, y - q * 40 * S); }
+  cx.globalAlpha = 1;
+}
+// Schneesturm: weißer Schleier und fliegende Flocken
+function drawStorm(t) {
+  const sm = st.storm, k = Math.min(1, sm.t / sm.warn, (sm.warn + sm.dur - sm.t) / 1.5);
+  cx.fillStyle = `rgba(235,242,255,${0.45 * k})`; cx.fillRect(0, 0, W, H);
+  cx.strokeStyle = `rgba(255,255,255,${0.9 * k})`; cx.lineCap = 'round';
+  for (let i = 0; i < 140; i++) {
+    const sp = 600 + (i % 5) * 160, x = ((i * 137.5 + t * sp) % (W + 200)) - 100, y = ((i * 71.3 + t * sp * 0.35) % (H + 40)) - 20;
+    cx.lineWidth = (1.5 + (i % 3)) * S; cx.beginPath(); cx.moveTo(W - x, y); cx.lineTo(W - x + 14 * S, y - 5 * S); cx.stroke();
+  }
+  if (sm.t > sm.warn && Math.floor(t * 2) % 2 === 0) bigText('Schneesturm! Grab dich ein oder geh ins Blumenhaus!', H * 0.4, Math.min(26 * S, W * 0.04), '#cfe3ff');
+  else if (sm.t <= sm.warn) bigText('Ein Schneesturm kommt!', H * 0.4, Math.min(30 * S, W * 0.05), '#cfe3ff');
+}
 function drawPlay(t) {
   const w = WORLDS[st.world], cam = st.camX;
   sky(w); drawJet(t); decoFar(w, cam, t); decoNear(w, cam, t); bigFlowers(w, cam, t); smallFlowers(w, cam, t); drawGoal(w, cam, t);
   for (const sc of st.secrets) { const sx = sc.x - cam; if (sx > -80 && sx < W + 80) drawSecret(sx, groundY(sc.x), t, sc.found, w); }
+  for (const o of st.obst || []) { const ox = o.x - cam; if (ox > -200 && ox < W + 200) drawObstacle(o, ox, groundY(o.x) + 4, o.t); }
   // sprechende Blume
   { const hx = st.helperX - cam; if (hx > -200 && hx < W + 200) {
       const h = w.helper; drawHelper(hx, groundY(st.helperX) + 4, h.kind, t, S);
@@ -1409,6 +1508,7 @@ function drawPlay(t) {
   if (w.deco === 'party' && st.boss && st.boss.defeated) for (const [k, f] of st.flakes.entries()) { f.y += f.v * 0.004; if (f.y > 1) f.y = 0;
     cx.fillStyle = ['#ff6fae', '#ffd23f', '#6fd3ff', '#c77dff', '#9be07a'][k % 5]; cx.fillRect(((f.x * W - cam * 0.3 * f.v) % W + W) % W, f.y * H, 5 * S, 8 * S); }
   if (w.deco === 'schnee') for (const f of st.flakes) { f.y += f.v * 0.004; if (f.y > 1) f.y = 0; circle(((f.x * W - cam * 0.3 * f.v) % W + W) % W, f.y * H, f.s * S, '#fff'); }
+  if (st.storm) drawStorm(t);
   hud(t);
 }
 
