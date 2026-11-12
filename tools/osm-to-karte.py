@@ -2,7 +2,8 @@
 """Wandelt einen Overpass-Export (JSON mit `out geom`) von Schwarzach in die
 kompakte Spielkarte public/schwarzach/karte.js um.
 
-Aufruf:  python3 tools/osm-to-karte.py schwarzach.json public/schwarzach/karte.js
+Aufruf:  python3 tools/osm-to-karte.py export.json [relationen.json ...] public/schwarzach/karte.js
+(mehrere Overpass-Exporte werden zusammengeführt, z. B. Wege + Multipolygone)
 
 Koordinaten werden in Meter um den Dorfplatz projiziert und mit SCALE
 (Pixel pro Meter) in Spielpixel umgerechnet. Daten: (c) OpenStreetMap-Mitwirkende, ODbL.
@@ -131,11 +132,13 @@ def fit_buildings(buildings, roads):
                 ox += nx / l * (over + 1); oy += ny / l * (over + 1)
             else:
                 sc *= 0.85
-            if sc < 0.3:
+            if sc < 0.35:
                 break
         if not ok:
-            dropped += 1
-            continue
+            if b[2] < 0 and b[0] not in 'KRS':  # wichtige Gebäude (Kirche, Gemeindeamt, Schule, benannte) immer behalten
+                dropped += 1
+                continue
+            cur = [(mx + ox * 0.5 + (x - mx) * 0.7, my + oy * 0.5 + (y - my) * 0.7) for x, y in pts]
         out.append([b[0], b[1], b[2], flat(cur)])
     return out, dropped
 
@@ -150,8 +153,30 @@ AREA = {  # tag=value -> code
     ('leisure', 'sports_centre'): 's', ('leisure', 'garden'): 'p', ('leisure', 'swimming_pool'): 'a',
     ('natural', 'water'): 'a', ('landuse', 'basin'): 'a', ('natural', 'scrub'): 'w',
     ('natural', 'grassland'): 'm', ('landuse', 'village_green'): 'g', ('amenity', 'parking'): 'P',
-    ('amenity', 'school'): 'S', ('amenity', 'kindergarten'): 'S', ('landuse', 'railway'): 'i',
+    ('amenity', 'school'): 'S', ('amenity', 'kindergarten'): 'S', ('landuse', 'education'): 'S', ('landuse', 'railway'): 'i',
 }
+
+
+def rings(members):
+    """Äußere Teilstücke eines Multipolygons zu geschlossenen Ringen verbinden."""
+    parts = [[(g['lat'], g['lon']) for g in m['geometry'] if g] for m in members
+             if m.get('type') == 'way' and m.get('role', 'outer') in ('outer', '') and m.get('geometry')]
+    out = []
+    while parts:
+        ring = parts.pop(0)
+        changed = True
+        while ring[0] != ring[-1] and changed:
+            changed = False
+            for i, q in enumerate(parts):
+                if q[0] == ring[-1]: ring += q[1:]
+                elif q[-1] == ring[-1]: ring += q[::-1][1:]
+                elif q[-1] == ring[0]: ring = q[:-1] + ring
+                elif q[0] == ring[0]: ring = q[::-1][:-1] + ring
+                else: continue
+                parts.pop(i); changed = True; break
+        if len(ring) > 3 and ring[0] == ring[-1]:
+            out.append(ring)
+    return out
 
 
 def area_code(t):
@@ -183,8 +208,22 @@ def bkind(t):
     return 'H'
 
 
-def main(src, dst):
-    data = json.load(open(src, encoding='utf-8'))
+def main(srcs, dst):
+    seen, elements = set(), []
+    for src in srcs:
+        for el in json.load(open(src, encoding='utf-8')).get('elements', []):
+            k = (el['type'], el['id'])
+            if k in seen:
+                continue
+            seen.add(k)
+            if el['type'] == 'relation' and el.get('tags', {}).get('type') == 'multipolygon' and 'boundary' not in el['tags']:
+                # Multipolygon -> ein Pseudo-Weg pro äußerem Ring
+                for j, ring in enumerate(rings(el.get('members', []))):
+                    elements.append({'type': 'way', 'id': f"r{el['id']}-{j}", 'tags': el['tags'],
+                                     'geometry': [{'lat': a, 'lon': b} for a, b in ring]})
+                continue
+            elements.append(el)
+    data = {'elements': elements}
     names, name_ix = [], {}
 
     def nid(n):
@@ -297,4 +336,4 @@ def main(src, dst):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1:-1], sys.argv[-1])
