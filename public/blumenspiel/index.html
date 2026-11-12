@@ -127,7 +127,7 @@ function startWorld(i, fromX) {
   }
   if (w.deco === 'schnee' && st.secrets[1]) st.stormAt = st.secrets[1].x - 900; // Schneesturm, kurz vor dem 2. Geheimgang
   st.shots = [];
-  st.boss = w.boss ? { x: 1700, hp: st.two ? 10 : 8, max: st.two ? 10 : 8, t: 0, atk: 4, hitT: 0, gone: 0, defeated: false, seedT: 0, intro: false } : null;
+  st.boss = w.boss ? { x: 1700, hp: st.two ? 6 : 8, max: st.two ? 6 : 8, t: 0, atk: 4, hitT: 0, gone: 0, defeated: false, seedT: 0, intro: false } : null;
   st.flakes = [];
   for (let k = 0; k < 60; k++) st.flakes.push({ x: Math.random(), y: Math.random(), s: 1 + Math.random() * 2.5, v: 0.3 + Math.random() * 0.6 });
   st.screen = 'play';
@@ -487,13 +487,13 @@ function update(dt) {
     if (near && !B.intro) { B.intro = true; say('Der Blätterkönig! Wirf Samen auf ihn (Leertaste oder lila Samen-Knopf)!'); }
     if (near) {
       B.t += dt; B.atk -= dt;
-      if (B.atk <= 0) { st.leaves.push({ type: 'leaf', x: B.x - 70 * S, t: 0, sp: (120 + Math.random() * 40) * S, hit: false }); B.atk = 3 + Math.random() * 1.5; beep(220, .2, 'sawtooth', .05, -60); }
+      if (B.atk <= 0) { st.leaves.push({ type: 'leaf', x: B.x - 70 * S, t: 0, sp: (120 + Math.random() * 40) * S, hit: false }); B.atk = (st.two ? 4.5 : 3) + Math.random() * 1.5; beep(220, .2, 'sawtooth', .05, -60); }
       // Samen fallen vom Himmel, damit man immer genug hat
       B.seedT -= dt;
       const lying = st.seedsOnMap.filter(sd => !sd.got && sd.x < B.x).length;
-      if (B.seedT <= 0 && lying < 3 && st.seeds < seedMax()) {
+      if (B.seedT <= 0 && lying < (st.two ? 5 : 3) && st.seeds < seedMax()) {
         const lo = Math.max(200, st.camX + 80), hi = B.x - 260 * S;
-        st.seedsOnMap.push({ x: lo + Math.random() * Math.max(10, hi - lo), t: 0, got: false, up: 70 + Math.random() * 30 }); B.seedT = 1.8;
+        st.seedsOnMap.push({ x: lo + Math.random() * Math.max(10, hi - lo), t: 0, got: false, up: 70 + Math.random() * 30 }); B.seedT = st.two ? 1.2 : 1.8;
       }
     }
     if (B.hitT > 0) B.hitT -= dt;
