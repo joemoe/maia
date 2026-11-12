@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Schwarzach Flitzer</title>
+<title>Grand Schliefar Schwarzach</title>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#ffcf3f">
@@ -25,6 +25,14 @@
   #punkte { left: 12px; bottom: max(12px, env(safe-area-inset-bottom)); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .chip { background: var(--paper); border: 3px solid var(--ink); border-radius: 999px; padding: 4px 12px; font-size: 15px; font-weight: bold; box-shadow: 0 3px 0 var(--ink); white-space: nowrap; }
   .chip.strasse { background: #fff; border-color: #2a4d8f; color: #2a4d8f; box-shadow: 0 3px 0 #2a4d8f; }
+  #tipp { left: 50%; bottom: max(64px, calc(env(safe-area-inset-bottom) + 64px)); transform: translateX(-50%); display: none; }
+  #tipp.on { display: block; }
+  #tipp .chip { background: var(--gelb); font-size: 16px; }
+  #energie { position: relative; overflow: hidden; min-width: 92px; }
+  #energie i { position: absolute; left: 0; top: 0; bottom: 0; background: #ffe58a; z-index: 0; transition: width .3s; }
+  #energie span { position: relative; z-index: 1; }
+  #energie.leer i { background: #ffb3b3; }
+  #auftrag .x { pointer-events: auto; cursor: pointer; float: right; margin-left: 10px; font-size: 13px; background: #fff; border: 2px solid var(--ink); border-radius: 999px; padding: 1px 8px; }
   #toast { left: 50%; top: 22%; transform: translateX(-50%); font-size: clamp(24px, 6vw, 46px); font-weight: bold; color: #fff;
     text-shadow: 3px 3px 0 var(--ink), -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink); opacity: 0; transition: opacity .25s; text-align: center; white-space: nowrap; }
   #toast.on { opacity: 1; }
@@ -41,6 +49,11 @@
   #aktion { position: fixed; right: 22px; bottom: max(22px, env(safe-area-inset-bottom)); z-index: 5; width: 86px; height: 86px; border-radius: 50%;
     border: 4px solid #fff; background: #ff5fa2cc; color: #fff; font-size: 34px; display: none; place-items: center; box-shadow: 0 5px 0 #0004; touch-action: none; }
   #aktion.zeigen { display: grid; }
+  #tun { position: fixed; right: 30px; bottom: calc(max(22px, env(safe-area-inset-bottom)) + 124px); z-index: 5; width: 70px; height: 70px; border-radius: 50%;
+    border: 4px solid #fff; background: #ffcf3fee; font-size: 30px; display: none; place-items: center; box-shadow: 0 5px 0 #0004; touch-action: none; }
+  #tun.zeigen { display: grid; }
+  @media (hover: hover) and (pointer: fine) { #tun { display: none !important; } }
+  .knopf.grau { background: #b8c0cc; margin-left: 8px; }
   #aktion small { position: absolute; bottom: -22px; font-size: 13px; font-weight: bold; color: var(--ink); text-shadow: 0 0 4px #fff; white-space: nowrap; }
   @media (hover: hover) and (pointer: fine) { #aktion { display: none !important; } }
 
@@ -57,13 +70,22 @@
   .knopf:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
   .knopf.blau { background: var(--blau); }
 
-  #start { background: linear-gradient(#ffe89a, #ffcf3f 60%, #ff9f43); }
-  #start .karte-box { text-align: center; }
-  #start h1 { margin: 0; font-size: clamp(34px, 9vw, 58px); color: #fff; line-height: 1;
-    text-shadow: 4px 4px 0 var(--ink), -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink); transform: rotate(-3deg); }
-  #start .unter { font-size: 18px; margin: 14px 0 6px; }
-  #start .steuerung { font-size: 14px; opacity: .8; margin-top: 12px; }
-  #start a.zurueck { display: block; margin-top: 14px; color: var(--ink); font-size: 14px; }
+  #start { padding: 0; background: #2b2a6b; overflow: hidden; flex-direction: column; justify-content: flex-start; }
+  #start .szene { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #start .inhalt { position: relative; z-index: 1; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; padding: max(14px, 3vh) 14px 12px; text-align: center; }
+  #start h1 { margin: 0; font-size: clamp(30px, min(11.5vw, 13vh), 104px); line-height: .86; letter-spacing: -.02em; text-transform: uppercase; font-style: italic;
+    transform: rotate(-5deg) skewX(-6deg); filter: drop-shadow(0 .09em 0 var(--ink)); }
+  #start h1 span { display: block; -webkit-text-stroke: .09em var(--ink); paint-order: stroke fill; }
+  #start h1 .g { color: #fff; font-size: .62em; margin-left: -2.6em; }
+  #start h1 .s { color: #2ee6d0; margin-left: -.3em; }
+  #start h1 .w { color: #ff5fa2; margin-left: .5em; }
+  #start .band { display: inline-block; margin-top: clamp(10px, 2.4vh, 22px); background: #fff3b0; color: var(--ink); border: 3px solid var(--ink); border-radius: 999px; padding: 5px 16px;
+    font-size: clamp(13px, 2.4vw, 18px); font-weight: bold; transform: rotate(-2deg); box-shadow: 0 4px 0 var(--ink); }
+  #start .unten { margin-top: auto; display: flex; flex-direction: column; align-items: center; }
+  #start #los { font-size: clamp(20px, 4vw, 28px); padding: 12px 28px; }
+  #start .steuerung { font-size: 13px; line-height: 1.35; margin: 12px 0 0; max-width: 640px; color: #fff; background: #23324acc; border-radius: 12px; padding: 7px 12px; }
+  #start a.zurueck { display: block; margin-top: 8px; color: #fff; font-size: 13px; }
+  @media (max-height: 520px) { #start .steuerung { display: none; } }
   #grosseKarte canvas { width: min(92vw, 92vh); height: min(92vw, 92vh); border: 4px solid var(--ink); border-radius: 18px; background: #9be07a; box-shadow: 0 8px 0 var(--ink); }
   .osm { position: fixed; left: 50%; transform: translateX(-50%); bottom: 2px; white-space: nowrap; z-index: 3; font-size: 10px; opacity: .7; font-family: system-ui, sans-serif; }
   .osm a { color: inherit; }
@@ -75,24 +97,85 @@
 <div class="hud" id="auftrag"></div>
 <div class="hud" id="punkte">
   <span class="chip" id="hi5">✋ 0</span>
+  <span class="chip" id="sterne">⭐ 0</span>
   <span class="chip" id="wissen">📜 0</span>
+  <span class="chip" id="stempel">🏅 0</span>
+  <span class="chip" id="energie"><i></i><span>⚡ Puste</span></span>
   <span class="chip strasse" id="strasse">📍 Schwarzach</span>
 </div>
+<div class="hud" id="tipp"><span class="chip" id="tippText"></span></div>
 <div class="hud" id="toast"></div>
 
 <button class="rund" id="quit" aria-label="Zurück zum Startbildschirm">✖</button>
 <button class="rund" id="mute" aria-label="Ton an oder aus">🔊</button>
 <button class="rund" id="karteBtn" aria-label="Karte">🗺️</button>
+<button id="tun" aria-label="Hier etwas machen">👆</button>
 <button id="aktion" aria-label="Aktion">🛴<small>aufsteigen</small></button>
 <div class="osm">Karte: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende</div>
 
 <div class="overlay on" id="start">
-  <div class="karte-box">
-    <h1>Schwarzach<br>Flitzer</h1>
-    <p class="unter">Flitz mit dem Leihscooter durchs Dorf,<br>verteil High fives und hilf den Leuten in Schwarzach!</p>
-    <button class="knopf" id="los">Los geht's! 🛴</button>
-    <p class="steuerung">↑ vorwärts · ↓ bremsen · ← → drehen (oder WASD) &nbsp;·&nbsp; Leertaste: Scooter auf/ab<br>M: Karte &nbsp;·&nbsp; Auf dem Tablet: links den Daumen nach oben schieben und lenken, rechts der Knopf</p>
-    <a class="zurueck" href="/">⟵ zurück zu maia.games</a>
+  <svg class="szene" viewBox="0 0 800 600" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="hi" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b2a6b"/><stop offset=".45" stop-color="#8a3f9a"/><stop offset=".75" stop-color="#ff7b6b"/><stop offset="1" stop-color="#ffd166"/></linearGradient>
+      <linearGradient id="fe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset="1" stop-color="#ffb347"/></linearGradient>
+    </defs>
+    <rect width="800" height="600" fill="url(#hi)"/>
+    <g fill="#fff" opacity=".85"><circle cx="70" cy="60" r="2"/><circle cx="180" cy="130" r="1.5"/><circle cx="330" cy="40" r="2"/><circle cx="610" cy="70" r="2"/><circle cx="730" cy="150" r="1.5"/><circle cx="520" cy="25" r="1.5"/><circle cx="760" cy="40" r="2"/></g>
+    <circle cx="400" cy="470" r="150" fill="#fff3b0" opacity=".55"/>
+    <g stroke="#fff3b0" stroke-width="26" opacity=".13"><path d="M400 470 L-100 150"/><path d="M400 470 L150 -80"/><path d="M400 470 L650 -80"/><path d="M400 470 L900 150"/></g>
+    <path d="M0 440 L110 360 L210 410 L330 330 L470 400 L590 340 L700 395 L800 350 V600 H0Z" fill="#5b3a8c"/>
+    <path d="M0 480 L140 420 L300 465 L480 425 L640 470 L800 430 V600 H0Z" fill="#3f8f6b"/>
+    <!-- Häuser von unten gesehen, links -->
+    <g stroke="#23324a" stroke-width="5" stroke-linejoin="round">
+      <path d="M-20 600 L10 250 L150 300 L175 600Z" fill="#ffe2b8"/><path d="M-10 262 L75 170 L165 300 L150 300 L10 250Z" fill="#ff5fa2"/>
+      <path d="M150 600 L165 350 L270 380 L282 600Z" fill="#bfe6ff"/><path d="M158 356 L222 290 L282 384 L270 380 L165 350Z" fill="#2ec4b6"/>
+      <!-- rechts -->
+      <path d="M820 600 L790 240 L650 295 L628 600Z" fill="#fff3b0"/><path d="M800 252 L722 165 L636 297 L650 295 L790 240Z" fill="#ff7b6b"/>
+      <path d="M650 600 L640 360 L545 388 L535 600Z" fill="#ffd6ec"/><path d="M646 366 L590 300 L533 392 L545 388 L640 360Z" fill="#8a63d2"/>
+      <!-- Kirchturm St. Sebastian, steil nach oben -->
+      <path d="M352 600 L368 250 L432 250 L448 600Z" fill="#f4ead8"/>
+      <path d="M362 252 L400 40 L438 252Z" fill="#3aa17e"/>
+      <path d="M400 40 V8 M390 20 H410" fill="none"/>
+      <path d="M448 600 L446 430 L530 460 L530 600Z" fill="#f4ead8"/><path d="M444 432 L490 392 L534 462 L530 460 L446 430Z" fill="#ff7b6b"/>
+    </g>
+    <g fill="url(#fe)" stroke="#23324a" stroke-width="3">
+      <rect x="30" y="330" width="34" height="44"/><rect x="92" y="350" width="34" height="44"/><rect x="30" y="420" width="34" height="44"/><rect x="92" y="436" width="34" height="44"/>
+      <rect x="190" y="405" width="26" height="34"/><rect x="234" y="416" width="26" height="34"/>
+      <rect x="738" y="325" width="34" height="44"/><rect x="676" y="346" width="34" height="44"/><rect x="738" y="415" width="34" height="44"/><rect x="676" y="432" width="34" height="44"/>
+      <rect x="590" y="412" width="26" height="34"/><rect x="552" y="422" width="24" height="32"/>
+      <path d="M388 330 a12 12 0 0 1 24 0 v34 h-24Z"/><path d="M388 420 a12 12 0 0 1 24 0 v34 h-24Z"/>
+      <circle cx="400" cy="285" r="15" fill="#fff"/>
+    </g>
+    <path d="M400 285 V275 M400 285 L407 289" stroke="#23324a" stroke-width="3" stroke-linecap="round"/>
+    <!-- Straße auf den Betrachter zu -->
+    <path d="M330 520 L470 520 L800 600 L0 600Z" fill="#7d8496" stroke="#23324a" stroke-width="5"/>
+    <path d="M400 524 V540 M400 552 V574 M400 586 V600" stroke="#fff6c2" stroke-width="7"/>
+    <!-- Scooter-Kind mit High five -->
+    <g transform="translate(585 412)" stroke="#23324a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="80" cy="172" rx="95" ry="10" fill="#23324a" opacity=".3" stroke="none"/>
+      <path d="M20 150 H128" stroke-width="12" stroke="#2ec4b6"/><path d="M20 150 H128" fill="none" stroke-width="3" opacity="0"/>
+      <circle cx="14" cy="158" r="14" fill="#23324a"/><circle cx="138" cy="158" r="14" fill="#23324a"/>
+      <circle cx="14" cy="158" r="4" fill="#fff" stroke="none"/><circle cx="138" cy="158" r="4" fill="#fff" stroke="none"/>
+      <path d="M134 152 L112 52 M96 52 H132" fill="none" stroke-width="7"/>
+      <path d="M52 146 L58 104 M78 146 L70 104" fill="none" stroke="#3b5bdb" stroke-width="14"/>
+      <path d="M44 62 Q64 50 84 62 L80 108 H50Z" fill="#ffcf3f"/>
+      <path d="M82 70 L114 58" fill="none" stroke="#ffcf3f" stroke-width="12"/><path d="M82 70 L114 58" fill="none" stroke-width="0"/>
+      <path d="M46 68 L14 22" fill="none" stroke="#ffcf3f" stroke-width="12"/>
+      <circle cx="10" cy="14" r="11" fill="#f5d0b0"/>
+      <circle cx="66" cy="34" r="24" fill="#f5d0b0"/>
+      <path d="M42 30 Q44 6 68 6 Q92 8 90 32 Q70 16 42 30Z" fill="#ff5fa2"/>
+      <path d="M58 44 Q67 52 76 44" fill="none" stroke-width="3"/><circle cx="58" cy="34" r="2.5" fill="#23324a" stroke="none"/><circle cx="76" cy="34" r="2.5" fill="#23324a" stroke="none"/>
+      <g stroke="#fff3b0" stroke-width="5" fill="none"><path d="M-12 -4 L-24 -12"/><path d="M6 -10 L4 -24"/><path d="M26 0 L38 -10"/></g>
+    </g>
+  </svg>
+  <div class="inhalt">
+    <h1><span class="g">Grand</span><span class="s">Schliefar</span><span class="w">Schwarzach</span></h1>
+    <div class="band">✋ High fives statt Hupen · Schwarzach in Vorarlberg</div>
+    <div class="unten">
+      <button class="knopf" id="los">Los geht's! 🛴</button>
+      <p class="steuerung">↑ vorwärts · ↓ bremsen · ← → drehen (oder WASD) · Leertaste: Scooter auf/ab · E: bei einem Ort etwas machen · M: Karte<br>Tablet: links den Daumen nach oben schieben und lenken, rechts die Knöpfe</p>
+      <a class="zurueck" href="/">⟵ zurück zu maia.games</a>
+    </div>
   </div>
 </div>
 
@@ -100,7 +183,7 @@
   <div class="karte-box">
     <h2><span class="emo" id="dEmo"></span><span id="dTitel"></span></h2>
     <div id="dText"></div>
-    <button class="knopf" id="dOk">Okay!</button>
+    <button class="knopf" id="dOk">Okay!</button><button class="knopf grau" id="dNein" hidden>Später</button>
   </div>
 </div>
 
@@ -110,7 +193,7 @@
 <script>
 "use strict";
 /* =====================================================================
-   Schwarzach Flitzer – ein kindgerechtes, gewaltfreies Dorf-Abenteuer
+   Grand Schliefar Schwarzach – ein kindgerechtes, gewaltfreies Dorf-Abenteuer
    in Schwarzach (Vorarlberg). Straßen und Gebäude: OpenStreetMap.
    ===================================================================== */
 const K = window.KARTE;
@@ -169,7 +252,7 @@ const GW = Math.ceil((BX1 - BX0 + 1200) / CELL), GH = Math.ceil((BY1 - BY0 + 120
 const gx = x => clamp(Math.floor((x - BX0 + 600) / CELL), 0, GW - 1), gy = y => clamp(Math.floor((y - BY0 + 600) / CELL), 0, GH - 1);
 const bGrid = new Array(GW * GH), rGrid = new Array(GW * GH);
 buildings.forEach((b, i) => { for (let y = gy(b.y0); y <= gy(b.y1); y++) for (let x = gx(b.x0); x <= gx(b.x1); x++) (bGrid[y * GW + x] ||= []).push(i); });
-roads.forEach((r, ri) => { if (!r.name) return; for (let k = 0; k < r.pts.length - 1; k++) {
+roads.forEach((r, ri) => { if (r.tunnel) return; for (let k = 0; k < r.pts.length - 1; k++) {
   const [ax, ay] = r.pts[k], [bx, by] = r.pts[k + 1];
   for (let y = gy(Math.min(ay, by)); y <= gy(Math.max(ay, by)); y++) for (let x = gx(Math.min(ax, bx)); x <= gx(Math.max(ax, bx)); x++) (rGrid[y * GW + x] ||= []).push(ri * 4096 + k);
 } });
@@ -182,10 +265,29 @@ function inPoly(f, px, py) {
   }
   return c;
 }
+// Gartenzäune: Rechteck mit Tor (gate: 0 oben, 1 rechts, 2 unten, 3 links)
+const ZAUN_D = 6, TOR = 15;
+const fences = (K.fences || []).map(([x0, y0, x1, y1, gate]) => ({ x0, y0, x1, y1, gate }));
+const fGrid = new Array(GW * GH);
+fences.forEach((f, i) => { for (let y = gy(f.y0 - ZAUN_D); y <= gy(f.y1 + ZAUN_D); y++) for (let x = gx(f.x0 - ZAUN_D); x <= gx(f.x1 + ZAUN_D); x++) (fGrid[y * GW + x] ||= []).push(i); });
+function amZaun(f, x, y) {
+  if (x < f.x0 - ZAUN_D || x > f.x1 + ZAUN_D || y < f.y0 - ZAUN_D || y > f.y1 + ZAUN_D) return false;
+  if (x > f.x0 + ZAUN_D && x < f.x1 - ZAUN_D && y > f.y0 + ZAUN_D && y < f.y1 - ZAUN_D) return false; // drinnen im Garten
+  const mx = (f.x0 + f.x1) / 2, my = (f.y0 + f.y1) / 2;
+  if (f.gate === 0 && y < f.y0 + ZAUN_D && Math.abs(x - mx) < TOR) return false;
+  if (f.gate === 2 && y > f.y1 - ZAUN_D && Math.abs(x - mx) < TOR) return false;
+  if (f.gate === 3 && x < f.x0 + ZAUN_D && Math.abs(y - my) < TOR) return false;
+  if (f.gate === 1 && x > f.x1 - ZAUN_D && Math.abs(y - my) < TOR) return false;
+  return true;
+}
+function imGarten(x, y) { const l = fGrid[gy(y) * GW + gx(x)]; if (!l) return null; for (const i of l) { const f = fences[i]; if (x > f.x0 && x < f.x1 && y > f.y0 && y < f.y1) return f; } return null; }
 function blocked(x, y) {
   if (x < BX0 || x > BX1 || y < BY0 || y > BY1) return true;
-  const list = bGrid[gy(y) * GW + gx(x)]; if (!list) return false;
-  for (const i of list) { const b = buildings[i]; if (x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1 && inPoly(b.f, x, y)) return true; }
+  const c = gy(y) * GW + gx(x);
+  const list = bGrid[c];
+  if (list) for (const i of list) { const b = buildings[i]; if (x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1 && inPoly(b.f, x, y)) return true; }
+  const fl = fGrid[c];
+  if (fl) for (const i of fl) if (amZaun(fences[i], x, y)) return true;
   return false;
 }
 function segDist(px, py, ax, ay, bx, by) {
@@ -193,13 +295,36 @@ function segDist(px, py, ax, ay, bx, by) {
   const t = clamp(((px - ax) * dx + (py - ay) * dy) / l, 0, 1);
   return [Math.hypot(px - ax - t * dx, py - ay - t * dy), ax + t * dx, ay + t * dy];
 }
+function aufStrasse(x, y) { // Fahrbahn oder Gehsteig?
+  for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
+    const X = gx(x) + ox, Y = gy(y) + oy; if (X < 0 || Y < 0 || X >= GW || Y >= GH) continue;
+    const list = rGrid[Y * GW + X]; if (!list) continue;
+    for (const v of list) { const r = roads[v >> 12], k = v & 4095; const [d] = segDist(x, y, ...r.pts[k], ...r.pts[k + 1]);
+      if (d < r.w / 2 + (r.code <= 7 ? GEHSTEIG * .8 : 2)) return true; }
+  }
+  return false;
+}
+// Wasser: Bäche ab 4 m Breite und Teiche
+const wGrid = new Array(GW * GH);
+waters.forEach((w, wi) => { if (w.w < 12) return; for (let k = 0; k < w.f.length - 2; k += 2) {
+  const ax = w.f[k], ay = w.f[k + 1], bx = w.f[k + 2], by = w.f[k + 3];
+  for (let y = gy(Math.min(ay, by) - 30); y <= gy(Math.max(ay, by) + 30); y++) for (let x = gx(Math.min(ax, bx) - 30); x <= gx(Math.max(ax, bx) + 30); x++) (wGrid[y * GW + x] ||= []).push(wi * 4096 + k);
+} });
+const teiche = areas.filter(a => a.c === 'a');
+function imWasser(x, y) {
+  const list = wGrid[gy(y) * GW + gx(x)];
+  let nass = false;
+  if (list) for (const v of list) { const w = waters[v >> 12], k = v & 4095; const [d] = segDist(x, y, w.f[k], w.f[k + 1], w.f[k + 2], w.f[k + 3]); if (d < w.w / 2 - 1) { nass = true; break; } }
+  if (!nass) for (const a of teiche) if (x > a.x0 && x < a.x1 && y > a.y0 && y < a.y1 && inPoly(a.f, x, y)) { nass = true; break; }
+  return nass && !aufStrasse(x, y); // Brücken bleiben trocken
+}
 function nearestRoadName(x, y) {
   let best = 1e9, name = '';
   for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
     const X = gx(x) + ox, Y = gy(y) + oy; if (X < 0 || Y < 0 || X >= GW || Y >= GH) continue;
     const list = rGrid[Y * GW + X]; if (!list) continue;
     for (const v of list) { const r = roads[v >> 12], k = v & 4095; const [d] = segDist(x, y, ...r.pts[k], ...r.pts[k + 1]);
-      if (d < best && !r.tunnel) { best = d; name = r.name; } }
+      if (d < best && r.name) { best = d; name = r.name; } }
   }
   return best < 60 ? name : '';
 }
@@ -249,25 +374,74 @@ function ort(def) {
   const [x, y] = snap(p[0], p[1]);
   return { name: def.name, emo: def.emo, x, y, bx: p[0], by: p[1] };
 }
-const ORTE = {
-  gemeindeamt: ort({ name: 'Gemeindeamt', emo: '🏛️', re: [/gemeinde(amt|haus)|rathaus/i], ll: [47.44752, 9.76418] }),
-  gorani: ort({ name: 'Pizza Gorani', emo: '🍕', re: [/gorani/i], ll: [47.43865, 9.75908] }),
-  spar: ort({ name: 'Spar', emo: '🛒', re: [/^spar\b/i], ll: [47.44746, 9.76324] }),
-  sutter: ort({ name: 'Sutterlüty', emo: '🥨', re: [/sutterl/i], ll: [47.43875, 9.75791] }),
-  baustelle: ort({ name: 'Baustelle Untere Staudachstraße', emo: '🚧', road: /untere staudach/i, ll: [47.4418, 9.7668] }),
-  bauhof: ort({ name: 'Bauhof (Gleisweg)', emo: '🧰', road: /gleisweg/i, ll: [47.4455, 9.7560] }),
-  dorfplatz: ort({ name: 'Dorfplatz', emo: '🎄', road: /dorfplatz/i, ll: [47.44730, 9.76390] }),
-  kirche: ort({ name: 'Pfarrkirche St. Sebastian', emo: '⛪', re: [/sebastian/i], kind: /worship|church/, ll: [47.4479, 9.7651] }),
-  bahnhof: ort({ name: 'Bahnhof Schwarzach', emo: '🚆', re: [/bahnhof/i], ll: [47.4461, 9.7542] }),
-  buecherei: ort({ name: 'Bücherei', emo: '📚', re: [/bücherei|bibliothek/i], kind: /library/, ll: [47.4446, 9.7627] }),
-  schule: ort({ name: 'Mittelschule', emo: '🏫', re: [/mittelschule schwarzach/i, /mittelschule/i], kind: /school/, ll: [47.4432, 9.7620] }),
-  rieger: ort({ name: 'Rieger Orgelbau', emo: '🎹', re: [/rieger/i] }),
-  bach: (() => { const w = waters.filter(w => /schwarzach/i.test(w.name)); if (!w.length) return null; let best = null, bd = 1e9;
-    for (const ww of w) for (let i = 0; i < ww.f.length; i += 2) { const d = dist(ww.f[i], ww.f[i + 1], 0, 0); if (d < bd) { bd = d; best = [ww.f[i], ww.f[i + 1]]; } }
-    const [x, y] = snap(...best); return { name: 'Die Schwarzach (Bach)', emo: '🐟', x, y, bx: best[0], by: best[1] }; })(),
-  tunnel: (() => { const t = roads.filter(r => r.tunnel && r.code <= 3); if (!t.length) return null; const r = t.reduce((a, b) => b.pts.length > a.pts.length ? b : a);
-    const p = r.pts[0]; const [x, y] = snap(p[0], p[1]); return { name: 'Achraintunnel', emo: '🚇', x, y, bx: p[0], by: p[1] }; })(),
+// Alle Einrichtungen von schwarzach.at (Einrichtungen, Gastronomie, Gesundheit und Soziales) plus Dorf-Wahrzeichen.
+// key: [Name, Emoji, Typ, Knopf-Text, Was passiert]   Typ: essen = stärken, hilfe = verarzten, sonst = Spaß
+const ORT_INFO = {
+  gemeindeamt: ['Gemeindeamt', '🏛️', 'sonst', 'Stempel abholen', 'Am Schalter bekommst du einen dicken Stempel: <b>„Schwarzach, 6858!“</b> Der Bürgermeister winkt aus dem Fenster.'],
+  dorfplatz: ['Dorfplatz', '🎄', 'sonst', 'Aufs Bänkle sitzen', 'Du setzt dich aufs Bänkle und schaust dem Dorf zu. Ahhh, kurz verschnaufen!'],
+  kirche: ['Pfarrkirche St. Sebastian', '⛪', 'sonst', 'Glocken anhören', '<b>Bim, bam, bim, bam!</b> Die Glocken im 64 Meter hohen Turm läuten extra für dich.', 'glocke'],
+  friedhof: ['Friedhof', '🕯️', 'sonst', 'Kerze anzünden', 'Du zündest leise eine Kerze an. Die Arkaden rund um den Friedhof wurden schon 1868 gebaut.'],
+  schule: ['Mittelschule', '🏫', 'sonst', 'Einmaleins üben', '<b>7 × 8 = 56!</b> Richtig! Die Lehrerin malt dir einen Stern ins Heft.'],
+  volksschule: ['Volksschule', '🎒', 'sonst', 'In der Pause mitspielen', 'Große Pause! Du spielst eine Runde Fangen mit und wirst kein einziges Mal erwischt.'],
+  buecherei: ['Bücherei', '📚', 'sonst', 'Buch ausleihen', 'Du leihst dir ein dickes Buch über Drachen aus. Bitte in drei Wochen zurückbringen!'],
+  schuelerbetreuung: ['Schülerbetreuung', '🧩', 'sonst', 'Mitbasteln', 'Du bastelst einen Papierflieger. Er fliegt bis zur anderen Wand!'],
+  kigadorf: ['Kindergarten Dorf', '🧸', 'sonst', 'Im Sandkasten buddeln', 'Du baust die größte Sandburg, die der Kindergarten Dorf je gesehen hat.'],
+  kigaminderach: ['Kindergarten Minderach', '🪁', 'sonst', 'Rutschen', 'Hui! Dreimal rutschen, dreimal lachen.'],
+  deluxe: ['Jugendtreff deluXe', '🎧', 'sonst', 'Tischfußball spielen', 'Tooor! Du gewinnst 10 zu 9 im Tischfußball.'],
+  gemeindesaal: ['Gemeindesaal', '🎭', 'sonst', 'Auf die Bühne hüpfen', 'Du verbeugst dich auf der Bühne. Der leere Saal klatscht trotzdem ein bisschen.'],
+  hofsteiger: ['Pizzeria Hofsteiger', '🍝', 'essen', 'Spaghetti essen', 'Ein Teller Spaghetti im Hofsteiger. Schlürf! Hier sind auch der Saal und der Bräukeller.'],
+  pub: ["S'Pub", '🎯', 'sonst', 'Dart werfen', 'Zack, mitten ins Schwarze! Die Dartpiraten staunen.'],
+  senioren: ['Seniorenwohnung', '👵', 'sonst', 'Karten spielen', 'Du jasst eine Runde mit. Die Omas gewinnen. Schon wieder.'],
+  heimathaus: ['Heimathaus', '🏺', 'sonst', 'Alte Sachen anschauen', 'Im Heimathaus siehst du, wie die Schwarzacher früher gelebt haben. Sogar echte Wetzsteine der Schlifar liegen hier!'],
+  bauhof: ['Bauhof', '🧰', 'sonst', 'Schneepflug anschauen', 'Die Bauhof-Leute lassen dich kurz im Schneepflug sitzen. Brumm, brumm!'],
+  feuerwehr: ['Feuerwehr', '🚒', 'sonst', 'Sirene ausprobieren', '<b>Tatüü, tataa!</b> Die Freiwillige Feuerwehr Schwarzach gibt es schon seit 1877.', 'sirene'],
+  fussballplatz: ['Fußballplatz', '⚽', 'sonst', 'Elfmeter schießen', 'Anlauf, Schuss ... <b>Tooor!</b> Genau ins Kreuzeck.'],
+  bahnhof: ['Bahnhof Schwarzach', '🚆', 'sonst', 'Dem Zug winken', 'Die S1 nach Bregenz rauscht vorbei. Der Lokführer hupt zurück!', 'hupe'],
+  bach: ['Die Schwarzach (Bach)', '🐟', 'sonst', 'Fische zählen', 'Eins, zwei, drei Barsche! Genau so viele wie im Wappen von Schwarzach.'],
+  tunnel: ['Achraintunnel', '🚇', 'sonst', 'Ins Echo rufen', '<b>„Hallooo!“</b> ... hallooo ... llooo ... ooo ...'],
+  baustelle: ['Baustelle Untere Staudachstraße', '🚧', 'sonst', 'Bagger anschauen', 'Der Baggerfahrer lässt die Schaufel für dich winken.'],
+  rieger: ['Rieger Orgelbau', '🎹', 'sonst', 'Orgelpfeife ausprobieren', 'Du pustest in eine Orgelpfeife. <b>Tuuut!</b> Die größten Pfeifen hier sind höher als ein Haus.', 'orgel'],
+  russmedia: ['Russmedia', '📰', 'sonst', 'Zeitung lesen', 'Hier entstehen die Vorarlberger Nachrichten. Heute auf Seite 1: du auf dem Scooter!'],
+  lebenshilfe: ['Lebenshilfe Manufaktur', '🧶', 'sonst', 'Beim Werken zuschauen', 'In der Manufaktur werden schöne Sachen von Hand gemacht. Du darfst einen Knopf annähen.'],
+  sparkasse: ['Sparkasse', '🐷', 'sonst', 'Sparschwein füttern', 'Klimper! Eine Münze wandert ins Sparschwein.'],
+  tierarzt: ['Tierarztpraxis', '🐶', 'sonst', 'Hund streicheln', 'Im Wartezimmer sitzt ein Hund mit Halskrause. Er wedelt, als du ihn streichelst.'],
+  apotheke: ['Heilquell Apotheke', '💊', 'hilfe', 'Traubenzucker holen', 'Die Apothekerin schenkt dir einen Traubenzucker.'],
+  arzt: ['Arztpraxis', '🩺', 'hilfe', 'Abhorchen lassen', 'Der Doktor horcht dich ab. <b>„Kerngesund!“</b>'],
+  zahnarzt: ['Zahnarzt', '🦷', 'hilfe', 'Zähne zeigen', '<b>„Aaaah!“</b> Kein einziges Loch. Du bekommst einen Sticker.'],
+  krankenpflege: ['Krankenpflegeverein', '🩹', 'hilfe', 'Hallo sagen', 'Die Pflegerinnen winken dir zu. Sie helfen Leuten in ganz Schwarzach.'],
+  gorani: ['Pizza Gorani', '🍕', 'essen', 'Pizzastück essen', 'Ein heißes Stück Pizza auf die Hand. Mmmh!'],
+  spar: ['Spar', '🛒', 'essen', 'Jause kaufen', 'Ein Wurstsemmele und ein Apfel. Das gibt Kraft!'],
+  sutter: ['Sutterlüty', '🥨', 'essen', 'Brezel holen', 'Eine frische Laugenbrezel vom Sutterlüty.'],
+  mangold: ['Bäckerei Mangold', '🥐', 'essen', 'Kipferl naschen', 'Ein warmes Kipferl direkt vom Blech.'],
+  loacker: ['Café Restaurant Loacker', '☕', 'essen', 'Kakao trinken', 'Ein großer Kakao mit Schlagobers. Schnurrbart inklusive!'],
+  memos: ['Memos Kebab', '🥙', 'essen', 'Dürüm essen', 'Ein Dürüm mit allem. Aber bitte nicht scharf!'],
+  stuba: ['Schwarzach-Stuba', '🍲', 'essen', 'Käsknöpfle essen', 'Eine Portion Käsknöpfle mit Röstzwiebeln. So schmeckt Vorarlberg!'],
+  subirerhof: ['Subirerhof', '🍐', 'essen', 'Birnensaft trinken', 'Ein Glas Birnensaft vom Hof. Süß und kalt!'],
 };
+const ORTE = {};
+{
+  const roh = { ...(K.orte || {}) };
+  const rm = re => { const p = roadMid(re); return p ? [p[0], p[1]] : null; };
+  roh.dorfplatz = rm(/dorfplatz/i) || proj(47.44730, 9.76390);
+  roh.baustelle = rm(/untere staudach/i) || proj(47.4418, 9.7668);
+  { const w = waters.filter(w => /schwarzach/i.test(w.name)); let best = null, bd = 1e9;
+    for (const ww of w) for (let i = 0; i < ww.f.length; i += 2) { const d = dist(ww.f[i], ww.f[i + 1], 0, 0); if (d < bd) { bd = d; best = [ww.f[i], ww.f[i + 1]]; } }
+    if (best) roh.bach = best; }
+  { const t = roads.filter(r => r.tunnel && r.code <= 3); if (t.length) roh.tunnel = t.reduce((a, b) => b.pts.length > a.pts.length ? b : a).pts[0]; }
+  { let best = null; for (const a of areas) if (a.c === 'k') { const d = Math.hypot((a.x0 + a.x1) / 2, (a.y0 + a.y1) / 2); if (!best || d < best[0]) best = [d, (a.x0 + a.x1) / 2, (a.y0 + a.y1) / 2]; } if (best && best[0] < 2500) roh.friedhof = [best[1], best[2]]; }
+  const frei = (x, y) => !blocked(x, y) && !imWasser(x, y) && !imGarten(x, y);
+  for (const key in ORT_INFO) {
+    const p = roh[key]; if (!p) continue;
+    let [x, y] = snap(p[0], p[1]);
+    // Orte mit gleicher Adresse etwas auseinanderrücken
+    const eng = (x, y) => Object.values(ORTE).some(o => dist(o.x, o.y, x, y) < 56);
+    if (eng(x, y) || !frei(x, y)) { let ok = false;
+      for (let r = 56; r <= 190 && !ok; r += 22) for (let a = 0; a < 12 && !ok; a++) { const qx = x + Math.cos(a * Math.PI / 6 + r) * r, qy = y + Math.sin(a * Math.PI / 6 + r) * r;
+        if (frei(qx, qy) && !eng(qx, qy) && aufStrasse(qx, qy)) { x = qx; y = qy; ok = true; } } }
+    const [name, emo, typ, knopf, text, klang] = ORT_INFO[key];
+    ORTE[key] = { key, name, emo, typ, knopf, text, klang, x, y, bx: p[0], by: p[1] };
+  }
+}
 
 /* ---------------- Wissenstafeln (Geschichte) ---------------- */
 const WP = 'Quelle: Wikipedia, Artikel „Schwarzach (Vorarlberg)“';
@@ -312,9 +486,44 @@ const AUFTRAEGE = [
     ] },
 ].filter(a => a.schritte.every(s => [].concat(s.ort).every(o => ORTE[o])));
 
+// 30 Zufalls-Aufträge: Leute im Dorf rufen um Hilfe. Quellen der Ideen: Vereine, Einrichtungen und Gastronomie laut schwarzach.at.
+// s = Schritte: ['hol', Ort, Ding] · ['gib', Ort oder 'geber'] · ['sammle', Ding, Anzahl, Ort?] · ['hi5', Anzahl] · ['geh', Ort]   hat = Ding, das man gleich mitbekommt
+const ZUFALL = [
+  { id: 'noten', wer: '🎺', rolle: 'Musikantin der Bürgermusik', ruf: 'Hilfe! Meine Noten fliegen weg!', bitte: 'Der Wind hat alle Notenblätter davongeweht, und heute Abend ist Probe! <b>Sammelst du sie für mich ein?</b>', s: [['sammle', '🎼', 6]], danke: 'Alle Blätter wieder da! Die Bürgermusik Schwarzach spielt schon seit 1856, und heute dank dir.' },
+  { id: 'wuerstle', wer: '🧑‍🚒', rolle: 'Feuerwehrmann', ruf: 'Hilfe! Die Würstle sind aus!', bitte: 'Beim Feuerwehrfest sind die Würstle ausgegangen. Das ist ein echter Notfall! <b>Holst du Nachschub vom Spar und bringst ihn zur Feuerwehr?</b>', s: [['hol', 'spar', '🌭'], ['gib', 'feuerwehr']], danke: 'Fest gerettet! Dafür darfst du einmal die Sirene drücken.' },
+  { id: 'baelle', wer: '🧢', rolle: 'Trainer vom FC Schwarzach', ruf: 'Hilfe! Alle Bälle sind weg!', bitte: 'Die Kinder haben beim Training jeden Ball über den Zaun geschossen. <b>Suchst du die Bälle rund um den Fußballplatz?</b>', s: [['sammle', '⚽', 5, 'fussballplatz']], danke: 'Fünf von fünf! Du bist ab heute Ehren-Balljunge beim FC Schwarzach.' },
+  { id: 'funken', wer: '🔥', rolle: 'Funkenzünzlar', ruf: 'He du! Wir brauchen Holz!', bitte: 'Am Funkensonntag soll der Funken hoch brennen, aber uns fehlt noch Holz. <b>Sammelst du ein paar Scheite?</b>', s: [['sammle', '🪵', 6]], danke: 'Das wird der höchste Funken im ganzen Rheintal!' },
+  { id: 'konfetti', wer: '🤡', rolle: 'Narr der Schliefer Fasnatzunft', ruf: 'Hilfe! Kein Konfetti mehr!', bitte: 'Beim Faschingsumzug wird der Bürgermeister abgesetzt, und zwar mit Konfetti! Nur haben wir keins mehr. <b>Holst du welches beim Spar und bringst es zum Dorfplatz?</b>', s: [['hol', 'spar', '🎉'], ['gib', 'dorfplatz']], danke: 'Ore, ore! Jetzt regnet es Konfetti. Der Bürgermeister hat es überall.' },
+  { id: 'hut', wer: '🎭', rolle: 'Schauspielerin vom Theaterverein', ruf: 'Hilfe! Mein Hut!', bitte: 'Gleich geht der Vorhang auf, und mein Zylinder liegt noch in der Pizzeria Hofsteiger! <b>Holst du ihn und bringst ihn in den Gemeindesaal?</b>', s: [['hol', 'hofsteiger', '🎩'], ['gib', 'gemeindesaal']], danke: 'Gerade noch rechtzeitig. Vorhang auf!' },
+  { id: 'heiser', wer: '🎤', rolle: 'Sänger vom Projektchor', ruf: 'Krächz! Hilfe!', bitte: 'Ich hab zu laut geübt, jetzt ist die Stimme weg. <b>Bringst du mir Hustenbonbons aus der Apotheke?</b>', s: [['hol', 'apotheke', '🍬'], ['gib', 'geber']], danke: 'La la laaa! Hörst du? Sie ist wieder da!' },
+  { id: 'federball', wer: '🏸', rolle: 'Spielerin vom Badmintonclub BC77', ruf: 'Hilfe! Der Wind!', bitte: 'Wir wollten draußen spielen, und der Wind hat alle Federbälle mitgenommen. <b>Findest du sie?</b>', s: [['sammle', '🏸', 5]], danke: 'Super! Nächstes Mal spielen wir wieder in der Halle.' },
+  { id: 'dart', wer: '🏴‍☠️', rolle: 'Dartpirat', ruf: 'Arrr! Hilfe!', bitte: "Ich hab meine Glückspfeile im S'Pub liegen lassen. Ohne die treffe ich nicht mal die Wand! <b>Holst du sie mir?</b>", s: [['hol', 'pub', '🎯'], ['gib', 'geber']], danke: 'Arrr, danke, Matrose! Heute werfe ich nur Volltreffer.' },
+  { id: 'kneipp', wer: '🦶', rolle: 'Frau vom Kneipp-Aktiv-Club', ruf: 'Huhu! Komm mit!', bitte: 'Wassertreten hält gesund und macht munter! <b>Flitz zur Schwarzach und halt die Zehen ins kalte Wasser.</b> Aber nicht hineinfallen!', s: [['geh', 'bach']], danke: 'Brrr, kalt! Aber jetzt bist du hellwach und hast wieder volle Puste.', puste: true },
+  { id: 'medizin', wer: '🧑‍⚕️', rolle: 'Pflegerin vom Krankenpflegeverein', ruf: 'Hilfe! Ich schaff das nicht allein!', bitte: 'Ich muss heute zu so vielen Leuten. <b>Holst du die Medizin aus der Apotheke und bringst sie in die Seniorenwohnung?</b>', s: [['hol', 'apotheke', '💊'], ['gib', 'senioren']], danke: 'Die Omas und Opas sagen danke und stecken dir ein Zuckerle zu.' },
+  { id: 'brille', wer: '👴', rolle: 'Opa von Vorarlberg 50plus', ruf: 'Hilfe! Ich seh nix!', bitte: 'Ich hab meine Brille im Café Loacker neben dem Kuchenteller vergessen. <b>Holst du sie mir, bitte?</b>', s: [['hol', 'loacker', '👓'], ['gib', 'geber']], danke: 'Ah, du bist das! Jetzt seh ich dich endlich.' },
+  { id: 'brief', wer: '🦯', rolle: 'Mann vom Blinden- und Sehbehindertenbund', ruf: 'Hallo? Hilft mir jemand?', bitte: 'Ich habe einen wichtigen Brief für die Gemeinde. <b>Bringst du ihn für mich ins Gemeindeamt?</b>', hat: '✉️', s: [['gib', 'gemeindeamt']], danke: 'Der Brief ist angekommen. Im Gemeindeamt haben sie sich sehr gefreut.' },
+  { id: 'kuchen', wer: '👩', rolle: 'Mama vom Elternverein', ruf: 'Hilfe! Der Kuchen fehlt!', bitte: 'Heute ist Schulfest und ich hab den Kuchen vergessen! <b>Holst du einen bei der Bäckerei Mangold und bringst ihn in die Volksschule?</b>', s: [['hol', 'mangold', '🍰'], ['gib', 'volksschule']], danke: 'Der Kuchen war in drei Minuten weg. Ein Stück haben sie dir aufgehoben!' },
+  { id: 'laternen', wer: '🧑‍🏫', rolle: 'Kindergärtnerin', ruf: 'Hilfe! Die Laternen!', bitte: 'Heute Abend ist Laternenfest, und es fehlen noch Lichter. <b>Holst du welche beim Spar und bringst sie in den Kindergarten Dorf?</b>', s: [['hol', 'spar', '🏮'], ['gib', 'kigadorf']], danke: 'Ich geh mit meiner Laterne ... und du gehst mit!' },
+  { id: 'kuscheltier', wer: '👧', rolle: 'Kind vom Kindergarten Minderach', ruf: 'Buhuu! Meine Kuscheltiere!', bitte: 'Beim Ausflug sind mir alle Kuscheltiere aus dem Rucksack gefallen. <b>Findest du sie beim Kindergarten Minderach?</b>', s: [['sammle', '🧸', 3, 'kigaminderach']], danke: 'Hasi, Bärli und Elefanti sind wieder da! Danke, danke, danke!' },
+  { id: 'buecher', wer: '🧒', rolle: 'Schüler', ruf: 'Hilfe! Die Bücherei macht gleich zu!', bitte: 'Ich muss zum Fußballtraining, aber die Bücher müssen heute noch zurück. <b>Bringst du sie in die Bücherei?</b>', hat: '📚', s: [['gib', 'buecherei']], danke: 'Pünktlich abgegeben, keine Mahngebühr. Puh!' },
+  { id: 'limo', wer: '🧑‍🎤', rolle: 'Jugendliche vom deluXe', ruf: 'Hey! Hilfst du uns?', bitte: 'Im Jugendtreff ist heute Tischfußball-Turnier, und die Limo ist aus. <b>Holst du welche beim Sutterlüty und bringst sie ins deluXe?</b>', s: [['hol', 'sutter', '🥤'], ['gib', 'deluxe']], danke: 'Prost! Du darfst im Finale mitspielen.' },
+  { id: 'blumen', wer: '👵', rolle: 'Oma', ruf: 'Ach herrje! Hilfe!', bitte: 'Meine Beine wollen heute nicht so recht. <b>Holst du Blumen beim Spar und bringst sie zum Friedhof?</b>', s: [['hol', 'spar', '💐'], ['gib', 'friedhof']], danke: 'So ein liebes Kind. Die Blumen sehen wunderschön aus.' },
+  { id: 'wetzstein', wer: '🧑‍🌾', rolle: 'Bauer', ruf: 'Schau, was ich gefunden hab!', bitte: 'Beim Umgraben lag ein alter Wetzstein im Acker, sicher von den Schlifar! <b>Bringst du ihn ins Heimathaus?</b>', hat: '🪨', s: [['gib', 'heimathaus']], danke: 'Ein echter Schwarzacher Wetzstein! Der kommt in die Vitrine.' },
+  { id: 'zeitung', wer: '🧓', rolle: 'Bewohnerin der Seniorenwohnung', ruf: 'Hilfe! Meine Zeitung fehlt!', bitte: 'Heute ist keine Zeitung gekommen, und ich will doch das Kreuzworträtsel lösen! <b>Holst du eine bei Russmedia und bringst sie in die Seniorenwohnung?</b>', s: [['hol', 'russmedia', '📰'], ['gib', 'senioren']], danke: 'Frisch aus der Druckerei! 7 waagrecht: „Held von Schwarzach“. Das bist du.' },
+  { id: 'huehner', wer: '👩‍🌾', rolle: 'Bäuerin', ruf: 'Hilfe! Die Hühner sind los!', bitte: 'Jemand hat das Gatter offen gelassen, jetzt laufen meine Hennen durchs Dorf. <b>Fängst du sie wieder ein?</b>', s: [['sammle', '🐔', 5]], danke: 'Alle fünf wieder im Stall. Dafür gibt es ein Frühstücksei!' },
+  { id: 'laune', wer: '🙋', rolle: 'Helferin vom Mobilen Hilfsdienst', ruf: 'Hilfe! Alle sind so grantig!', bitte: 'Heute schauen alle drein wie sieben Tage Regenwetter. <b>Verteilst du sechs High fives im Dorf?</b>', s: [['hi5', 6]], danke: 'Schau, wie alle lachen! Gute Laune ist ansteckend.' },
+  { id: 'kebab', wer: '🚂', rolle: 'Lokführer', ruf: 'Hilfe! Ich verhungere!', bitte: 'Mein Zug fährt gleich weiter und ich hab noch nichts gegessen. <b>Holst du mir einen Dürüm bei Memos Kebab und bringst ihn zum Bahnhof?</b>', s: [['hol', 'memos', '🥙'], ['gib', 'bahnhof']], danke: 'Mmmh! Mit vollem Bauch fährt die S1 gleich viel pünktlicher.' },
+  { id: 'birnen', wer: '🧑‍🍳', rolle: 'Koch', ruf: 'Hilfe! Kein Birnensaft!', bitte: 'In der Schwarzach-Stuba will heute jeder Birnensaft, und das Fass ist leer. <b>Holst du Nachschub vom Subirerhof? Das ist ein gutes Stück zu fahren!</b>', s: [['hol', 'subirerhof', '🍐'], ['gib', 'stuba']], danke: 'Du bist einmal quer durchs Ried gefahren! Das erste Glas geht auf dich.' },
+  { id: 'eier', wer: '👩‍🍳', rolle: 'Wirtin der Schwarzach-Stuba', ruf: 'Hilfe! Keine Eier!', bitte: 'Ohne Eier keine Käsknöpfle, und die Stube ist voll! <b>Holst du Eier beim Spar und bringst sie in die Schwarzach-Stuba?</b> Aber vorsichtig fahren!', s: [['hol', 'spar', '🥚'], ['gib', 'stuba']], danke: 'Kein einziges Ei kaputt! Für dich gibt es eine Extraportion Röstzwiebeln.' },
+  { id: 'pfeife', wer: '🧑‍🔧', rolle: 'Orgelbauer', ruf: 'Hilfe! Die Orgel pfeift nicht!', bitte: 'In der Pfarrkirche fehlt eine Orgelpfeife, und am Samstag ist Kirchenkonzert. <b>Holst du eine neue bei Rieger Orgelbau und bringst sie zur Kirche?</b>', s: [['hol', 'rieger', '🎶'], ['gib', 'kirche']], danke: 'Tuuut! Jetzt klingt sie wieder wie tausend Flöten.' },
+  { id: 'koffer', wer: '🧳', rolle: 'Reisende', ruf: 'Hilfe! Mein Zug!', bitte: 'Mein Zug fährt gleich, und der Koffer ist so schwer! <b>Bringst du ihn schnell zum Bahnhof?</b>', hat: '🧳', s: [['gib', 'bahnhof']], danke: 'Geschafft! Sie winkt dir aus dem Zugfenster zu.' },
+  { id: 'punsch', wer: '🎅', rolle: 'Standlerin vom Weihnachtsmarkt', ruf: 'Hilfe! Der Punsch ist aus!', bitte: 'Am Weihnachtsmarkt beim Gemeindesaal ist der Kinderpunsch leer, und die Schlange wird immer länger. <b>Holst du Saft beim Sutterlüty und bringst ihn zum Gemeindesaal?</b>', s: [['hol', 'sutter', '🧃'], ['gib', 'gemeindesaal']], danke: 'Punsch für alle! Deine Tasse ist die größte.' },
+  { id: 'paket', wer: '📦', rolle: 'Mitarbeiter der Lebenshilfe-Manufaktur', ruf: 'Hallo! Hast du kurz Zeit?', bitte: 'Wir haben in der Manufaktur Geschenke für die Gemeinde gebastelt. <b>Bringst du das Paket ins Gemeindeamt?</b>', hat: '📦', s: [['gib', 'gemeindeamt']], danke: 'Der Bürgermeister packt es sofort aus. Sein Büro ist jetzt viel bunter.' },
+].filter(a => a.s.every(st => (st[0] === 'hol' || st[0] === 'geh') ? ORTE[st[1]] : st[0] === 'gib' ? (st[1] === 'geber' || ORTE[st[1]]) : st[0] === 'sammle' ? (!st[3] || ORTE[st[3]]) : true));
+
 /* ---------------- Spielzustand ---------------- */
 let state = {
-  hi5: 0, wissen: 0, fertig: [],
+  hi5: 0, wissen: 0, fertig: [], zufall: [], sterne: 0, stempel: [], platsch: 0,
 };
 try { const s = JSON.parse(localStorage.getItem('schwarzach-flitzer') || 'null'); if (s) state = { ...state, ...s }; } catch (e) {}
 function save() { try { localStorage.setItem('schwarzach-flitzer', JSON.stringify(state)); } catch (e) {} }
@@ -322,8 +531,12 @@ for (const t of TAFELN) if ((state.tafeln || []).includes(t.titel)) t.gefunden =
 
 const start0 = (() => { const o = ORTE.dorfplatz || { x: 0, y: 0 }; // ein paar Schritte neben dem Dorfplatz starten
   let best = null; for (const n of walkNodes) { const d = dist(n.x, n.y, o.x, o.y); if (d > 110 && d < 200 && (!best || n.w > best.w)) best = n; } return best || o; })();
-const P = { x: start0.x, y: start0.y, dir: Math.PI / 2, vx: 0, vy: 0, speed: 0, scooter: null, walk: 0, tragen: null };
-let auftrag = null; // { a, schritt, erledigt:Set }
+const P = { x: start0.x, y: start0.y, dir: Math.PI / 2, vx: 0, vy: 0, speed: 0, scooter: null, walk: 0, tragen: null,
+  energie: 100, turbo: 0, nass: 0, schramme: false, dreck: 0, trockenX: start0.x, trockenY: start0.y };
+let auftrag = null; // Dorf-Auftrag: { a, schritt, erledigt:Set } · Zufalls-Auftrag: { z, schritt, geber, items, hi5Start }
+const rufer = [];   // Leute, die um Hilfe rufen
+const spur = [];    // Dreckspur
+let oma = null, omaCool = 0;
 let cam = { x: P.x, y: P.y, z: 1 };
 
 /* ---------------- Figuren ---------------- */
@@ -363,9 +576,10 @@ addEventListener('keydown', e => {
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
   keys[e.key.toLowerCase()] = true;
   if (e.repeat) return;
-  if (e.key === ' ' || e.key === 'Enter' || e.key === 'e') aktion();
+  if (e.key === ' ') aktion();
+  if (e.key.toLowerCase() === 'e' || e.key === 'Enter') tun();
   if (e.key.toLowerCase() === 'm') toggleKarte();
-  if (e.key === 'Escape') { if (gkOn) toggleKarte(); }
+  if (e.key === 'Escape') { if (gkOn) toggleKarte(); else if (dialogOffen) schliesseDialog(true); }
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
@@ -382,6 +596,7 @@ addEventListener('pointermove', e => {
 const joyEnd = e => { if (e.pointerId === joy.id) { joy.id = null; joy.x = joy.y = 0; } };
 addEventListener('pointerup', joyEnd); addEventListener('pointercancel', joyEnd);
 document.getElementById('aktion').addEventListener('pointerdown', e => { e.preventDefault(); aktion(); });
+document.getElementById('tun').addEventListener('pointerdown', e => { e.preventDefault(); tun(); });
 function eingabe() {
   let x = 0, y = 0;
   if (keys['arrowleft'] || keys['a']) x -= 1; if (keys['arrowright'] || keys['d']) x += 1;
@@ -408,6 +623,21 @@ function klatsch() {
 const jingle = () => { [523, 659, 784, 1047].forEach((f, i) => ton(f, .16, 'triangle', .07, 0, i * .09)); };
 const hupe = () => { ton(392, .18, 'square', .03); ton(494, .18, 'square', .03, 0, .02); };
 const plopp = () => ton(300, .1, 'sine', .08, 700);
+function rauschen(dauer, freq, vol) {
+  if (!laut || !ac()) return; const n = AC.sampleRate * dauer, b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2);
+  const q = AC.createBufferSource(), g = AC.createGain(), fl = AC.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = freq; q.buffer = b; g.gain.value = vol; q.connect(fl).connect(g).connect(AC.destination); q.start();
+}
+const platschTon = () => { rauschen(.5, 900, .6); ton(500, .35, 'sine', .08, 90); };
+const schimpfTon = () => { [330, 392, 330, 392, 294].forEach((f, i) => ton(f, .09, 'sawtooth', .035, f * 1.15, i * .1)); };
+const hilfeTon = () => { ton(784, .14, 'triangle', .05); ton(587, .22, 'triangle', .05, 0, .16); };
+const KLANG = {
+  glocke: () => { [0, .5, 1, 1.5].forEach((t, i) => ton(i % 2 ? 392 : 523, .9, 'sine', .09, 0, t)); },
+  sirene: () => { [0, .4, .8, 1.2].forEach((t, i) => ton(i % 2 ? 440 : 587, .38, 'square', .04, 0, t)); },
+  orgel: () => { [131, 196, 262].forEach(f => ton(f, 1.1, 'triangle', .06)); },
+  hupe: () => { ton(220, .5, 'square', .05); ton(277, .5, 'square', .05); },
+  mampf: () => { [0, .14, .28].forEach(t => ton(180, .07, 'square', .04, 120, t)); },
+};
 
 /* ---------------- Boden-Kacheln (gecacht) ---------------- */
 const CH = 512, chunks = new Map(); let chunkTick = 0;
@@ -512,6 +742,7 @@ function zeichneGrosseKarte() {
     const tw = g.measureText(o.name).width; let ly = y + 24; for (let t = 0; t < 6 && belegt.some(([bx, by, bw]) => Math.abs(by - ly) < 15 && Math.abs(bx - x) < (bw + tw) / 2); t++) ly += 15;
     belegt.push([x, ly, tw]); g.lineWidth = 4; g.strokeStyle = '#fff'; g.strokeText(o.name, x, ly); g.fillStyle = '#23324a'; g.fillText(o.name, x, ly); }
   for (const t of TAFELN) if (!t.gefunden) { const [x, y] = tp(t.x, t.y); g.font = '18px sans-serif'; g.fillText('📜', x + 16, y - 6); }
+  for (const r of rufer) { const [x, y] = tp(r.x, r.y); g.font = '18px sans-serif'; g.fillText('🆘', x, y); }
   const z = ziel(); if (z) { const [x, y] = tp(z.x, z.y); g.strokeStyle = '#ff5fa2'; g.lineWidth = 5; g.beginPath(); g.arc(x, y, 18, 0, 7); g.stroke(); }
   const [px, py] = tp(P.x, P.y); g.fillStyle = '#ff5fa2'; g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.arc(px, py, 9, 0, 7); g.fill(); g.stroke();
   g.font = 'bold 14px "Comic Sans MS", sans-serif'; g.fillStyle = '#23324a'; g.textAlign = 'left'; g.fillText('Schwarzach · M oder tippen zum Schließen', 14, 886);
@@ -521,6 +752,13 @@ document.getElementById('grosseKarte').addEventListener('pointerdown', toggleKar
 /* ---------------- Auftrags-Logik ---------------- */
 function ziel() {
   if (!auftrag) return null;
+  if (auftrag.z) {
+    const st = auftrag.z.s[auftrag.schritt]; if (!st) return null;
+    if (st[0] === 'hol' || st[0] === 'geh') return ORTE[st[1]];
+    if (st[0] === 'gib') return st[1] === 'geber' ? auftrag.geber : ORTE[st[1]];
+    if (st[0] === 'sammle') { let b = null; for (const it of auftrag.items) if (!b || dist(P.x, P.y, it.x, it.y) < dist(P.x, P.y, b.x, b.y)) b = it; return b; }
+    return null;
+  }
   const s = auftrag.a.schritte[auftrag.schritt];
   const os = [].concat(s.ort).filter(o => !auftrag.erledigt.has(o));
   let best = null; for (const o of os) { const p = ORTE[o]; if (!best || dist(P.x, P.y, p.x, p.y) < dist(P.x, P.y, best.x, best.y)) best = p; }
@@ -533,19 +771,21 @@ function auftragsGeber() { // Sterne an Orten, wo ein Auftrag startet
   if (auftrag) return [];
   const a = naechsterAuftrag(); return a ? [{ a, o: ORTE[a.schritte[0].ort] }] : [];
 }
-let dialogOffen = false, dialogWeiter = null;
-function zeigeDialog(emo, titel, text, knopf, weiter) {
-  dialogOffen = true; dialogWeiter = weiter || null;
+let dialogOffen = false, dialogWeiter = null, dialogNein = null;
+function zeigeDialog(emo, titel, text, knopf, weiter, nein) { // nein = [Knopftext, Funktion] für einen zweiten Knopf
+  dialogOffen = true; dialogWeiter = weiter || null; dialogNein = nein ? nein[1] : null;
+  const nb = document.getElementById('dNein'); nb.hidden = !nein; if (nein) nb.textContent = nein[0];
   document.getElementById('dEmo').textContent = emo; document.getElementById('dTitel').textContent = titel;
   document.getElementById('dText').innerHTML = (Array.isArray(text) ? text : [text]).map(t => '<p>' + t + '</p>').join('');
   document.getElementById('dOk').textContent = knopf || 'Okay!';
   document.getElementById('dialog').classList.add('on');
 }
-function schliesseDialog() {
+function schliesseDialog(abgelehnt) {
   if (!dialogOffen) return; dialogOffen = false; document.getElementById('dialog').classList.remove('on');
-  const w = dialogWeiter; dialogWeiter = null; if (w) w();
+  const w = abgelehnt === true && dialogNein ? dialogNein : abgelehnt === true ? null : dialogWeiter; dialogWeiter = dialogNein = null; if (w) w();
 }
-document.getElementById('dOk').addEventListener('click', schliesseDialog);
+document.getElementById('dOk').addEventListener('click', () => schliesseDialog());
+document.getElementById('dNein').addEventListener('click', () => schliesseDialog(true));
 function pruefeAuftrag() {
   if (dialogOffen) return;
   // Auftrag annehmen
@@ -558,7 +798,9 @@ function pruefeAuftrag() {
       return;
     }
   }
-  if (!auftrag || auftrag.schritt === 0) return;
+  if (!auftrag) { pruefeRufer(); return; }
+  if (auftrag.z) { pruefeZufall(); return; }
+  if (auftrag.schritt === 0) return;
   const s = auftrag.a.schritte[auftrag.schritt];
   const z = ziel(); if (!z || dist(P.x, P.y, z.x, z.y) > 34) return;
   const okey = Object.keys(ORTE).find(k => ORTE[k] === z);
@@ -568,7 +810,7 @@ function pruefeAuftrag() {
     if (offen.length) { zeigeDialog(s.sag[0], z.name, s.sag[2].replace('dem anderen Geschäft', ORTE[offen[0]].name), 'Weiter!'); hudAuftrag(); return; }
     zeigeDialog(s.sag[0], s.sag[1], s.sag[2].replace('Fehlt noch das andere Geschäft!', 'Jetzt hast du alle beisammen. Ab zur Baustelle!'), 'Los!', () => { auftrag.schritt++; auftrag.erledigt = new Set(); hudAuftrag(); });
   } else if (s.gib) {
-    P.tragen = null; jingle(); state.hi5 += 1 + (s.bonus || 0); state.fertig.push(auftrag.a.id); save(); hudPunkte();
+    P.tragen = null; jingle(); state.hi5 += 1 + (s.bonus || 0); state.sterne++; state.fertig.push(auftrag.a.id); save(); hudPunkte();
     const id = auftrag.a.id;
     zeigeDialog(s.sag[0], s.sag[1], [s.sag[2], '⭐ Auftrag erledigt! ' + state.fertig.length + ' von ' + AUFTRAEGE.length], 'Juhu!', () => {
       auftrag = null; hudAuftrag(); toast('Auftrag geschafft! ⭐');
@@ -577,20 +819,114 @@ function pruefeAuftrag() {
     });
   }
 }
+/* ---- Zufalls-Aufträge: Leute rufen um Hilfe ---- */
+let ruferT = 3;
+function neuerRufer() {
+  const frei = ZUFALL.filter(z => !rufer.some(r => r.z === z) && !(auftrag && auftrag.z === z)); if (!frei.length) return;
+  const offen = frei.filter(z => !state.zufall.includes(z.id));
+  const z = pick(offen.length ? offen : frei);
+  let x, y, ok = false;
+  for (let v = 0; v < 12 && !ok; v++) { const n = nodeNear(walkNodes, P.x, P.y, 260, 760); if (!n) continue;
+    const a = Math.random() * 7; x = n.x + Math.cos(a) * (n.w / 2 + 4); y = n.y + Math.sin(a) * (n.w / 2 + 4);
+    if (blocked(x, y) || imWasser(x, y)) { x = n.x; y = n.y; }
+    ok = !Object.values(ORTE).some(o => dist(o.x, o.y, x, y) < 60) && !rufer.some(r => dist(r.x, r.y, x, y) < 160); }
+  if (!ok) return;
+  rufer.push({ x, y, z, name: z.rolle, emo: z.wer, shirt: pick(SHIRTS), hair: pick(HAIR), skin: pick(SKIN), t: 0, weg: false, dir: 0 });
+  if (dist(x, y, P.x, P.y) < 650) hilfeTon();
+}
+function pruefeRufer() {
+  for (const r of rufer) {
+    const d = dist(P.x, P.y, r.x, r.y);
+    if (r.weg) { if (d > 90) r.weg = false; continue; }
+    if (d < 36) {
+      hilfeTon();
+      zeigeDialog(r.emo, r.name, ['<b>„' + r.z.ruf + '“</b>', r.z.bitte], 'Mach ich!', () => {
+        auftrag = { z: r.z, schritt: 0, geber: r, items: [], hi5Start: state.hi5 }; if (r.z.hat) P.tragen = r.z.hat; jingle(); schrittBeginn();
+      }, ['Später', () => { r.weg = true; }]);
+      return;
+    }
+  }
+}
+function schrittBeginn() {
+  const st = auftrag.z.s[auftrag.schritt];
+  if (st[0] === 'hi5') auftrag.hi5Start = state.hi5;
+  if (st[0] === 'sammle') {
+    const m = st[3] ? ORTE[st[3]] : auftrag.geber; auftrag.items = [];
+    const nah = walkNodes.filter(n => dist(n.x, n.y, m.x, m.y) < 330);
+    for (let v = 0; v < 400 && auftrag.items.length < st[2]; v++) {
+      const n = nah.length ? pick(nah) : m; const x = n.x + rnd(-45, 45), y = n.y + rnd(-45, 45);
+      if (blocked(x, y) || imWasser(x, y) || imGarten(x, y) || dist(x, y, m.x, m.y) < 50 || auftrag.items.some(i => dist(i.x, i.y, x, y) < 40)) continue;
+      auftrag.items.push({ x, y, emo: st[1], name: '', p: Math.random() * 7 });
+    }
+  }
+  hudAuftrag();
+}
+function schrittWeiter() {
+  auftrag.schritt++;
+  if (auftrag.schritt < auftrag.z.s.length) { schrittBeginn(); return; }
+  const z = auftrag.z, g = auftrag.geber; P.tragen = null; jingle();
+  state.sterne++; if (!state.zufall.includes(z.id)) state.zufall.push(z.id); if (z.puste) P.energie = 100; save(); hudPunkte();
+  zeigeDialog(z.wer, 'Danke!', [z.danke, '⭐ Stern Nummer ' + state.sterne + '! Du hast schon ' + state.zufall.length + ' von ' + ZUFALL.length + ' verschiedenen Hilferufen erledigt.'], 'Juhu!', () => {
+    auftrag = null; const i = rufer.indexOf(g); if (i >= 0) rufer.splice(i, 1); hudAuftrag(); toast('Geschafft! ⭐');
+  });
+}
+function pruefeZufall() {
+  const st = auftrag.z.s[auftrag.schritt], z = ziel();
+  const da = z && dist(P.x, P.y, z.x, z.y) < 38;
+  if (st[0] === 'hol' && da) { P.tragen = st[2]; plopp(); toast(st[2] + ' eingepackt!'); schrittWeiter(); }
+  else if ((st[0] === 'gib' || st[0] === 'geh') && da) { schrittWeiter(); }
+  else if (st[0] === 'sammle') {
+    for (let i = auftrag.items.length - 1; i >= 0; i--) { const it = auftrag.items[i]; if (dist(P.x, P.y, it.x, it.y) < 28) { auftrag.items.splice(i, 1); plopp(); toast(it.emo + ' ' + (st[2] - auftrag.items.length) + ' von ' + st[2]); hudAuftrag(); } }
+    if (!auftrag.items.length) schrittWeiter();
+  } else if (st[0] === 'hi5') { if (state.hi5 - auftrag.hi5Start >= st[1]) schrittWeiter(); else if (hudHi5 !== state.hi5) hudAuftrag(); }
+}
+let hudHi5 = -1;
+function abbrechen() { if (!auftrag) return; if (auftrag.geber) auftrag.geber.weg = true; auftrag = null; P.tragen = null; hudAuftrag(); toast('Auftrag abgebrochen'); }
+document.getElementById('auftrag').addEventListener('click', e => { if (e.target.classList.contains('x')) abbrechen(); });
+
+/* ---- Bei jedem Ort kann man etwas machen ---- */
+function ortNah() { let b = null, bd = 46; for (const k in ORTE) { const o = ORTE[k], d = dist(P.x, P.y, o.x, o.y); if (d < bd) { bd = d; b = o; } } return b; }
+function tun() {
+  if (!laeuft || gkOn) return;
+  if (dialogOffen) { schliesseDialog(); return; }
+  const o = ortNah(); if (!o) return;
+  let text = o.text; const extra = [];
+  if (o.typ === 'essen') { P.energie = 100; P.turbo = 10; KLANG.mampf(); extra.push('⚡ Volle Puste und 10 Sekunden Turbo!'); }
+  else if (o.typ === 'hilfe') {
+    if (P.schramme) { P.schramme = false; text = 'Aua, eine Schramme vom Sturz in den Bach! Pflaster drauf, einmal pusten, schon wieder gut.'; extra.push('🩹 Schramme verarztet!'); }
+    P.energie = Math.min(100, P.energie + 30);
+  }
+  if (o.klang) KLANG[o.klang](); else if (o.typ !== 'essen') plopp();
+  if (!state.stempel.includes(o.key)) { state.stempel.push(o.key); save(); extra.push('🏅 Neuer Stempel im Dorfpass: ' + state.stempel.length + ' von ' + Object.keys(ORTE).length); }
+  hudPunkte();
+  zeigeDialog(o.emo, o.name, [text, ...extra], 'Weiter');
+}
+
 let baumLeuchtet = false;
 function hudAuftrag() {
-  const el = document.getElementById('auftrag');
-  if (!auftrag) { const a = naechsterAuftrag();
-    if (!a) { el.innerHTML = '🏆 <b>Alle Aufträge geschafft!</b><div class="ziel">Finde noch alle 📜 Wissenstafeln.</div>'; return; }
-    el.innerHTML = '⭐ <b>Neuer Auftrag</b><div class="ziel">Komm zum Stern: ' + ORTE[a.schritte[0].ort].emo + ' ' + ORTE[a.schritte[0].ort].name + '</div>'; return; }
+  const el = document.getElementById('auftrag'); const X = '<span class="x">✖ abbrechen</span>';
+  if (!auftrag) { const a = naechsterAuftrag(); const hilf = '<div class="ziel">Oder hilf den Leuten, die 🆘 rufen!</div>';
+    if (!a) { el.innerHTML = '🏆 <b>Alle Dorf-Aufträge geschafft!</b>' + hilf; return; }
+    el.innerHTML = '⭐ <b>Neuer Auftrag</b><div class="ziel">Komm zum Stern: ' + ORTE[a.schritte[0].ort].emo + ' ' + ORTE[a.schritte[0].ort].name + '</div>' + hilf; return; }
+  if (auftrag.z) {
+    const st = auftrag.z.s[auftrag.schritt], z = ziel(); let was = ''; hudHi5 = state.hi5;
+    if (st[0] === 'hol') was = 'Hol ' + st[2] + ' bei: ' + z.emo + ' ' + z.name;
+    else if (st[0] === 'gib') was = 'Bring ' + (P.tragen || '') + ' zu: ' + z.emo + ' ' + z.name;
+    else if (st[0] === 'geh') was = 'Flitz zu: ' + z.emo + ' ' + z.name;
+    else if (st[0] === 'sammle') was = 'Sammle ' + st[1] + ' ein: ' + (st[2] - auftrag.items.length) + ' von ' + st[2];
+    else if (st[0] === 'hi5') was = 'Verteile High fives: ' + Math.min(st[1], state.hi5 - auftrag.hi5Start) + ' von ' + st[1] + ' ✋';
+    el.innerHTML = X + auftrag.z.wer + ' <b>' + auftrag.z.rolle + '</b><div class="ziel">' + was + '</div>'; return;
+  }
   const s = auftrag.a.schritte[auftrag.schritt]; const z = ziel();
   let was = s.hol ? 'Hol ' + s.hol + ' bei ' : s.gib ? 'Bring ' + s.gib + ' zu: ' : '';
   if (s.hol && [].concat(s.ort).length > 1) was = 'Hol ' + s.hol + ' bei ' + [].concat(s.ort).map(o => (auftrag.erledigt.has(o) ? '✅ ' : '') + ORTE[o].name).join(' und ') + ' · nächstes: ';
-  el.innerHTML = auftrag.a.emo + ' <b>' + auftrag.a.titel + '</b><div class="ziel">' + was + (z ? z.emo + ' ' + z.name : '') + '</div>';
+  el.innerHTML = X + auftrag.a.emo + ' <b>' + auftrag.a.titel + '</b><div class="ziel">' + was + (z ? z.emo + ' ' + z.name : '') + '</div>';
 }
 function hudPunkte() {
   document.getElementById('hi5').textContent = '✋ ' + state.hi5;
   document.getElementById('wissen').textContent = '📜 ' + TAFELN.filter(t => t.gefunden).length + '/' + TAFELN.length;
+  document.getElementById('sterne').textContent = '⭐ ' + state.sterne;
+  document.getElementById('stempel').textContent = '🏅 ' + state.stempel.length + '/' + Object.keys(ORTE).length;
 }
 let toastT = 0;
 function toast(t) { const el = document.getElementById('toast'); el.textContent = t; el.classList.add('on'); toastT = 1.6; }
@@ -619,6 +955,7 @@ function highFive(p) {
 }
 function bewege(e, nx, ny) { // Achsenweise mit Gebäude-Kollision
   let moved = false;
+  if (blocked(e.x, e.y)) { e.x = nx; e.y = ny; return true; } // nie feststecken
   if (!blocked(nx, e.y)) { e.x = nx; moved = true; }
   if (!blocked(e.x, ny)) { e.y = ny; moved = true; }
   return moved;
@@ -639,8 +976,9 @@ function folge(e, nodes, dt, offset) {
 function update(dt) {
   // Spieler: oben = vorwärts, unten = bremsen/zurück, links/rechts = drehen (aus Sicht der Figur)
   const [ix, iy] = eingabe(); const gas = -iy, lenk = ix;
+  const tempo = (P.energie <= 0 ? .6 : 1) * (P.turbo > 0 ? 1.3 : 1) * (P.nass > 0 ? .75 : 1);
   if (P.scooter) {
-    const max = 230;
+    const max = 230 * tempo;
     // je schneller, desto ruhiger lenkt der Scooter; im Stand dreht er sich trotzdem
     const dreh = 3.4 - Math.min(Math.abs(P.speed) / max, 1) * 1.2;
     P.dir += lenk * dreh * dt * (P.speed < -5 ? -1 : 1);
@@ -654,11 +992,51 @@ function update(dt) {
     P.walk += Math.abs(P.speed) * dt * .02;
   } else {
     P.dir += lenk * 3.6 * dt;
-    const sp = gas > .1 ? 80 * gas : gas < -.1 ? 40 * gas : 0;
+    const sp = (gas > .1 ? 80 * gas : gas < -.1 ? 40 * gas : 0) * tempo;
     if (sp) { bewege(P, P.x + Math.cos(P.dir) * sp * dt, P.y + Math.sin(P.dir) * sp * dt); P.walk += dt * 10 * Math.abs(gas); }
     else if (Math.abs(lenk) > .1) P.walk += dt * 5;
     P.speed = sp;
   }
+  // Puste: wer sich bewegt, wird langsam müde. Essen macht wieder fit.
+  if (Math.abs(P.speed) > 5) P.energie = Math.max(0, P.energie - dt * (P.scooter ? .33 : .16));
+  if (P.energie < 20 && !P.muede) { P.muede = true; toast('Du wirst müde. Zeit für eine Jause! 🥨'); } else if (P.energie > 50) P.muede = false;
+  P.turbo = Math.max(0, P.turbo - dt); P.nass = Math.max(0, P.nass - dt);
+  // Bach und Teich: Platsch!
+  if (imWasser(P.x, P.y)) {
+    if (P.nass <= 0) {
+      platschTon(); toast(P.scooter ? 'PLATSCH! 💦 Runter vom Scooter!' : 'PLATSCH! 💦'); state.platsch++; save();
+      for (let i = 0; i < 18; i++) { const a = Math.random() * 7; funken.push({ x: P.x, y: P.y, vx: Math.cos(a) * rnd(40, 150), vy: Math.sin(a) * rnd(40, 150) - 40, t: rnd(.5, 1), c: '#36b6f0', s: '💧' }); }
+      if (P.scooter) { const sc = P.scooter; sc.frei = true; sc.umgefallen = true; sc.x = P.trockenX; sc.y = P.trockenY; P.scooter = null; }
+      P.nass = 5; P.schramme = true; P.energie = Math.max(0, P.energie - 10);
+    }
+    P.x = P.trockenX; P.y = P.trockenY; P.speed = 0;
+  } else { P.trockenX = P.x; P.trockenY = P.y; }
+  // Wiese: Dreckspur hinter dem Scooter, die auf der Straße langsam ausläuft
+  const gras = !aufStrasse(P.x, P.y) && !blocked(P.x, P.y);
+  if (P.scooter && Math.abs(P.speed) > 15) {
+    if (gras) P.dreck = 1; else P.dreck = Math.max(0, P.dreck - dt * .9);
+    if (P.dreck > .05) { const l = spur[spur.length - 1]; if (!spurAn || !l || dist(l.x, l.y, P.x, P.y) > 7) { spur.push({ x: P.x, y: P.y, a: P.dreck, t: T, b: !spurAn }); spurAn = true; if (spur.length > 1400) spur.shift(); } }
+    else spurAn = false;
+  } else spurAn = false;
+  while (spur.length && T - spur[0].t > 70) spur.shift();
+  // Wer durch den Garten brettert, wird geschimpft
+  omaCool -= dt;
+  if (oma) { oma.t -= dt; oma.dir = Math.atan2(P.y - oma.y, P.x - oma.x); if (oma.t <= 0) oma = null; }
+  else if (P.scooter && gras && Math.abs(P.speed) > 30 && omaCool <= 0) {
+    const garten = imGarten(P.x, P.y); let haus = null, hd = 95;
+    const l = bGrid[gy(P.y) * GW + gx(P.x)]; if (l) for (const i of l) { const b = buildings[i]; if (b.kind !== 'H') continue; const d = dist(b.cx, b.cy, P.x, P.y); if (d < hd) { hd = d; haus = b; } }
+    if (haus && (garten || Math.random() < dt * 1.5)) {
+      let ox = haus.cx, oy = haus.cy; for (let t = 0; t <= 1; t += .04) { ox = haus.cx + (P.x - haus.cx) * t; oy = haus.cy + (P.y - haus.cy) * t; if (!blocked(ox, oy)) break; }
+      const a = Math.atan2(P.y - haus.cy, P.x - haus.cx);
+      oma = { x: ox + Math.cos(a) * 8, y: oy + Math.sin(a) * 8, t: 4.5, dir: a, spruch: pick(OMA_SPRUECHE) }; omaCool = 9; schimpfTon();
+    }
+  }
+  // Leute, die um Hilfe rufen
+  ruferT -= dt;
+  if (ruferT <= 0) { ruferT = rnd(4, 8); if (rufer.filter(r => !(auftrag && auftrag.geber === r)).length < 3) neuerRufer(); }
+  for (let i = rufer.length - 1; i >= 0; i--) { const r = rufer[i]; r.t += dt; r.dir = Math.atan2(P.y - r.y, P.x - r.x);
+    if (!(auftrag && auftrag.geber === r) && (r.t > 150 || dist(r.x, r.y, P.x, P.y) > 1700)) rufer.splice(i, 1); }
+
   // Kamera: zoomt beim Flitzen etwas raus (wie in klassischen Top-Down-Spielen)
   const baseZ = Math.min(W, H) < 600 ? 1.0 : 1.25;
   const zz = baseZ * (P.scooter ? 1 - Math.min(Math.abs(P.speed) / 230, 1) * .22 : 1);
@@ -711,11 +1089,17 @@ function update(dt) {
 
   // Straßenname
   strTick -= dt; if (strTick <= 0) { strTick = .4; const n = nearestRoadName(P.x, P.y); const el = document.getElementById('strasse'); const t = '📍 ' + (n || 'Schwarzach'); if (el.textContent !== t) el.textContent = t; }
+  const on = ortNah(), tp = document.getElementById('tipp'), tb = document.getElementById('tun');
+  tp.classList.toggle('on', !!on); tb.classList.toggle('zeigen', !!on);
+  if (on) { const t = 'E · ' + on.emo + ' ' + on.knopf; const tt = document.getElementById('tippText'); if (tt.textContent !== t) { tt.textContent = t; tb.textContent = on.emo; } }
+  const en = document.getElementById('energie'); en.firstElementChild.style.width = P.energie + '%'; en.classList.toggle('leer', P.energie < 20);
+  en.lastElementChild.textContent = (P.schramme ? '🩹 ' : '') + (P.turbo > 0 ? '🚀 Turbo' : '⚡ Puste');
   const btn = document.getElementById('aktion');
   const zeigen = !!P.scooter || !!naechsterScooter();
   btn.classList.toggle('zeigen', zeigen); btn.innerHTML = P.scooter ? '🚶<small>absteigen</small>' : '🛴<small>aufsteigen</small>';
 }
-let strTick = 0;
+let strTick = 0, spurAn = false;
+const OMA_SPRUECHE = ['He! Raus aus meinen Blumen!', 'Mein schöner Rasen!', 'Gohts no?!', 'Lausbub! Runter vom Gras!', 'Das sag ich dem Bürgermeister!', 'Nicht durch die Tulpen!', 'Usse us mim Garta!', 'Kannst du nicht auf der Straße fahren?!'];
 
 /* ---------------- Zeichnen ---------------- */
 let T = 0;
@@ -733,6 +1117,21 @@ function draw() {
     cx.drawImage(c, i * CH, j * CH, CH + .5, CH + .5);
   }
   const vis = (x, y, m = 60) => x > vx0 - m && x < vx1 + m && y > vy0 - m && y < vy1 + m;
+
+  // Dreckspur
+  cx.lineCap = 'round'; cx.lineWidth = 6;
+  for (let i = 1; i < spur.length; i++) { const p = spur[i], q = spur[i - 1]; if (p.b || !vis(p.x, p.y)) continue;
+    cx.strokeStyle = 'rgba(128,92,52,' + (p.a * .6 * clamp(1 - (T - p.t) / 70, 0, 1)).toFixed(3) + ')'; cx.beginPath(); cx.moveTo(q.x, q.y); cx.lineTo(p.x, p.y); cx.stroke(); }
+  // Gärten mit Zaun
+  for (const f of fences) { if (f.x1 < vx0 || f.x0 > vx1 || f.y1 < vy0 || f.y0 > vy1) continue;
+    cx.fillStyle = '#8fdc6f'; cx.fillRect(f.x0, f.y0, f.x1 - f.x0, f.y1 - f.y0);
+    for (let k = 0; k < 7; k++) { const h1 = hash(f.x0 * 7 + f.y0 * 13 + k), h2 = hash(f.x0 * 3 + f.y0 * 5 + k * 17); cx.fillStyle = ['#ff5fa2', '#ffcf3f', '#ffffff', '#c77dff'][k % 4]; cx.beginPath(); cx.arc(f.x0 + 5 + h1 * (f.x1 - f.x0 - 10), f.y0 + 5 + h2 * (f.y1 - f.y0 - 10), 2.2, 0, 7); cx.fill(); }
+    const mx = (f.x0 + f.x1) / 2, my = (f.y0 + f.y1) / 2, seiten = [[f.x0, f.y0, f.x1, f.y0], [f.x1, f.y0, f.x1, f.y1], [f.x0, f.y1, f.x1, f.y1], [f.x0, f.y0, f.x0, f.y1]];
+    for (const pass of [0, 1]) { cx.strokeStyle = pass ? '#ffffff' : '#b98a5a'; cx.lineWidth = pass ? 4 : 2; cx.setLineDash(pass ? [2.5, 4] : []); cx.lineCap = 'butt';
+      seiten.forEach(([ax, ay, bx, by], i) => { cx.beginPath();
+        if (i === f.gate) { if (ay === by) { cx.moveTo(ax, ay); cx.lineTo(mx - TOR, ay); cx.moveTo(mx + TOR, ay); cx.lineTo(bx, by); } else { cx.moveTo(ax, ay); cx.lineTo(ax, my - TOR); cx.moveTo(ax, my + TOR); cx.lineTo(bx, by); } }
+        else { cx.moveTo(ax, ay); cx.lineTo(bx, by); } cx.stroke(); }); }
+    cx.setLineDash([]); }
 
   // Straßennamen auf der Fahrbahn
   cx.font = 'bold 11px "Comic Sans MS", sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
@@ -754,7 +1153,6 @@ function draw() {
     cx.font = '22px sans-serif'; cx.fillStyle = '#000'; cx.fillText(emo, o.x, o.y - 30 + Math.sin(T * 3) * 4); };
   if (zl) marker(zl, '#ff5fa2', zl.emo);
   for (const { o } of auftragsGeber()) marker(o, '#ffcf3f', '⭐');
-
   // Scooter
   for (const s of scooters) if (s.frei && vis(s.x, s.y)) zeichneScooter(s.x, s.y, s.umgefallen ? s.dir + 1.2 : s.dir, s.col, s.umgefallen);
 
@@ -765,28 +1163,46 @@ function draw() {
   list.sort((a, b) => dist(b.cx, b.cy, cam.x, cam.y) - dist(a.cx, a.cy, cam.x, cam.y));
   const HC = 700 / z;
   for (const b of list) zeichneGebaeude(b, HC);
+  // Orte: runde Plakette dort, wo man etwas machen kann
+  cx.textAlign = 'center'; cx.textBaseline = 'middle';
+  for (const k in ORTE) { const o = ORTE[k]; if (!vis(o.x, o.y)) continue;
+    cx.fillStyle = state.stempel.includes(k) ? '#fffdf5' : '#ffe58a'; cx.strokeStyle = '#23324a'; cx.lineWidth = 2; cx.beginPath(); cx.arc(o.x, o.y, 13, 0, 7); cx.fill(); cx.stroke();
+    cx.font = '15px sans-serif'; cx.fillStyle = '#000'; cx.fillText(o.emo, o.x, o.y + 1); }
   // Leute, Autos und Spieler über den Häusern, damit nichts verschwindet
   for (const p of peds) if (vis(p.x, p.y)) zeichneFigur(p.x, p.y - (p.happy > 0 ? Math.abs(Math.sin(p.happy * 9)) * 6 : 0), p.dir, p.shirt, p.hair, p.skin, p.walk, p.happy > 0);
   for (const c of cars) if (vis(c.x, c.y, 80)) zeichneAuto(c);
   if (P.scooter) zeichneScooter(P.x, P.y, P.dir, P.scooter.col, false);
   zeichneFigur(P.x, P.y, P.dir, '#ff5fa2', '#3b2a20', '#f5d0b0', P.walk, false, true);
   if (P.tragen) { cx.font = '22px sans-serif'; cx.fillText(P.tragen, P.x + 14, P.y - 22); }
+  if (P.nass > 0) { cx.font = '11px sans-serif'; for (let i = 0; i < 3; i++) cx.fillText('💧', P.x - 12 + i * 12, P.y + 16 + ((T * 30 + i * 9) % 14)); }
+  // Sachen zum Einsammeln
+  if (auftrag && auftrag.z) for (const it of auftrag.items) if (vis(it.x, it.y)) { const b = Math.sin(T * 5 + it.p) * 3;
+    cx.fillStyle = '#ffffffcc'; cx.beginPath(); cx.arc(it.x, it.y, 15, 0, 7); cx.fill(); cx.font = '20px sans-serif'; cx.fillStyle = '#000'; cx.fillText(it.emo, it.x, it.y + b); }
+  // Hilferufer winken und hüpfen
+  const blase = (x, y, text, col) => { cx.font = 'bold 13px "Comic Sans MS", sans-serif'; const w = cx.measureText(text).width + 18;
+    cx.fillStyle = col || '#fffdf5'; cx.strokeStyle = '#23324a'; cx.lineWidth = 2; cx.beginPath(); cx.roundRect(x - w / 2, y - 12, w, 24, 12); cx.fill(); cx.stroke();
+    cx.beginPath(); cx.moveTo(x - 5, y + 11); cx.lineTo(x, y + 19); cx.lineTo(x + 5, y + 11); cx.fill(); cx.fillStyle = '#23324a'; cx.fillText(text, x, y + 1); };
+  for (const r of rufer) { if (!vis(r.x, r.y, 120)) continue; const aktiv = auftrag && auftrag.geber === r; const hops = aktiv ? 0 : Math.abs(Math.sin(r.t * 6)) * 7;
+    zeichneFigur(r.x, r.y - hops, r.dir, r.shirt, r.hair, r.skin, r.t * 8, !aktiv);
+    cx.font = '18px sans-serif'; cx.fillStyle = '#000'; cx.fillText(r.emo, r.x, r.y - 24 - hops);
+    if (!aktiv && !auftrag) blase(r.x, r.y - 50 - hops, '🆘 ' + r.z.ruf, '#fff3b0'); }
+  if (oma) { const j = Math.sin(T * 40) * 2; zeichneFigur(oma.x + j, oma.y, oma.dir, '#b08cff', '#e6e6e6', '#f5d0b0', T * 25, true);
+    cx.font = '16px sans-serif'; cx.fillStyle = '#000'; cx.fillText('💢', oma.x + 14, oma.y - 18); blase(oma.x, oma.y - 44, oma.spruch, '#ffd9d9'); }
 
   // Funken
   for (const f of funken) { cx.globalAlpha = clamp(f.t * 2, 0, 1); cx.fillStyle = f.c; cx.font = 'bold 14px sans-serif'; cx.fillText(f.s, f.x, f.y); }
   cx.globalAlpha = 1;
-  // Ortsnamen schweben über wichtigen Orten
+  // Ortsname: nur beim nächsten Ort ausgeschrieben, sonst reicht die Plakette
   cx.font = 'bold 13px "Comic Sans MS", sans-serif';
-  const belegt = [];
-  for (const k in ORTE) { const o = ORTE[k]; if (!o || !vis(o.bx, o.by)) continue; const tw = cx.measureText(o.name).width + 30;
-    let ly = o.by - 34; for (let t = 0; t < 6 && belegt.some(([bx, by, bw]) => Math.abs(by - ly) < 24 && Math.abs(bx - o.bx) < (bw + tw) / 2); t++) ly -= 26;
-    belegt.push([o.bx, ly, tw]); cx.fillStyle = '#fffdf5ee'; cx.strokeStyle = '#23324a'; cx.lineWidth = 2; cx.beginPath(); cx.roundRect(o.bx - tw / 2, ly - 11, tw, 22, 11); cx.fill(); cx.stroke();
-    cx.fillStyle = '#23324a'; cx.fillText(o.emo + ' ' + o.name, o.bx, ly + 1); }
-  if (baumLeuchtet && ORTE.dorfplatz && vis(ORTE.dorfplatz.bx, ORTE.dorfplatz.by)) { const o = ORTE.dorfplatz; for (let i = 0; i < 14; i++) { const a = i / 14 * 7 + T; cx.fillStyle = pick(['#ffcf3f', '#ff5fa2', '#36b6f0', '#fff']); cx.beginPath(); cx.arc(o.bx + Math.cos(a) * 16, o.by - 4 + Math.sin(a) * 16, 2.5, 0, 7); cx.fill(); } }
+  { let o = null, bd = 120; for (const k in ORTE) { const q = ORTE[k], d = dist(q.x, q.y, P.x, P.y); if (d < bd) { bd = d; o = q; } }
+    if (o) { const tw = cx.measureText(o.name).width + 16, ly = o.y - 28; cx.fillStyle = '#fffdf5ee'; cx.strokeStyle = '#23324a'; cx.lineWidth = 2; cx.beginPath(); cx.roundRect(o.x - tw / 2, ly - 10, tw, 20, 10); cx.fill(); cx.stroke();
+      cx.fillStyle = '#23324a'; cx.fillText(o.name, o.x, ly + 1); } }
+  if (baumLeuchtet && ORTE.dorfplatz && vis(ORTE.dorfplatz.x, ORTE.dorfplatz.y)) { const o = { bx: ORTE.dorfplatz.x, by: ORTE.dorfplatz.y }; for (let i = 0; i < 14; i++) { const a = i / 14 * 7 + T; cx.fillStyle = pick(['#ffcf3f', '#ff5fa2', '#36b6f0', '#fff']); cx.beginPath(); cx.arc(o.bx + Math.cos(a) * 16, o.by - 4 + Math.sin(a) * 16, 2.5, 0, 7); cx.fill(); } }
 
   // Bildschirm-Ebene: Zielpfeil, Minikarte, Joystick
   cx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  if (zl || auftragsGeber().length) zeichnePfeil(zl || auftragsGeber()[0].o);
+  if (zl) zeichnePfeil(zl, '#ff5fa2', zl.emo);
+  else { for (const r of rufer) zeichnePfeil(r, '#ffcf3f', '🆘'); for (const { o } of auftragsGeber()) zeichnePfeil(o, '#ff5fa2', '⭐'); }
   zeichneMini();
   if (joy.id !== null) { cx.globalAlpha = .5; cx.fillStyle = '#fff'; cx.beginPath(); cx.arc(joy.ox, joy.oy, 60, 0, 7); cx.fill(); cx.fillStyle = '#ff5fa2'; cx.beginPath(); cx.arc(joy.ox + joy.x * 60, joy.oy + joy.y * 60, 26, 0, 7); cx.fill(); cx.globalAlpha = 1; }
 }
@@ -852,17 +1268,17 @@ function zeichneAuto(c) {
   cx.restore();
   if (c.honk > 2.2) { cx.font = 'bold 12px "Comic Sans MS", sans-serif'; cx.fillStyle = '#23324a'; cx.fillText('Tüüt! 📯', c.x, c.y - 16); }
 }
-function zeichnePfeil(o) {
+function zeichnePfeil(o, col, emo) {
   const z = cam.z; const sx = W / 2 + (o.x - cam.x) * z, sy = H / 2 + (o.y - cam.y) * z;
   const m = 46; if (sx > m && sx < W - m && sy > m + 60 && sy < H - m) return;
   const a = Math.atan2(sy - H / 2, sx - W / 2);
   const ex = clamp(W / 2 + Math.cos(a) * W, m, W - m), ey = clamp(H / 2 + Math.sin(a) * H, m + 70, H - m - 30);
   cx.save(); cx.translate(ex, ey); cx.rotate(a);
-  cx.fillStyle = '#ff5fa2'; cx.strokeStyle = '#fff'; cx.lineWidth = 3; cx.beginPath(); cx.moveTo(22, 0); cx.lineTo(-10, -15); cx.lineTo(-4, 0); cx.lineTo(-10, 15); cx.closePath(); cx.fill(); cx.stroke();
+  cx.fillStyle = col || '#ff5fa2'; cx.strokeStyle = '#23324a'; cx.lineWidth = 3; cx.lineJoin = 'round'; cx.beginPath(); cx.moveTo(22, 0); cx.lineTo(-10, -15); cx.lineTo(-4, 0); cx.lineTo(-10, 15); cx.closePath(); cx.fill(); cx.stroke();
   cx.restore();
   const meter = Math.round(dist(P.x, P.y, o.x, o.y) / SC / 10) * 10;
   cx.font = 'bold 14px "Comic Sans MS", sans-serif'; cx.textAlign = 'center'; cx.lineWidth = 4; cx.strokeStyle = '#fff'; cx.fillStyle = '#23324a';
-  const tx = ex - Math.cos(a) * 34, ty = ey - Math.sin(a) * 34; cx.strokeText(meter + ' m', tx, ty); cx.fillText(meter + ' m', tx, ty);
+  const tx = ex - Math.cos(a) * 36, ty = ey - Math.sin(a) * 36; cx.textBaseline = 'middle'; const txt = (emo ? emo + ' ' : '') + meter + ' m'; cx.strokeText(txt, tx, ty); cx.fillText(txt, tx, ty);
 }
 function zeichneMini() {
   const S = 160, x0 = W - S - 12, y0 = Math.max(12, 0) ;
@@ -874,6 +1290,7 @@ function zeichneMini() {
   const tp = (x, y) => [x0 + (x - P.x + span / 2) / span * S, y0 + (y - P.y + span / 2) / span * S];
   const zl = ziel() || (auftragsGeber()[0] || {}).o;
   if (zl) { let [mx, my] = tp(zl.x, zl.y); mx = clamp(mx, x0 + 8, x0 + S - 8); my = clamp(my, y0 + 8, y0 + S - 8); cx.fillStyle = zl === ziel() ? '#ff5fa2' : '#ffcf3f'; cx.strokeStyle = '#fff'; cx.lineWidth = 2; cx.beginPath(); cx.arc(mx, my, 6, 0, 7); cx.fill(); cx.stroke(); }
+  if (!auftrag) for (const r of rufer) { const [mx, my] = tp(r.x, r.y); if (mx < x0 || mx > x0 + S || my < y0 || my > y0 + S) continue; cx.fillStyle = '#ffcf3f'; cx.strokeStyle = '#23324a'; cx.lineWidth = 1.5; cx.beginPath(); cx.arc(mx, my, 6, 0, 7); cx.fill(); cx.stroke(); cx.fillStyle = '#23324a'; cx.font = 'bold 9px sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('!', mx, my + .5); }
   cx.save(); cx.translate(x0 + S / 2, y0 + S / 2); cx.rotate(P.dir); cx.fillStyle = '#23324a'; cx.beginPath(); cx.moveTo(7, 0); cx.lineTo(-5, -5); cx.lineTo(-5, 5); cx.closePath(); cx.fill(); cx.restore();
   cx.restore();
   cx.strokeStyle = '#23324a'; cx.lineWidth = 3; cx.beginPath(); cx.roundRect(x0, y0, S, S, 16); cx.stroke();
@@ -893,7 +1310,8 @@ function starte() {
   if (!state.gesehen) {
     state.gesehen = true; save();
     zeigeDialog('👋', 'Servus in Schwarzach!', ['Du stehst am <b>Dorfplatz</b> mitten in Schwarzach. Überall stehen <b>Leihscooter</b> herum: Geh hin und drück <b>Leertaste</b> (oder den 🛴-Knopf), dann flitzt du los.',
-      'Lauf oder fahr an Leuten vorbei, dann gibt es ein <b>High five</b>! ✋ Der ⭐ Stern zeigt dir deinen ersten Auftrag, und 📜 Tafeln erzählen dir Geschichten aus Schwarzach.'], 'Los!');
+      'Lauf oder fahr an Leuten vorbei, dann gibt es ein <b>High five</b>! ✋ Der ⭐ Stern zeigt dir deinen ersten Auftrag, und manche Leute rufen 🆘 um Hilfe.',
+      'Bei jeder runden Plakette kannst du mit <b>E</b> etwas machen und einen Stempel sammeln. Essen gibt neue ⚡ Puste. Und pass beim Bach auf!'], 'Los!');
   }
 }
 function zumStart() { laeuft = false; document.body.classList.remove('ingame'); document.getElementById('start').classList.add('on'); }
@@ -910,7 +1328,7 @@ scooters.push({ x: P.x + 22, y: P.y + 4, dir: 0, col: '#ff5fa2', umgefallen: fal
 hudPunkte();
 requestAnimationFrame(loop);
 // Hilfe für automatische Tests
-window.__spiel = { blocked, P, ORTE, AUFTRAEGE, TAFELN, cars, peds, scooters, state, starte, aktion };
+window.__spiel = { blocked, imWasser, aufStrasse, imGarten, rufer, fences, ZUFALL, tun, spur, get auftrag() { return auftrag; }, get oma() { return oma; }, P, ORTE, AUFTRAEGE, TAFELN, cars, peds, scooters, state, starte, aktion, abbrechen, neuerRufer };
 </script>
 </body>
 </html>
