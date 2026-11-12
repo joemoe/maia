@@ -194,6 +194,7 @@ ORTE = {
     'schuelerbetreuung': {'adr': ('Hofsteigstraße', '64a')},
     'bahnhof': {'ll': (47.4461, 9.7542)},
     'bauhof': {'adr': ('Gleisweg', '8')},
+    'heimathaus': {'ll': (47.4474008, 9.7720245)},
     'rieger': {'name': r'^Rieger Orgelbau$'},
     'russmedia': {'adr': ('Gutenbergstraße', '1')},
     'hofsteiger': {'adr': ('Am Dorfplatz', '4')},
