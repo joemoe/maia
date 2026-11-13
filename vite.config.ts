@@ -33,7 +33,7 @@ export default defineConfig({
       workbox: {
         // Alle gebauten Assets (JS/CSS/HTML) + alle Spielgrafiken/Icons
         // fürs Offline-Spielen vorab cachen.
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest,mp3}"],
         // Die Pixelfont kommt von Google Fonts (externe Domain) - wird beim
         // ersten (Online-)Laden separat gecacht, damit sie auch offline
         // verfügbar ist.

@@ -668,25 +668,32 @@ function ton(f, d = .12, typ = 'square', vol = .06, slide = 0, when = 0) {
   const o = AC.createOscillator(), g = AC.createGain(); o.type = typ; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + d);
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(g).connect(MASTER); o.start(t); o.stop(t + d + .02);
 }
+// Aufgenommene Geräusche (Ordner sounds/); solange eines nicht geladen ist, springt der erzeugte Ton ein
+const PROBEN = {}; let probenGeladen = false;
+function ladeProben() { if (probenGeladen || !ac()) return; probenGeladen = true;
+  for (const n of ['platsch', 'klatsch', 'klingel', 'mampf', 'ding']) fetch('sounds/' + n + '.mp3').then(r => r.ok ? r.arrayBuffer() : Promise.reject()).then(b => AC.decodeAudioData(b)).then(b => { PROBEN[n] = b; }).catch(() => {}); }
+function probe(n, vol = 1, rate = 1) { if (!laut || !ac() || !PROBEN[n]) return false;
+  const q = AC.createBufferSource(), g = AC.createGain(); q.buffer = PROBEN[n]; q.playbackRate.value = rate; g.gain.value = vol; q.connect(g).connect(MASTER); q.start(); return true; }
 function klatsch() {
+  if (probe('klatsch', .9, .92 + Math.random() * .2)) { ton(880, .1, 'triangle', .04, 1320, .03); return; }
   if (!laut || !ac()) return; const t = AC.currentTime, n = AC.sampleRate * .12, b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
   for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 4);
   const s = AC.createBufferSource(), g = AC.createGain(), fl = AC.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = 1800; fl.Q.value = .8;
   s.buffer = b; g.gain.value = .5; s.connect(fl).connect(g).connect(MASTER); s.start(t);
   ton(880, .1, 'triangle', .05, 1320, .03); ton(1175, .12, 'triangle', .04, 1568, .11);
 }
-const jingle = () => { [523, 659, 784, 1047].forEach((f, i) => ton(f, .16, 'triangle', .07, 0, i * .09)); };
+const jingle = () => { probe('ding', .5); [523, 659, 784, 1047].forEach((f, i) => ton(f, .16, 'triangle', .07, 0, i * .09)); };
 const hupe = () => { [0, .22].forEach(t => { ton(370, .16, 'square', .03, 0, t); ton(466, .16, 'sawtooth', .025, 0, t); }); };
-const plopp = () => ton(300, .1, 'sine', .08, 700);
+const plopp = () => { if (!probe('ding', .6)) ton(300, .1, 'sine', .08, 700); };
 function rauschen(dauer, freq, vol) {
   if (!laut || !ac()) return; const n = AC.sampleRate * dauer, b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
   for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2);
   const q = AC.createBufferSource(), g = AC.createGain(), fl = AC.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = freq; q.buffer = b; g.gain.value = vol; q.connect(fl).connect(g).connect(MASTER); q.start();
 }
-const platschTon = () => { rauschen(.5, 900, .6); ton(500, .35, 'sine', .08, 90); };
+const platschTon = () => { if (probe('platsch', 1)) return; rauschen(.5, 900, .6); ton(500, .35, 'sine', .08, 90); };
 const schimpfTon = () => { [311, 392, 330, 415, 349, 440, 294].forEach((f, i) => ton(f, .1, 'sawtooth', .035, f * (i % 2 ? .8 : 1.25), i * .11)); };
 const hilfeTon = () => { ton(784, .14, 'triangle', .05); ton(587, .22, 'triangle', .05, 0, .16); };
-const aufsteigTon = () => { ton(330, .07, 'triangle', .05, 660); ton(660, .09, 'triangle', .05, 990, .07); };
+const aufsteigTon = () => { if (probe('klingel', .7)) return; ton(330, .07, 'triangle', .05, 660); ton(660, .09, 'triangle', .05, 990, .07); };
 const absteigTon = () => { ton(660, .07, 'triangle', .05, 330); };
 const schleifTon = () => { if (!laut || !ac()) return; rauschen(.09, 500, .12); };
 
@@ -707,13 +714,13 @@ function liedSchritt() {
     for (let k = 0; k < 3; k++) if (m[k] > 0) { let d = 1; while (k + d < 3 && m[k + d] === 0) d++; note(hz(m[k]), t + k * T3, T3 * d * .92, 'square', .028); note(hz(m[k]), t + k * T3, T3 * d * .92, 'sine', .05); }
     liedT += T3 * 3; liedI++; }
 }
-function musikStart() { if (!ac()) return; if (!liedTimer) liedTimer = setInterval(liedSchritt, 150); }
+function musikStart() { if (!ac()) return; ladeProben(); if (!liedTimer) liedTimer = setInterval(liedSchritt, 150); }
 const KLANG = {
   glocke: () => { [0, .5, 1, 1.5].forEach((t, i) => ton(i % 2 ? 392 : 523, .9, 'sine', .09, 0, t)); },
   sirene: () => { [0, .4, .8, 1.2].forEach((t, i) => ton(i % 2 ? 440 : 587, .38, 'square', .04, 0, t)); },
   orgel: () => { [131, 196, 262].forEach(f => ton(f, 1.1, 'triangle', .06)); },
   hupe: () => { ton(220, .5, 'square', .05); ton(277, .5, 'square', .05); },
-  mampf: () => { [0, .14, .28].forEach(t => ton(180, .07, 'square', .04, 120, t)); },
+  mampf: () => { if (probe('mampf', 1)) { setTimeout(() => probe('mampf', .9, 1.1), 260); return; } [0, .14, .28].forEach(t => ton(180, .07, 'square', .04, 120, t)); },
 };
 
 /* ---------------- Boden-Kacheln (gecacht) ---------------- */
