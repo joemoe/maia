@@ -1944,6 +1944,16 @@ function drawPlay(t) {
       cx.restore();
     }
     drawPowerFx(p, px, gy, t);
+    if (st.rain && p.digging < 0.5 && !blink) { // Regenschirm
+      const R2 = st.rain, ua = Math.max(0, Math.min(1, R2.t / 1, (R2.dur - R2.t) / 1)), top = gy - p.jumpY + bob - 200 * S, hx = px + 44 * S, sway = Math.sin(t * 2 + p.id) * 0.06;
+      cx.save(); cx.globalAlpha = ua; cx.translate(hx, gy - p.jumpY + bob - 70 * S); cx.rotate(sway); cx.translate(-hx, -(gy - p.jumpY + bob - 70 * S));
+      cx.strokeStyle = '#6b4a2e'; cx.lineWidth = 3.5 * S; cx.lineCap = 'round'; cx.beginPath(); cx.moveTo(hx, top); cx.lineTo(hx, gy - p.jumpY + bob - 62 * S); cx.arc(hx - 7 * S, gy - p.jumpY + bob - 62 * S, 7 * S, 0, Math.PI); cx.stroke();
+      const c1 = p.id ? '#6fd3ff' : '#ff6fae', c2 = p.id ? '#bff0ff' : '#ffd6e8', R = 62 * S;
+      for (let k = 0; k < 6; k++) { const a0 = Math.PI + k * Math.PI / 6, a1 = a0 + Math.PI / 6; cx.fillStyle = k % 2 ? c2 : c1; cx.beginPath(); cx.moveTo(hx, top);
+        cx.arc(hx, top + 34 * S, R, a0, a1); cx.closePath(); cx.fill(); }
+      cx.fillStyle = c1; for (let k = 0; k < 6; k++) { const xx = hx - R + (k + 0.5) * R / 3; cx.beginPath(); cx.arc(xx, top + 34 * S, R / 6, 0, Math.PI); cx.fill(); }
+      circle(hx, top - 2 * S, 4 * S, '#ffd23f'); cx.restore();
+    }
     if (p.digging > 0.1) { // Erdhügel
       cx.fillStyle = w.dirt; cx.beginPath(); cx.ellipse(px, gy + 4 * S, 40 * S * p.digging, 14 * S * p.digging, 0, Math.PI, 0); cx.fill();
     }
