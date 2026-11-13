@@ -148,6 +148,13 @@ function enterVisit(i) {
   beep(880, .1, 'triangle'); setTimeout(() => beep(660, .12, 'triangle'), 140); // Klopf klopf
 }
 function leaveVisit() { st.screen = 'play'; st.visit = null; say('Tschüss! Komm bald wieder!'); }
+// Schlafenszeit: nachts geht die Blume ins Bett, am Morgen weckt sie der Hahn
+function goToBed() {
+  st.screen = 'home'; st.homeMode = 'night'; st.homeFrom = 'night'; st.sleepT = 0; st.nightHeartT = 0; st.crowed = false;
+  st.leaves = []; st.rain = null; st.jet = null; for (const p of P) Object.assign(p.keys, mkKeys());
+  beep(523, .3, 'sine', .08); setTimeout(() => beep(392, .4, 'sine', .08), 300);
+}
+function crow() { [[500, 700], [700, 900], [900, 1300], [1300, 800]].forEach(([a, b], k) => setTimeout(() => beep(a, .18, 'sawtooth', .07, b - a), k * 160)); }
 const hasPower = k => st.power && st.power.kind === k;
 const RAINBOW = ['#ff6b6b', '#ffb347', '#ffe66b', '#7ee081', '#6fc3ff', '#b58cff'];
 const FLY = new Set(['leaf', 'wolke', 'fleder', 'hai', 'qualle']); // diese Gegner fliegen/schwimmen
@@ -336,6 +343,7 @@ addEventListener('keydown', e => {
   if (e.key === 'm' || e.key === 'M') { toggleMusic(); return; }
   if (e.key === 'Escape' && (st.screen === 'play' || st.screen === 'star' || st.screen === 'win' || (st.screen === 'home' && st.homeMode === 'menu'))) { toStart(); return; }
   if (st.screen === 'visit') { if (st.visit.t > 0.6 && ['Enter', ' ', 'Escape', 'ArrowUp', 'ArrowDown', 'w', 's', 'Backspace'].includes(e.key)) leaveVisit(); return; }
+  if (st.screen === 'home' && st.homeMode === 'night') return;
   if (st.screen === 'home') {
     const m = st.homeMode === 'cook' ? ({ '1': 'ing0', '2': 'ing1', '3': 'ing2', '4': 'ing3', '5': 'ing4', '6': 'ing5', Enter: 'cookgo', ' ': 'cookgo', Escape: 'back', Backspace: 'back' }[e.key])
       : st.homeMode === 'album' ? ({ Escape: 'back', Backspace: 'back', Enter: 'back' }[e.key]) : st.homeMode === 'doors'
@@ -490,7 +498,11 @@ function update(dt) {
   if (st.msgT > 0) st.msgT -= dt;
   if (st.screen === 'home') {
     st.sleepT += dt;
-    if (st.homeMode === 'sleep') {
+    if (st.homeMode === 'night') {
+      st.nightHeartT += dt; if (st.hearts < 4 && st.nightHeartT > 1.2 && st.sleepT < 5) { st.hearts++; st.nightHeartT = 0; beep(700 + st.hearts * 120, .2, 'triangle'); }
+      if (st.sleepT > 5.5 && !st.crowed) { st.crowed = true; crow(); }
+      if (st.sleepT > 9) { st.screen = 'play'; st.homeMode = 'menu'; st.dayT = Math.floor(st.dayT / DAY) * DAY + 147; say('Kikeriki! Guten Morgen! Ein neuer Tag beginnt.'); }
+    } else if (st.homeMode === 'sleep') {
       if (st.hearts < 4 && st.sleepT > 1.2) { st.hearts++; st.sleepT = 0; beep(700 + st.hearts * 120, .2, 'triangle'); }
       else if (st.hearts >= 4 && st.sleepT > 1.6) { st.homeMode = 'menu'; say('Gut ausgeschlafen!'); }
     } else if (st.homeMode === 'eat') {
@@ -507,7 +519,9 @@ function update(dt) {
   const speed = 210 * S * (hasPower('flitz') ? 1.6 : 1);
   { const before = (st.dayT || 0) % DAY; st.dayT = (st.dayT || 0) + dt; const now = st.dayT % DAY, d = w.deco;
     if (d !== 'nacht' && d !== 'wasser') {
-      if (before < 90 && now >= 90) say('Es wird Nacht! Schau mal, die Glühwürmchen kommen.');
+      if (before < 90 && now >= 90) say('Es wird Nacht! Gleich ist Schlafenszeit.');
+      const Bz = st.boss, bossNear = Bz && !Bz.defeated && Bz.x - leadX() < W * 1.5;
+      if (before < 100 && now >= 100 && !st.storm && !bossNear) { goToBed(); return; }
       if (before < 140 && now >= 140) say('Guten Morgen! Die Sonne geht wieder auf.'); } }
   const ps = players();
 
@@ -1627,6 +1641,22 @@ function drawVisit(t) {
     cx.fillText(V.gift === 'heart' ? 'Geschenk: ein Herz!' : 'Geschenk: zwei Samen!', gx + 10 * s, gy + 1); }
   if (V.t > 1) bigText('Tippe, um wieder rauszugehen', H * 0.95, 18 * S, '#fff6c0');
 }
+// Hahn, der morgens alle weckt
+function drawRooster(x, y, s, t, crowing) {
+  const open = crowing && Math.sin(t * 10) > 0;
+  cx.strokeStyle = '#e8a020'; cx.lineWidth = 4 * s; cx.lineCap = 'round';
+  for (const d of [-8, 8]) { cx.beginPath(); cx.moveTo(x + d * s, y - 34 * s); cx.lineTo(x + d * s, y - 4 * s); cx.lineTo(x + (d + 9) * s, y); cx.stroke(); }
+  for (const [c, a] of [['#2a8a5a', -0.6], ['#1f5fa8', -0.2], ['#c0392b', 0.2]]) { cx.fillStyle = c; cx.beginPath(); cx.ellipse(x - 34 * s, y - 70 * s, 12 * s, 34 * s, a - 0.5, 0, 7); cx.fill(); } // Schwanzfedern
+  cx.fillStyle = '#fff6ea'; cx.beginPath(); cx.ellipse(x, y - 56 * s, 34 * s, 26 * s, 0, 0, 7); cx.fill();
+  cx.fillStyle = '#f0d9b5'; cx.beginPath(); cx.ellipse(x - 4 * s, y - 54 * s, 18 * s, 12 * s, 0.3, 0, 7); cx.fill(); // Flügel
+  cx.fillStyle = '#fff6ea'; cx.beginPath(); cx.ellipse(x + 22 * s, y - 88 * s, 15 * s, 22 * s, 0.2, 0, 7); cx.fill(); // Hals + Kopf
+  for (let k = 0; k < 3; k++) circle(x + (16 + k * 7) * s, y - 110 * s - (k === 1 ? 4 : 0) * s, 6 * s, '#e8222e'); // Kamm
+  circle(x + 26 * s, y - 92 * s, 2.8 * s, '#222');
+  cx.fillStyle = '#ffb000'; cx.beginPath(); cx.moveTo(x + 34 * s, y - 90 * s); cx.lineTo(x + 48 * s, y - (open ? 94 : 86) * s); cx.lineTo(x + 34 * s, y - 86 * s); cx.fill();
+  if (open) { cx.beginPath(); cx.moveTo(x + 34 * s, y - 85 * s); cx.lineTo(x + 46 * s, y - 78 * s); cx.lineTo(x + 34 * s, y - 82 * s); cx.fill(); }
+  cx.fillStyle = '#e8222e'; cx.beginPath(); cx.ellipse(x + 33 * s, y - 78 * s, 4 * s, 7 * s, 0, 0, 7); cx.fill(); // Kehllappen
+  if (crowing) for (let i = 0; i < 3; i++) { const q = (t * 1.2 + i / 3) % 1; cx.globalAlpha = 1 - q; cx.fillStyle = '#7a1f5c'; cx.font = `bold ${(14 + i * 4) * s}px sans-serif`; cx.textAlign = 'center'; cx.fillText('♪', x + 60 * s + q * 40 * s, y - 100 * s - q * 40 * s + i * 8 * s); } cx.globalAlpha = 1;
+}
 function drawJet(t) {
   const J = st.jet; if (!J) return;
   const s = S, cols = ['#ff4f6d', '#ff9a3c', '#ffd23f', '#5cc85c', '#36b6f0', '#a66bff'];
@@ -2230,7 +2260,7 @@ function drawHome(t) {
   cx.fillStyle = '#c98a5a'; cx.fillRect(0, floor, W, H - floor);
   cx.fillStyle = '#b77a4c'; for (let x = 0; x < W; x += 80 * s) cx.fillRect(x, floor, 3 * s, H - floor);
   // Fenster: draußen fliegen die Blätter vorbei, drinnen bist du sicher
-  const night = mode === 'sleep';
+  const asleep = mode === 'sleep' || (mode === 'night' && st.sleepT < 5.5), night = asleep;
   const ww = 170 * s, wh = 120 * s, wx = W / 2 - ww / 2, wy = H * 0.2;
   cx.save(); rr(wx, wy, ww, wh, 60 * s); cx.fillStyle = night ? '#2b3a7a' : '#9fdcff'; cx.fill(); cx.clip();
   if (night) { circle(wx + ww * 0.65, wy + wh * 0.4, 18 * s, '#fff3a0'); circle(wx + ww * 0.72, wy + wh * 0.35, 15 * s, '#2b3a7a');
@@ -2252,13 +2282,13 @@ function drawHome(t) {
   const zz = (x, y, i0) => { for (let i = 0; i < 3; i++) { const p = ((t * 0.6 + i / 3 + i0) % 1);
     cx.globalAlpha = 1 - p; cx.fillStyle = '#7a1f5c'; cx.font = `bold ${(16 + i * 7) * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center';
     cx.fillText('Z', x + p * 50 * s + i * 10 * s, y - p * 60 * s); cx.globalAlpha = 1; } };
-  if (mode === 'sleep') {
+  if (mode === 'sleep' || mode === 'night') {
     for (const p of players()) {
       const ly = p.id ? up : 0;
       cx.save(); cx.translate(bx - 165 * s, by - 56 * s - ly); cx.rotate(-Math.PI / 2);
-      drawFlower(0, 190 * s, kindOf(p), s * 0.85, { bob: Math.sin(t * 1.5 + p.id) * 2 * s, mood: 'sleep', noBag: true });
+      drawFlower(0, 190 * s, kindOf(p), s * 0.85, { bob: Math.sin(t * 1.5 + p.id) * 2 * s, mood: asleep ? 'sleep' : 'happy', noBag: true });
       cx.restore();
-      zz(bx - 100 * s, by - 100 * s - ly, p.id * 0.5);
+      if (asleep) zz(bx - 100 * s, by - 100 * s - ly, p.id * 0.5);
     }
   }
   // Decken: unten blau (Spieler 1), oben rot (Spieler 2)
@@ -2271,7 +2301,7 @@ function drawHome(t) {
   const kx = Math.max(44 * s, bx - 190 * s), ky = by;
   cx.fillStyle = '#d9a35f'; cx.beginPath(); cx.ellipse(kx, ky - 18 * s, 38 * s, 18 * s, 0, 0, Math.PI); cx.fill();
   cx.fillStyle = '#ffe9a8'; cx.beginPath(); cx.ellipse(kx, ky - 18 * s, 34 * s, 7 * s, 0, 0, 7); cx.fill();
-  if (mode !== 'menu') { drawBee(kx, ky - 30 * s, t, 1, 0.9 * s, mode === 'sleep'); if (mode === 'sleep') zz(kx + 10 * s, ky - 50 * s, 0.25); }
+  if (mode !== 'menu') { drawBee(kx, ky - 30 * s, t, 1, 0.9 * s, asleep); if (asleep) zz(kx + 10 * s, ky - 50 * s, 0.25); }
   cx.fillStyle = '#d9a35f'; cx.beginPath(); cx.ellipse(kx, ky - 18 * s, 38 * s, 5 * s, 0, 0, Math.PI); cx.fill();
   cx.strokeStyle = '#b5844f'; cx.lineWidth = 2 * s; for (let i = -2; i <= 2; i++) { cx.beginPath(); cx.moveTo(kx + i * 13 * s, ky - 16 * s); cx.lineTo(kx + i * 10 * s, ky - 2 * s); cx.stroke(); }
   cx.strokeStyle = '#c48a48'; cx.lineWidth = 4 * s; cx.beginPath(); cx.ellipse(kx, ky - 18 * s, 38 * s, 18 * s, 0, 0, Math.PI); cx.stroke();
@@ -2294,9 +2324,14 @@ function drawHome(t) {
     drawBee(W / 2 + Math.cos(t * 1.2) * 150 * s, H * 0.45 + Math.sin(t * 2.4) * 30 * s, t, -Math.sign(Math.sin(t * 1.2)) || 1, 1.2 * s);
   }
 
+  if (mode === 'night') { // dunkles Zimmer, und am Morgen kommt der Hahn
+    if (asleep) { cx.fillStyle = `rgba(20,24,80,${Math.min(0.45, st.sleepT * 0.3)})`; cx.fillRect(0, 0, W, H); }
+    else { const k = Math.min(1, (st.sleepT - 5.5) * 1.5); drawRooster(W * 0.5 + (1 - k) * 260 * s, floor, s * 1.2, t, st.sleepT < 8);
+      if (st.sleepT > 5.8 && st.sleepT < 8.2) bubble('Kikeriki!', W * 0.5, floor - 190 * s); }
+  }
   // Herzen
   for (let i = 0; i < 4; i++) heart(W / 2 - 60 * s + i * 40 * s, H * 0.07, 16 * s, i < st.hearts);
-  const txt = mode === 'sleep' ? (st.hearts >= 4 ? 'Ausgeschlafen!' : 'Schlaf gut...') : mode === 'eat' ? 'Guten Appetit!'
+  const txt = mode === 'night' ? (asleep ? 'Gute Nacht! Schlaf schön...' : 'Kikeriki! Guten Morgen!') : mode === 'sleep' ? (st.hearts >= 4 ? 'Ausgeschlafen!' : 'Schlaf gut...') : mode === 'eat' ? 'Guten Appetit!'
     : (st.hidCount ? 'Hier drin bist du sicher vor den Blättern!' : 'Willkommen im Blumenhaus!');
   if (mode !== 'doors' && mode !== 'ward' && mode !== 'swap' && mode !== 'album' && mode !== 'cook') bigText(txt, H * 0.14, 26 * s);
 
