@@ -377,6 +377,11 @@ addEventListener('keydown', e => {
   if (e.key === 'm' || e.key === 'M') { toggleMusic(); return; }
   if (e.key === 'Escape' && (st.screen === 'play' || st.screen === 'star' || st.screen === 'win' || (st.screen === 'home' && st.homeMode === 'menu'))) { toStart(); return; }
   if (st.screen === 'visit') { if (st.visit.t > 0.6 && ['Enter', ' ', 'Escape', 'ArrowUp', 'ArrowDown', 'w', 's', 'Backspace'].includes(e.key)) leaveVisit(); return; }
+  if (st.screen === 'help') {
+    if (e.key === 'ArrowRight' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); helpNext(1); }
+    else if (e.key === 'ArrowLeft') helpNext(-1); else if (e.key === 'Escape') helpDone();
+    return;
+  }
   if (st.screen === 'home' && st.homeMode === 'night') return;
   if (st.screen === 'home') {
     const m = st.homeMode === 'cook' ? ({ '1': 'ing0', '2': 'ing1', '3': 'ing2', '4': 'ing3', '5': 'ing4', '6': 'ing5', Enter: 'cookgo', ' ': 'cookgo', Escape: 'back', Backspace: 'back' }[e.key])
@@ -417,10 +422,17 @@ buildPads();
 cv.addEventListener('pointerdown', e => onTapScreen(e));
 
 function onTapScreen(e) {
+  if (st.screen === 'help') {
+    if (!e) { helpNext(1); return; }
+    for (const b of st.btns) if (e.clientX > b.x && e.clientX < b.x + b.w && e.clientY > b.y && e.clientY < b.y + b.h) {
+      if (b.id === 'hnext') helpNext(1); else if (b.id === 'hprev') helpNext(-1); else if (b.id === 'hskip') helpDone(); return; }
+    helpNext(1); return;
+  }
   if (st.screen === 'start') {
     if (!e) { begin(); return; }
     for (const b of st.btns) if (e.clientX > b.x && e.clientX < b.x + b.w && e.clientY > b.y && e.clientY < b.y + b.h) {
       if (b.id === 'go') begin();
+      else if (b.id === 'help') openHelp(false);
       else if (b.id === 'cont') continueGame();
       else if (b.id.startsWith('lv')) { st.startWorld = +b.id.slice(2); beep(600 + st.startWorld * 80, .08); }
       else { st.two = b.id === '2p'; st.picker = 0; buildPads(); beep(700, .08); }
@@ -508,7 +520,24 @@ function continueGame() {
   startWorld(g.world, g.at > 140 ? g.at : null);
   say('Weiter geht\'s in: ' + WORLDS[g.world].name + '!');
 }
-function begin() { st.dayT = 0; st.power = null; st.hearts = 4; st.seeds = 0; st.stars = 0; beep(660, .1); startWorld(st.startWorld || 0); }
+// Kleine Anleitung: kommt beim ersten Spielen, und über den ?-Knopf
+const HELP = [
+  ['Laufen', 'Mit den Pfeiltasten ◀ ▶ läufst du. Auf dem Tablet nimmst du die Knöpfe unten.'],
+  ['Samen sammeln', 'Sammle die lila Samen! Du brauchst sie zum Hüpfen und zum Eingraben.'],
+  ['Hüpfen', 'Mit ⬆ hüpfst du über Bösewichte und Hindernisse. Das kostet einen Samen.'],
+  ['Eingraben', 'Halte ⬇ gedrückt, dann gräbst du dich ein. Die Bösewichte laufen über dich drüber.'],
+  ['Herzen', 'Du hast 4 Herzen. Im Blumenhaus kannst du schlafen und essen, dann sind sie wieder voll.'],
+  ['Könige besiegen', 'Bei den Königen wirfst du Samen mit der Leertaste oder dem lila Knopf.'],
+];
+function helpSeen() { try { return localStorage.getItem('blumen-anleitung') === '1'; } catch (e) { return true; } }
+function openHelp(thenBegin) { st.screen = 'help'; st.helpPage = 0; st.helpThen = thenBegin; st.screenT = 0; beep(700, .08); }
+function helpNext(d) {
+  st.helpPage += d; st.screenT = 0;
+  if (st.helpPage < 0) st.helpPage = 0;
+  if (st.helpPage >= HELP.length) helpDone(); else beep(700 + st.helpPage * 60, .08);
+}
+function helpDone() { try { localStorage.setItem('blumen-anleitung', '1'); } catch (e) {} if (st.helpThen) begin(); else st.screen = 'start'; }
+function begin() { if (!helpSeen()) { openHelp(true); return; } st.dayT = 0; st.power = null; st.hearts = 4; st.seeds = 0; st.stars = 0; beep(660, .1); startWorld(st.startWorld || 0); }
 
 function tryHop(p) {
   if (st.screen !== 'play' || (p.jumpY > 0 && !onObstacle(p)) || p.digging > 0.2) return;
@@ -1771,6 +1800,47 @@ function drawGarden(t, s) {
   cx.fillStyle = '#5a1745'; cx.font = `bold ${15 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(st.seeds + ' Samen', W / 2 + 8 * s, H * 0.19 + 15 * s);
   st.gbtns = btns;
 }
+// Anleitung mit Bildern
+function keyCap(x, y, s, dir, on) {
+  rr(x - 22 * s, y - 22 * s, 44 * s, 44 * s, 10 * s); cx.fillStyle = on ? '#ff6fae' : '#ffffffdd'; cx.fill(); cx.strokeStyle = '#7a1f5c55'; cx.lineWidth = 3; cx.stroke();
+  cx.fillStyle = on ? '#fff' : '#7a1f5c'; cx.save(); cx.translate(x, y); cx.rotate({ r: 0, d: Math.PI / 2, l: Math.PI, u: -Math.PI / 2 }[dir]);
+  cx.beginPath(); cx.moveTo(11 * s, 0); cx.lineTo(-7 * s, -10 * s); cx.lineTo(-7 * s, 10 * s); cx.closePath(); cx.fill(); cx.restore();
+}
+function drawHelp(t) {
+  const w = WORLDS[1], pg = st.helpPage, [title, text] = HELP[pg], s = Math.min(Math.max(0.85, S), W / 440), gy = H * 0.66, cxm = W / 2, q = st.screenT;
+  sky(w); cx.fillStyle = w.ground; cx.fillRect(0, gy, W, H - gy); cx.fillStyle = w.dirt; cx.fillRect(0, gy + 14 * s, W, H - gy);
+  bigText('So spielst du', H * 0.07, Math.min(34 * s, W * 0.07));
+  bigText((pg + 1) + '. ' + title, H * 0.15, Math.min(30 * s, W * 0.065), '#fff6c0');
+  const k = st.kind;
+  cx.save(); cx.beginPath(); cx.rect(0, 0, W, gy + 6 * s); cx.clip();
+  if (pg === 0) { const x = cxm + Math.sin(q * 1.5) * 120 * s; drawFlower(x, gy, k, s, { lean: Math.cos(q * 1.5) > 0 ? 0.6 : -0.6, bob: -Math.abs(Math.sin(q * 9)) * 6 * s }); }
+  else if (pg === 1) { const got = (q % 3) > 1.8; drawFlower(cxm - 100 * s + Math.min(1, (q % 3) / 1.8) * 100 * s, gy, k, s, { lean: 0.5, seeds: got ? 1 : 0 }); if (!got) drawSeed(cxm + 20 * s, gy - 90 * s + Math.sin(q * 3) * 5 * s, q); else star4(cxm + 10 * s, gy - 100 * s, 10 * s, '#fff6a0'); }
+  else if (pg === 2) { const ph = (q % 2.4) / 2.4, j = Math.sin(ph * Math.PI) * 120 * s; drawFlowerMonster(cxm + 30 * s, gy + 4 * s, q); drawFlower(cxm - 150 * s + ph * 300 * s, gy - j, k, s, {}); }
+  else if (pg === 3) { const d = Math.min(1, Math.max(0, Math.sin(q * 1.2) * 1.5 + 0.5)), lx = cxm + 200 * s - ((q * 120 * s) % (420 * s)); drawFlower(cxm, gy + d * 82 * s, k, s, { mood: d > 0.5 ? 'happy' : 'happy' }); drawLeaf(lx, gy - 40 * s, q); }
+  else if (pg === 4) { drawHouse(cxm + 110 * s, gy + 6 * s, s, true, true); drawFlower(cxm - 110 * s, gy, k, s, {}); for (let i = 0; i < 4; i++) heart(cxm - 60 * s + i * 40 * s, H * 0.26, 16 * s, i < 1 + Math.floor(q * 1.5) % 4); }
+  else { cx.save(); cx.translate(cxm + 150 * s, gy - 130 * s); cx.scale(2, 2); drawLeaf(0, 0, q); cx.restore(); drawFlower(cxm - 160 * s, gy, k, s, {}); const sx = cxm - 140 * s + ((q * 260 * s) % (260 * s)); cx.fillStyle = '#9b4dff'; cx.beginPath(); cx.ellipse(sx, gy - 95 * s, 9 * s, 6 * s, q * 20, 0, 7); cx.fill(); }
+  cx.restore();
+  if (pg === 3) { const d = Math.min(1, Math.max(0, Math.sin(q * 1.2) * 1.5 + 0.5)); if (d > 0.3) { cx.fillStyle = w.dirt; cx.beginPath(); cx.ellipse(cxm, gy + 4 * s, 40 * s * d, 14 * s * d, 0, Math.PI, 0); cx.fill(); drawFeet(cxm, gy + d * 82 * s + 6 * s, k, t, Math.min(1, (d - 0.3) * 3), true); } }
+  // Tasten
+  const ky = H * 0.27;
+  if (pg === 0) { keyCap(cxm - 30 * s, ky, s, 'l', Math.cos(q * 1.5) < 0); keyCap(cxm + 30 * s, ky, s, 'r', Math.cos(q * 1.5) > 0); }
+  if (pg === 2) keyCap(cxm, ky, s, 'u', (q % 2.4) < 0.4);
+  if (pg === 3) keyCap(cxm, ky, s, 'd', Math.sin(q * 1.2) > -0.3);
+  if (pg === 5) { rr(cxm - 70 * s, ky - 20 * s, 140 * s, 40 * s, 10 * s); cx.fillStyle = '#ffffffdd'; cx.fill(); cx.fillStyle = '#7a1f5c'; cx.font = `bold ${16 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('Leertaste', cxm, ky + 1); }
+  // Text
+  const tw = Math.min(560 * s, W - 32), ty = gy + 34 * s; rr(cxm - tw / 2, ty, tw, 70 * s, 18 * s); cx.fillStyle = '#ffffffee'; cx.fill();
+  cx.fillStyle = '#5a1745'; cx.font = `bold ${Math.min(19 * s, W * 0.042)}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+  const words = text.split(' '), lines = ['']; for (const wd of words) { const tl = lines[lines.length - 1] + (lines[lines.length - 1] ? ' ' : '') + wd; if (cx.measureText(tl).width > tw - 30) lines.push(wd); else lines[lines.length - 1] = tl; }
+  lines.forEach((l, i) => cx.fillText(l, cxm, ty + 35 * s + (i - (lines.length - 1) / 2) * 24 * s));
+  // Punkte und Knöpfe
+  for (let i = 0; i < HELP.length; i++) circle(cxm + (i - (HELP.length - 1) / 2) * 20 * s, H * 0.86, 6 * s, i === pg ? '#ff6fae' : '#ffffff99');
+  st.btns = []; const bh = 48 * s, bw = Math.min(180 * s, (W - 56) / 3), by = H * 0.9;
+  const btn = (id, label, col, fg, x0) => { rr(x0, by, bw, bh, bh / 2); cx.fillStyle = col; cx.fill(); cx.strokeStyle = '#fff'; cx.lineWidth = 3; cx.stroke();
+    cx.fillStyle = fg; cx.font = `bold ${18 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(label, x0 + bw / 2, by + bh / 2, bw - 12); st.btns.push({ id, x: x0, y: by, w: bw, h: bh }); };
+  if (pg > 0) btn('hprev', 'Zurück', '#ffffffcc', '#7a1f5c', cxm - bw * 1.5 - 12);
+  btn('hskip', 'Überspringen', '#ffffffcc', '#7a1f5c', cxm - bw / 2);
+  btn('hnext', pg === HELP.length - 1 ? 'Los geht\'s!' : 'Weiter', '#ff6fae', '#fff', cxm + bw / 2 + 12);
+}
 function drawJet(t) {
   const J = st.jet; if (!J) return;
   const s = S, cols = ['#ff4f6d', '#ff9a3c', '#ffd23f', '#5cc85c', '#36b6f0', '#a66bff'];
@@ -2206,6 +2276,9 @@ function drawStart(t) {
         cx.fillStyle = '#fff'; cx.font = `bold ${20 * s}px "Comic Sans MS", sans-serif`; cx.textBaseline = 'middle'; cx.fillText(n, bx, by + 1); });
     }
   });
+  { const hb = 46 * u; circle(12 + hb / 2, 12 + hb / 2, hb / 2, '#ffffffcc'); cx.strokeStyle = '#ff6fae'; cx.lineWidth = 3; cx.beginPath(); cx.arc(12 + hb / 2, 12 + hb / 2, hb / 2, 0, 7); cx.stroke();
+    cx.fillStyle = '#7a1f5c'; cx.font = `bold ${26 * u}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('?', 12 + hb / 2, 12 + hb / 2 + 1);
+    st.btns.push({ id: 'help', x: 12, y: 12, w: hb, h: hb }); }
   const saved = loadGame(), bh = 52 * u, by0 = H * 0.92 - bh / 2;
   const btnsB = saved ? [['go', 'Neu anfangen', '#ffffffcc', '#7a1f5c'], ['cont', 'Weiterspielen: ' + WORLDS[saved.world].name, '#ff6fae', '#fff']] : [['go', 'Los geht\'s!', '#ff6fae', '#fff']];
   const bw = saved ? Math.min(260 * u, (W - 48) / 2) : 220 * u, totB = bw * btnsB.length + 16 * (btnsB.length - 1);
@@ -2619,6 +2692,7 @@ function loop(now) {
   else if (st.screen === 'star') drawStar(t);
   else if (st.screen === 'home') drawHome(t);
   else if (st.screen === 'visit') drawVisit(t);
+  else if (st.screen === 'help') drawHelp(t);
   else drawWin(t);
   requestAnimationFrame(loop);
 }
