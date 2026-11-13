@@ -123,6 +123,11 @@ const POWER = {
 const DAY = 150;
 function nightAmt() {
   if (st.screen !== 'play' && st.screen !== 'star') return 0;
+  return nightRaw();
+}
+// ist es draußen gerade Nacht? (auch wenn man im Haus ist)
+function nightOutside() { return WORLDS[st.world].deco === 'nacht' || nightRaw() > 0.5; }
+function nightRaw() {
   const d = WORLDS[st.world].deco; if (d === 'nacht' || d === 'wasser') return 0;
   const q = (st.dayT || 0) % DAY;
   return q < 90 ? 0 : q < 100 ? (q - 90) / 10 : q < 140 ? 1 : 1 - (q - 140) / 10;
@@ -1615,9 +1620,10 @@ function drawVisit(t) {
   for (let y = fy + 22 * s; y < H; y += 22 * s) { cx.beginPath(); cx.moveTo(0, y); cx.lineTo(W, y); cx.stroke(); }
   // Fenster mit Blick ins Heimatland
   const wx = W * 0.5, wy = H * 0.24, ww = Math.min(220 * s, W * 0.3), wh = ww * 0.75;
-  cx.save(); rr(wx - ww / 2, wy, ww, wh, 16 * s); const wg = cx.createLinearGradient(0, wy, 0, wy + wh); wg.addColorStop(0, L.sky[0]); wg.addColorStop(1, L.sky[1]); cx.fillStyle = wg; cx.fill(); cx.clip();
+  cx.save(); rr(wx - ww / 2, wy, ww, wh, 16 * s); const wg = cx.createLinearGradient(0, wy, 0, wy + wh); const nOut = nightOutside(); wg.addColorStop(0, nOut ? '#141a4a' : L.sky[0]); wg.addColorStop(1, nOut ? '#3b2f7a' : L.sky[1]); cx.fillStyle = wg; cx.fill(); cx.clip();
+  if (nOut) for (let i = 0; i < 6; i++) star4(wx - ww / 2 + 20 * s + i * ww / 6, wy + 20 * s + (i % 2) * 22 * s, (1.5 + Math.abs(Math.sin(t * 2 + i))) * s, '#fff');
   cx.fillStyle = L.hill2; cx.beginPath(); cx.ellipse(wx - ww * 0.2, wy + wh, ww * 0.6, wh * 0.4, 0, 0, 7); cx.fill();
-  cx.fillStyle = L.ground; cx.fillRect(wx - ww / 2, wy + wh * 0.85, ww, wh * 0.2); circle(wx + ww * 0.3, wy + wh * 0.25, 14 * s, L.deco === 'nacht' ? '#fff6c8' : '#fff3a0'); cx.restore();
+  cx.fillStyle = L.ground; cx.fillRect(wx - ww / 2, wy + wh * 0.85, ww, wh * 0.2); circle(wx + ww * 0.3, wy + wh * 0.25, 14 * s, L.deco === 'nacht' || nOut ? '#fff6c8' : '#fff3a0'); cx.restore();
   cx.strokeStyle = '#fff'; cx.lineWidth = 8 * s; rr(wx - ww / 2, wy, ww, wh, 16 * s); cx.stroke(); cx.beginPath(); cx.moveTo(wx, wy); cx.lineTo(wx, wy + wh); cx.moveTo(wx - ww / 2, wy + wh / 2); cx.lineTo(wx + ww / 2, wy + wh / 2); cx.stroke();
   cx.fillStyle = '#ff9ec7'; cx.fillRect(wx - ww / 2 - 26 * s, wy - 8 * s, 22 * s, wh + 16 * s); cx.fillRect(wx + ww / 2 + 4 * s, wy - 8 * s, 22 * s, wh + 16 * s); // Vorhänge
   // Teppich, Tisch mit Tasse und Blumenvase
@@ -2260,7 +2266,7 @@ function drawHome(t) {
   cx.fillStyle = '#c98a5a'; cx.fillRect(0, floor, W, H - floor);
   cx.fillStyle = '#b77a4c'; for (let x = 0; x < W; x += 80 * s) cx.fillRect(x, floor, 3 * s, H - floor);
   // Fenster: draußen fliegen die Blätter vorbei, drinnen bist du sicher
-  const asleep = mode === 'sleep' || (mode === 'night' && st.sleepT < 5.5), night = asleep;
+  const asleep = mode === 'sleep' || (mode === 'night' && st.sleepT < 5.5), night = asleep || (mode !== 'night' && nightOutside());
   const ww = 170 * s, wh = 120 * s, wx = W / 2 - ww / 2, wy = H * 0.2;
   cx.save(); rr(wx, wy, ww, wh, 60 * s); cx.fillStyle = night ? '#2b3a7a' : '#9fdcff'; cx.fill(); cx.clip();
   if (night) { circle(wx + ww * 0.65, wy + wh * 0.4, 18 * s, '#fff3a0'); circle(wx + ww * 0.72, wy + wh * 0.35, 15 * s, '#2b3a7a');
