@@ -160,6 +160,34 @@ function goToBed() {
   beep(523, .3, 'sine', .08); setTimeout(() => beep(392, .4, 'sine', .08), 300);
 }
 function crow() { [[500, 700], [700, 900], [900, 1300], [1300, 800]].forEach(([a, b], k) => setTimeout(() => beep(a, .18, 'sawtooth', .07, b - a), k * 160)); }
+// Schatzkisten: in jedem Land ist eine versteckt
+const TREASURES = [['eine goldene Eichel', '#e0a020'], ['ein Glitzer-Marienkäfer', '#ff4f6d'], ['eine Perle', '#f4f0ff'], ['ein goldener Kaktus', '#ffd23f'], ['eine Kristall-Schneeflocke', '#bfe6ff'],
+  ['eine Party-Krone', '#ff8ad8'], ['ein Regenbogenstein', '#b58cff'], ['ein Riesen-Bonbon', '#ff7bb5'], ['eine Dose Sternenstaub', '#fff3a0'], ['eine Schatz-Muschel', '#ffb3c8'], ['ein goldener Schlüssel', '#ffc233']];
+// Eigener Garten hinter dem Blumenhaus: Samen einpflanzen, gießen, wachsen lassen
+const GARDEN_KINDS = ['gaensebluemchen', 'loewenzahn', 'hibiskus', 'kaktusbluete', 'schneegloeckchen', 'regenbogenblume', 'zuckerblume', 'mondblume', 'seerose', 'sonnenblume'];
+const GROW = 60; // Sekunden, bis eine Blume blüht
+let garden = [null, null, null, null, null, null];
+try { const g = JSON.parse(localStorage.getItem('blumen-garten') || 'null'); if (Array.isArray(g)) garden = g.concat([null, null, null, null, null, null]).slice(0, 6); } catch (e) {}
+function saveGarden() { try { localStorage.setItem('blumen-garten', JSON.stringify(garden)); } catch (e) {} }
+function plotAge(g) { return (Date.now() - g.at) / 1000 + (g.boost || 0); }
+function gardenAction(id) {
+  if (id === 'back') { st.homeMode = 'menu'; beep(500, .08); return; }
+  if (id === 'water') {
+    let any = false; for (const g of garden) if (g && plotAge(g) < GROW) { g.boost = (g.boost || 0) + 8; any = true; }
+    saveGarden(); st.waterT = 1.2; beep(400, .3, 'sine', .06, 300);
+    say(any ? 'Plitsch, platsch! Die Pflanzen wachsen schneller.' : 'Pflanz zuerst einen Samen ein!'); return;
+  }
+  if (id && id.startsWith('plot')) {
+    const i = +id.slice(4), g = garden[i];
+    if (!g) {
+      if (st.seeds <= 0) { say('Du hast keine Samen. Sammle draußen welche!'); beep(200, .15, 'triangle'); return; }
+      st.seeds--; garden[i] = { at: Date.now(), kind: GARDEN_KINDS[Math.floor(Math.random() * GARDEN_KINDS.length)], boost: 0 }; saveGarden();
+      sfx.dig(); say('Eingepflanzt! Gieß ihn mit der Gießkanne, dann wächst er schneller.');
+    } else if (plotAge(g) < GROW) say('Die Pflanze wächst noch. Ein bisschen Geduld!');
+    else if (!g.harvested) { g.harvested = 1; saveGarden(); st.seeds = Math.min(seedMax(), st.seeds + 2); sfx.star(); say('Sie blüht! Die Blume schenkt dir 2 neue Samen.'); }
+    else { g.wiggle = Date.now(); beep(988, .1, 'triangle'); say(['Hihi, das kitzelt!', 'Danke, dass du mich gepflanzt hast!', 'Ich bin so gern in deinem Garten!'][i % 3]); }
+  }
+}
 const hasPower = k => st.power && st.power.kind === k;
 const RAINBOW = ['#ff6b6b', '#ffb347', '#ffe66b', '#7ee081', '#6fc3ff', '#b58cff'];
 const FLY = new Set(['leaf', 'wolke', 'fleder', 'hai', 'qualle']); // diese Gegner fliegen/schwimmen
@@ -181,11 +209,12 @@ function startWorld(i, fromX) {
   // zwei geheime Eingänge ins Blumenhaus
   st.secrets = (w.secretAt || [0.24, 0.7]).map((f, n) => ({ x: Math.round(w.len * f + (Math.random() - 0.5) * 600), found: false, n }));
   st.fairy = { x: Math.round(w.len * (w.deco === 'party' ? 0.62 : 0.56)), got: false, t: 0, kind: POWERS[i] || 'herz' };
+  st.chest = { x: Math.round(w.len * (w.deco === 'wasser' ? 0.78 : 0.84) + Math.random() * 300), open: false, t: 0 };
   // Hindernisse: passend zum Land (Wald und Party haben keine)
   st.obst = []; st.storm = null; st.stormAt = null; st.stormSheltered = false;
   const OB = OBST_KIND[w.deco];
   if (OB) for (let x = 1800 + Math.random() * 400; x < w.len - 800; x += 1700 + Math.random() * 900) {
-    if (Math.abs(x - st.helperX) < 400 || st.secrets.some(q => Math.abs(x - q.x) < 320) || Math.abs(x - base) < 300 || Math.abs(x - st.fairy.x) < 350 || (w.boss === 'krake' && x > w.len - 2000)) continue;
+    if (Math.abs(x - st.helperX) < 400 || st.secrets.some(q => Math.abs(x - q.x) < 320) || Math.abs(x - base) < 300 || Math.abs(x - st.fairy.x) < 350 || Math.abs(x - st.chest.x) < 350 || (w.boss === 'krake' && x > w.len - 2000)) continue;
     st.obst.push({ x, kind: OB, w: OBST[OB].w, h: OBST[OB].h, t: Math.random() * 6 });
     // ein Samen liegt immer vor dem Hindernis, damit man drüberhüpfen kann
     st.seedsOnMap.push({ x: x - 330, t: Math.random() * 6, got: false, up: 70 });
@@ -207,9 +236,9 @@ function startWorld(i, fromX) {
 }
 function say(m) { st.msg = m; st.msgT = 3; }
 // Sammelalbum: merkt sich besuchte Länder, Sterne, Geheimtüren und den Blätterkönig
-let album = { seen: [], star: [], sec: [], boss: 0, boss2: 0 };
+let album = { seen: [], star: [], sec: [], chest: [], boss: 0, boss2: 0 };
 try { const a = JSON.parse(localStorage.getItem('blumen-album') || 'null'); if (a) album = Object.assign(album, a); } catch (e) {}
-for (const k of ['seen', 'star', 'sec']) while (album[k].length < WORLDS.length) album[k].push(0);
+for (const k of ['seen', 'star', 'sec', 'chest']) if (!album[k]) album[k] = []; for (const k of ['seen', 'star', 'sec', 'chest']) while (album[k].length < WORLDS.length) album[k].push(0);
 function saveAlbum() { try { localStorage.setItem('blumen-album', JSON.stringify(album)); } catch (e) {} }
 
 /* ---------- Töne ---------- */
@@ -351,9 +380,9 @@ addEventListener('keydown', e => {
   if (st.screen === 'home' && st.homeMode === 'night') return;
   if (st.screen === 'home') {
     const m = st.homeMode === 'cook' ? ({ '1': 'ing0', '2': 'ing1', '3': 'ing2', '4': 'ing3', '5': 'ing4', '6': 'ing5', Enter: 'cookgo', ' ': 'cookgo', Escape: 'back', Backspace: 'back' }[e.key])
-      : st.homeMode === 'album' ? ({ Escape: 'back', Backspace: 'back', Enter: 'back' }[e.key]) : st.homeMode === 'doors'
+      : st.homeMode === 'garden' ? ({ '1': 'plot0', '2': 'plot1', '3': 'plot2', '4': 'plot3', '5': 'plot4', '6': 'plot5', g: 'water', w: 'water', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'album' ? ({ Escape: 'back', Backspace: 'back', Enter: 'back' }[e.key]) : st.homeMode === 'doors'
       ? ({ '1': 'w0', '2': 'w1', '3': 'w2', '4': 'w3', '5': 'w4', '6': 'w5', '7': 'w6', '8': 'w7', '9': 'w8', '0': 'w9', Escape: 'back', Backspace: 'back' }[e.key])
-      : ({ '1': 'sleep', ArrowLeft: 'sleep', '2': 'eat', ArrowRight: 'eat', '3': 'cook', '4': 'travel', '5': 'ward', '6': 'swap', '7': 'album', '8': 'out', Enter: 'out' }[e.key]);
+      : ({ '1': 'sleep', ArrowLeft: 'sleep', '2': 'eat', ArrowRight: 'eat', '3': 'cook', '4': 'travel', '5': 'ward', '6': 'swap', '7': 'album', '8': 'garden', '9': 'out', Enter: 'out' }[e.key]);
     if (m) homeAction(m);
     return;
   }
@@ -403,7 +432,7 @@ function onTapScreen(e) {
       else { if (st.picker === 0) st.kind = k; else st.kind2 = k; st.picker = 1 - st.picker; beep(700 + st.picker * 200, .08); }
     }
   } else if (st.screen === 'home') {
-    if ((st.homeMode !== 'menu' && st.homeMode !== 'doors' && st.homeMode !== 'ward' && st.homeMode !== 'swap' && st.homeMode !== 'album' && st.homeMode !== 'cook') || !e) return;
+    if ((st.homeMode !== 'menu' && st.homeMode !== 'doors' && st.homeMode !== 'ward' && st.homeMode !== 'swap' && st.homeMode !== 'album' && st.homeMode !== 'cook' && st.homeMode !== 'garden') || !e) return;
     for (const b of st.btns) if (e.clientX > b.x && e.clientX < b.x + b.w && e.clientY > b.y && e.clientY < b.y + b.h) homeAction(b.id);
   } else if (st.screen === 'visit') { if (st.visit.t > 0.6) leaveVisit();
   } else if (st.screen === 'star' && st.screenT > 1) {
@@ -422,6 +451,7 @@ function goHome(why) {
 }
 function homeAction(id) {
   if (st.homeMode === 'cook') { cookAction(id); return; }
+  if (st.homeMode === 'garden') { gardenAction(id); return; }
   if (st.homeMode === 'album') { if (id === 'back') { st.homeMode = 'menu'; beep(500, .08); } return; }
   if (st.homeMode === 'swap') {
     if (id === 'back' || id === 'out') { st.homeMode = 'menu'; beep(500, .08); }
@@ -453,6 +483,7 @@ function homeAction(id) {
   if (id === 'ward') { st.homeMode = 'ward'; st.wardFor = 0; return; }
   if (id === 'swap') { st.homeMode = 'swap'; st.wardFor = 0; return; }
   if (id === 'album') { st.homeMode = 'album'; return; }
+  if (id === 'garden') { st.homeMode = 'garden'; say('Dein eigener Garten! Tippe auf ein leeres Beet, um einen Samen zu pflanzen.'); return; }
   if (id === 'cook') { st.homeMode = 'cook'; st.cook = { picked: [], stir: 0, phase: 'pick', spin: 0 }; say('Wähle 3 Zutaten für den Kochtopf!'); return; }
   if (id === 'sleep') { st.homeMode = 'sleep'; st.sleepT = 0; st.screenT = 0; }
   else if (id === 'eat') { st.homeMode = 'eat'; st.sleepT = 0; st.eaten = 0; st.screenT = 0; }
@@ -627,6 +658,15 @@ function update(dt) {
       say('Die Blumenfee schenkt dir ' + pw.say); st.msgT = 4;
       [1046, 1318, 1568, 2093].forEach((f, k) => setTimeout(() => beep(f, .18, 'triangle', .1), k * 90));
       for (let k = 0; k < 30; k++) st.sparkles.push(spark(F.x, groundY(F.x) - 130 * S, [pw.c, '#fff6a0', '#ffffff'][k % 3]));
+    } }
+  const C = st.chest;
+  if (C) { C.t += dt;
+    if (!C.open && ps.some(p => Math.abs(p.x - C.x) < 50 && p.digging < 0.5 && p.jumpY < 30 * S)) {
+      C.open = true; C.t = 0; const tr = TREASURES[st.world] || TREASURES[0], neu = !album.chest[st.world];
+      album.chest[st.world] = 1; saveAlbum(); st.seeds = Math.min(seedMax(), st.seeds + 3); if (st.hearts < 4) st.hearts++;
+      say('Eine Schatzkiste! Darin ist ' + tr[0] + '! Und 3 Samen.' + (neu ? ' Der Schatz ist jetzt im Album.' : '')); st.msgT = 5;
+      [784, 988, 1175, 1568, 1976].forEach((f, k) => setTimeout(() => beep(f, .15, 'triangle', .1), k * 80));
+      for (let k = 0; k < 30; k++) st.sparkles.push(spark(C.x, groundY(C.x) - 30 * S, ['#ffd23f', '#fff6a0', tr[1]][k % 3]));
     } }
   if (st.power) { st.power.t -= dt;
     if (st.power.t <= 0) { if (st.power.kind !== 'herz') say('Der ' + POWER[st.power.kind].name + ' ist vorbei.'); st.power = null; } }
@@ -1663,6 +1703,74 @@ function drawRooster(x, y, s, t, crowing) {
   cx.fillStyle = '#e8222e'; cx.beginPath(); cx.ellipse(x + 33 * s, y - 78 * s, 4 * s, 7 * s, 0, 0, 7); cx.fill(); // Kehllappen
   if (crowing) for (let i = 0; i < 3; i++) { const q = (t * 1.2 + i / 3) % 1; cx.globalAlpha = 1 - q; cx.fillStyle = '#7a1f5c'; cx.font = `bold ${(14 + i * 4) * s}px sans-serif`; cx.textAlign = 'center'; cx.fillText('♪', x + 60 * s + q * 40 * s, y - 100 * s - q * 40 * s + i * 8 * s); } cx.globalAlpha = 1;
 }
+// Schatzkiste (halb in der Erde, glänzt ab und zu)
+function drawChest(x, y, s, open, t, tr, w) {
+  const bw = 46 * s, bh = 28 * s;
+  if (!open && w) { cx.fillStyle = w.dirt; cx.beginPath(); cx.ellipse(x, y, bw * 0.8, 10 * s, 0, 0, 7); cx.fill(); }
+  cx.fillStyle = '#9a5a2a'; rr(x - bw / 2, y - bh, bw, bh, 4 * s); cx.fill();
+  cx.fillStyle = '#ffc233'; cx.fillRect(x - bw / 2, y - bh * 0.55, bw, 4 * s); cx.fillRect(x - bw * 0.3, y - bh, 4 * s, bh); cx.fillRect(x + bw * 0.3 - 4 * s, y - bh, 4 * s, bh);
+  if (!open) {
+    cx.fillStyle = '#b06a32'; cx.beginPath(); cx.moveTo(x - bw / 2, y - bh); cx.quadraticCurveTo(x, y - bh - 22 * s, x + bw / 2, y - bh); cx.closePath(); cx.fill();
+    rr(x - 5 * s, y - bh - 4 * s, 10 * s, 12 * s, 2 * s); cx.fillStyle = '#ffd23f'; cx.fill(); circle(x, y - bh + 2 * s, 1.8 * s, '#7a4a10');
+    const q = (performance.now() / 1000) % 3; if (q < 0.5) star4(x + bw * 0.35, y - bh - 10 * s, 6 * s * Math.sin(q / 0.5 * Math.PI), '#fff6a0');
+  } else {
+    cx.fillStyle = '#b06a32'; cx.beginPath(); cx.moveTo(x - bw / 2, y - bh); cx.lineTo(x - bw / 2 - 6 * s, y - bh - 26 * s); cx.quadraticCurveTo(x, y - bh - 40 * s, x + bw / 2 - 6 * s, y - bh - 26 * s); cx.lineTo(x + bw / 2, y - bh); cx.closePath(); cx.fill();
+    cx.fillStyle = '#4a2a10'; cx.fillRect(x - bw / 2 + 3 * s, y - bh - 2 * s, bw - 6 * s, 6 * s);
+    for (const [dx, c] of [[-10, '#ffd23f'], [0, '#ffe066'], [10, '#ffd23f']]) circle(x + dx * s, y - bh + 1 * s, 6 * s, c); // Goldmünzen
+    if (tr) { const up = Math.min(1, t * 1.2), gy = y - bh - 20 * s - up * 50 * s + Math.sin(t * 3) * 4 * s; cx.globalAlpha = Math.max(0, 1 - Math.max(0, t - 3) * 0.5);
+      if (cx.globalAlpha > 0) { cx.globalAlpha *= 0.4; circle(x, gy, 22 * s, '#fff6a0'); cx.globalAlpha = Math.max(0, 1 - Math.max(0, t - 3) * 0.5);
+        cx.fillStyle = tr[1]; cx.beginPath(); cx.moveTo(x, gy - 14 * s); cx.lineTo(x + 12 * s, gy - 3 * s); cx.lineTo(x, gy + 14 * s); cx.lineTo(x - 12 * s, gy - 3 * s); cx.closePath(); cx.fill();
+        cx.strokeStyle = '#fff'; cx.lineWidth = 2 * s; cx.stroke(); star4(x + 8 * s, gy - 8 * s, 4 * s, '#fff'); }
+      cx.globalAlpha = 1; }
+  }
+}
+// Mein Garten hinter dem Blumenhaus
+function drawGarden(t, s) {
+  const night = nightOutside(), fy = H * 0.6;
+  const g = cx.createLinearGradient(0, 0, 0, fy); g.addColorStop(0, night ? '#141a4a' : '#8fd3ff'); g.addColorStop(1, night ? '#3b2f7a' : '#e6f7ff'); cx.fillStyle = g; cx.fillRect(0, 0, W, H);
+  if (night) { for (let i = 0; i < 30; i++) star4((i * 97.3) % W, (i * 41.7) % (H * 0.4), (1 + Math.abs(Math.sin(t * 2 + i))) * s, '#fff'); circle(W * 0.8, H * 0.14, 30 * s, '#fff6c8'); }
+  else circle(W * 0.8, H * 0.15, 40 * s, '#fff7b0');
+  cx.fillStyle = night ? '#2f6b4f' : '#7fd16a'; cx.fillRect(0, fy, W, H - fy);
+  // Zaun
+  cx.fillStyle = night ? '#c9bfa8' : '#fff4e0';
+  for (let x = 10 * s; x < W; x += 34 * s) { cx.fillRect(x, fy - 54 * s, 18 * s, 60 * s); cx.beginPath(); cx.moveTo(x, fy - 54 * s); cx.lineTo(x + 9 * s, fy - 66 * s); cx.lineTo(x + 18 * s, fy - 54 * s); cx.fill(); }
+  cx.fillRect(0, fy - 40 * s, W, 8 * s); cx.fillRect(0, fy - 16 * s, W, 8 * s);
+  // Hauswand links
+  cx.fillStyle = '#fff4e0'; rr(-40 * s, fy - 200 * s, 120 * s, 210 * s, 10 * s); cx.fill(); cx.fillStyle = '#ff9ec7'; cx.beginPath(); cx.moveTo(-60 * s, fy - 190 * s); cx.lineTo(100 * s, fy - 190 * s); cx.lineTo(20 * s, fy - 250 * s); cx.fill();
+  cx.fillStyle = '#a0623a'; rr(14 * s, fy - 80 * s, 46 * s, 80 * s, 23 * s); cx.fill(); circle(50 * s, fy - 40 * s, 3 * s, '#ffd23f');
+  bigText('Mein Garten', H * 0.14, 30 * s);
+  // Beete
+  const n = 6, left = 110 * s, pw = (W - left - 20 * s) / n, by = H * 0.74, btns = [];
+  for (let i = 0; i < n; i++) {
+    const x = left + pw * (i + 0.5), G = garden[i];
+    cx.fillStyle = '#7a4e2d'; cx.beginPath(); cx.ellipse(x, by, pw * 0.42, 16 * s, 0, 0, 7); cx.fill();
+    cx.fillStyle = '#5e3a20'; for (let k = -2; k <= 2; k++) circle(x + k * pw * 0.12, by + 2 * s, 2 * s, '#5e3a20');
+    if (!G) { cx.fillStyle = '#ffffffaa'; cx.font = `bold ${Math.min(26 * s, pw * 0.3)}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('+', x, by - 26 * s); }
+    else {
+      const a = plotAge(G), k = Math.min(1, a / GROW), wig = G.wiggle && Date.now() - G.wiggle < 800 ? Math.sin(t * 30) * 0.15 : 0;
+      cx.save(); cx.translate(x, by); cx.rotate(wig); cx.translate(-x, -by);
+      if (k < 0.25) { cx.fillStyle = '#8a5a33'; cx.beginPath(); cx.ellipse(x, by - 4 * s, 18 * s, 9 * s, 0, Math.PI, 0); cx.fill(); circle(x, by - 10 * s, 4 * s, '#9b4dff'); }
+      else if (k < 1) { const h = (14 + (k - 0.25) / 0.75 * 70) * s; cx.strokeStyle = '#3a9a40'; cx.lineWidth = 5 * s; cx.lineCap = 'round'; cx.beginPath(); cx.moveTo(x, by - 4 * s); cx.lineTo(x, by - h); cx.stroke();
+        cx.fillStyle = '#4fbf55'; cx.beginPath(); cx.ellipse(x - 10 * s, by - h * 0.45, 11 * s, 5 * s, 0.5, 0, 7); cx.ellipse(x + 10 * s, by - h * 0.6, 11 * s, 5 * s, -0.5, 0, 7); cx.fill();
+        if (k > 0.6) { cx.fillStyle = '#ff9ec7'; cx.beginPath(); cx.ellipse(x, by - h - 6 * s, 7 * s, 11 * s, 0, 0, 7); cx.fill(); cx.fillStyle = '#4fbf55'; cx.beginPath(); cx.ellipse(x, by - h + 2 * s, 8 * s, 5 * s, 0, 0, Math.PI); cx.fill(); } }
+      else { drawHelper(x, by - 2 * s, G.kind, t * 2 + i, Math.min(0.75 * s, pw / 150)); if (!G.harvested) { drawSeedSmall(x + 26 * s, by - 100 * s + Math.sin(t * 3 + i) * 4 * s, t); } }
+      cx.restore();
+      if (k < 1) { rr(x - pw * 0.3, by + 22 * s, pw * 0.6, 7 * s, 3 * s); cx.fillStyle = '#ffffff88'; cx.fill(); rr(x - pw * 0.3, by + 22 * s, pw * 0.6 * k, 7 * s, 3 * s); cx.fillStyle = '#7fe07a'; cx.fill(); }
+    }
+    btns.push({ id: 'plot' + i, x: x - pw / 2, y: by - 140 * s, w: pw, h: 170 * s });
+  }
+  // Gießkanne
+  if (st.waterT > 0) { st.waterT -= 1 / 60; cx.strokeStyle = '#6fc3ff'; cx.lineWidth = 2 * s;
+    for (let i = 0; i < 40; i++) { const x = left + ((i * 53.7) % (W - left)), y = by - 160 * s + ((t * 400 + i * 37) % (150 * s)); cx.beginPath(); cx.moveTo(x, y); cx.lineTo(x - 2 * s, y + 8 * s); cx.stroke(); } }
+  const bh = 50 * s, bw = Math.min(200 * s, (W - 48) / 2), y0 = H * 0.87;
+  const btn = (id, label, col, x0) => { rr(x0, y0, bw, bh, bh / 2); cx.fillStyle = col; cx.fill(); cx.strokeStyle = '#fff'; cx.lineWidth = 4; cx.stroke();
+    cx.fillStyle = '#5a1745'; cx.font = `bold ${20 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(label, x0 + bw / 2, y0 + bh / 2, bw - 16); btns.push({ id, x: x0, y: y0, w: bw, h: bh }); };
+  btn('water', 'Gießen', '#8fd3ff', W / 2 - bw - 8); btn('back', 'Zurück ins Haus', '#ffd6e8', W / 2 + 8);
+  // Samen-Anzeige
+  cx.fillStyle = '#ffffffcc'; rr(W / 2 - 80 * s, H * 0.19, 160 * s, 30 * s, 15 * s); cx.fill(); drawSeedSmall(W / 2 - 58 * s, H * 0.19 + 15 * s, t);
+  cx.fillStyle = '#5a1745'; cx.font = `bold ${15 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(st.seeds + ' Samen', W / 2 + 8 * s, H * 0.19 + 15 * s);
+  st.gbtns = btns;
+}
 function drawJet(t) {
   const J = st.jet; if (!J) return;
   const s = S, cols = ['#ff4f6d', '#ff9a3c', '#ffd23f', '#5cc85c', '#36b6f0', '#a66bff'];
@@ -1964,6 +2072,7 @@ function drawPlay(t) {
   } }
   { const h = players().find(p => p.nearHouse != null && !p.nearDoor); if (h) bubble('⬆ Klopf klopf! Besuch machen', h.nearHouse * 260 + 90 - cam, groundY(h.nearHouse * 260 + 90) - 170 * S); }
   { const d = players().find(p => p.nearDoor); if (d) bubble(d.nearDoor === HOUSE_X ? '⬆ Ins Blumenhaus gehen' : '⬆ Geheimgang ins Blumenhaus', d.nearDoor - cam, groundY(d.nearDoor) - 200 * S); }
+  if (st.chest) { const cx0 = st.chest.x - cam; if (cx0 > -80 && cx0 < W + 80) drawChest(cx0, groundY(st.chest.x) + 6 * S, S * 1.2, st.chest.open, st.chest.t, TREASURES[st.world] || TREASURES[0], w); }
   if (st.fairy) { const fx = st.fairy.x - cam; if (fx > -100 && fx < W + 100) drawFairy(st.fairy, fx, t); }
   // Samen
   for (const s of st.seedsOnMap) if (!s.got) { const sx = s.x - cam; if (sx > -40 && sx < W + 40) drawSeed(sx, groundY(s.x) - s.up * S + Math.sin(s.t * 2) * 5 * S, s.t); }
@@ -2335,19 +2444,21 @@ function drawHome(t) {
     else { const k = Math.min(1, (st.sleepT - 5.5) * 1.5); drawRooster(W * 0.5 + (1 - k) * 260 * s, floor, s * 1.2, t, st.sleepT < 8);
       if (st.sleepT > 5.8 && st.sleepT < 8.2) bubble('Kikeriki!', W * 0.5, floor - 190 * s); }
   }
+  if (mode === 'garden') drawGarden(t, s);
   // Herzen
   for (let i = 0; i < 4; i++) heart(W / 2 - 60 * s + i * 40 * s, H * 0.07, 16 * s, i < st.hearts);
   const txt = mode === 'night' ? (asleep ? 'Gute Nacht! Schlaf schön...' : 'Kikeriki! Guten Morgen!') : mode === 'sleep' ? (st.hearts >= 4 ? 'Ausgeschlafen!' : 'Schlaf gut...') : mode === 'eat' ? 'Guten Appetit!'
     : (st.hidCount ? 'Hier drin bist du sicher vor den Blättern!' : 'Willkommen im Blumenhaus!');
-  if (mode !== 'doors' && mode !== 'ward' && mode !== 'swap' && mode !== 'album' && mode !== 'cook') bigText(txt, H * 0.14, 26 * s);
+  if (mode !== 'doors' && mode !== 'ward' && mode !== 'swap' && mode !== 'album' && mode !== 'cook' && mode !== 'garden') bigText(txt, H * 0.14, 26 * s);
 
   // Knöpfe
   st.btns = [];
+  if (mode === 'garden') st.btns = st.gbtns || [];
   if (mode === 'menu') {
-    const items = [['sleep', 'Schlafen', '#8fc9ff'], ['eat', 'Essen', '#ffb36b'], ['cook', 'Kochen', '#ff9b8a'], ['travel', 'Reisen', '#d6b3ff'], ['ward', 'Schrank', '#ffd23f'], ['swap', 'Wechseln', '#ff9ec7'], ['album', 'Album', '#7fe0d0'], ['out', 'Rausgehen', '#9be07a']];
-    const n = 4, gap = 12, bw = Math.min(190 * s, (W - 32 - gap * (n - 1)) / n), bh = 48 * s, total = bw * n + gap * (n - 1);
+    const items = [['sleep', 'Schlafen', '#8fc9ff'], ['eat', 'Essen', '#ffb36b'], ['cook', 'Kochen', '#ff9b8a'], ['travel', 'Reisen', '#d6b3ff'], ['ward', 'Schrank', '#ffd23f'], ['swap', 'Wechseln', '#ff9ec7'], ['album', 'Album', '#7fe0d0'], ['garden', 'Garten', '#b9e86a'], ['out', 'Rausgehen', '#9be07a']];
+    const n = W < 600 ? 3 : 5, gap = 12, bw = Math.min(190 * s, (W - 32 - gap * (n - 1)) / n), bh = 48 * s, total = bw * n + gap * (n - 1);
     items.forEach(([id, label, col], i) => {
-      const x0 = W / 2 - total / 2 + (i % n) * (bw + gap), y0 = H * 0.76 + Math.floor(i / n) * (bh + 10 * s);
+      const x0 = W / 2 - total / 2 + (i % n) * (bw + gap), y0 = (n === 3 ? H * 0.7 : H * 0.76) + Math.floor(i / n) * (bh + 10 * s);
       rr(x0, y0, bw, bh, bh / 2); cx.fillStyle = col; cx.fill(); cx.strokeStyle = '#fff'; cx.lineWidth = 4; cx.stroke();
       cx.fillStyle = '#5a1745'; cx.font = `bold ${20 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
       cx.fillText(label, x0 + bw / 2, y0 + bh / 2, bw - 16);
@@ -2438,11 +2549,11 @@ function drawAlbum(t, s) {
   rr(bx - 8 * s, by - 8 * s, bw + 16 * s, bh + 16 * s, 22 * s); cx.fillStyle = '#c0477f'; cx.fill();
   rr(bx, by, bw, bh, 16 * s); cx.fillStyle = '#fff8e8'; cx.fill();
   cx.strokeStyle = '#e8c9a8'; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(W / 2, by + 10 * s); cx.lineTo(W / 2, by + bh - 10 * s); cx.stroke();
-  const total = album.seen.reduce((a, v) => a + v, 0) + album.star.reduce((a, v) => a + v, 0) + album.sec.reduce((a, v) => a + (v & 1) + (v >> 1 & 1), 0) + album.boss + (album.boss2 || 0);
+  const total = album.seen.reduce((a, v) => a + v, 0) + album.star.reduce((a, v) => a + v, 0) + album.sec.reduce((a, v) => a + (v & 1) + (v >> 1 & 1), 0) + album.boss + (album.boss2 || 0) + album.chest.reduce((a, v) => a + v, 0);
   cx.fillStyle = '#7a1f5c'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
   cx.font = `bold ${Math.min(30 * s, bw * 0.05)}px "Comic Sans MS", sans-serif`; cx.fillText('📖 Mein Sammelalbum', W / 2, by + 30 * s);
   cx.font = `bold ${Math.min(17 * s, bw * 0.03)}px "Comic Sans MS", sans-serif`; cx.fillStyle = '#a0507f';
-  const maxT = WORLDS.length * 4 + 2;
+  const maxT = WORLDS.length * 5 + 2;
   cx.fillText(total >= maxT ? 'Alles gefunden! Du bist ein Sammel-Profi! 🏆' : 'Schon ' + total + ' von ' + maxT + ' Sachen gefunden!', W / 2, by + 60 * s);
   // Länder: 3 Spalten, 2 Reihen
   const cols = 6, gx = 10 * s, gy = 12 * s, top = by + 80 * s, cw = (bw - 40 * s - gx * (cols - 1)) / cols, ch = (bh - (top - by) - 20 * s - gy) / 2;
@@ -2462,7 +2573,7 @@ function drawAlbum(t, s) {
     cx.strokeText(wd.name, x0 + cw / 2, y0 + ch * 0.16, cw - 8); cx.fillText(wd.name, x0 + cw / 2, y0 + ch * 0.16, cw - 8);
     // Stern + 2 Geheimtüren (+ Blätterkönig auf der Party)
     const icon = Math.min(ch * 0.2, cw * 0.12), iy = y0 + ch * 0.52;
-    const items = [['star', album.star[i]], ['door', album.sec[i] & 1], ['door', album.sec[i] >> 1 & 1]];
+    const items = [['star', album.star[i]], ['door', album.sec[i] & 1], ['door', album.sec[i] >> 1 & 1], ['chest', album.chest[i]]];
     if (WORLDS[i].boss) items.push([WORLDS[i].boss, WORLDS[i].boss === 'krake' ? album.boss2 : album.boss]);
     items.forEach(([k, on], j) => {
       const ix = x0 + cw / 2 + (j - (items.length - 1) / 2) * Math.min(icon * 2.4, (cw - icon * 2.4) / (items.length - 1));
@@ -2470,6 +2581,7 @@ function drawAlbum(t, s) {
       cx.globalAlpha = on ? 1 : 0.3;
       if (k === 'star') star5(ix, iy, icon * 0.8, on ? '#ffd23f' : '#888', on ? '#fff' : null);
       else if (k === 'door') { cx.fillStyle = on ? '#a0623a' : '#777'; cx.beginPath(); cx.moveTo(ix - icon * 0.5, iy + icon * 0.7); cx.lineTo(ix - icon * 0.5, iy - icon * 0.2); cx.arc(ix, iy - icon * 0.2, icon * 0.5, Math.PI, 0); cx.lineTo(ix + icon * 0.5, iy + icon * 0.7); cx.fill(); circle(ix + icon * 0.25, iy + icon * 0.2, icon * 0.1, '#ffd23f'); }
+      else if (k === 'chest') drawChest(ix, iy + icon * 0.6, icon / 28, on, 0, null);
       else if (k === 'krake') { cx.save(); cx.translate(ix, iy); cx.scale(icon / (60 * S), icon / (60 * S)); cx.translate(-ix, -iy); drawOctoMonster(ix, iy + 40 * S, 0); cx.restore(); }
       else { cx.save(); cx.translate(ix, iy); cx.scale(icon / (45 * S), icon / (45 * S)); cx.translate(-ix, -iy); drawLeaf(ix, iy, 0); cx.restore(); }
       cx.globalAlpha = 1;
