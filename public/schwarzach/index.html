@@ -22,6 +22,7 @@
     font-size: 15px; line-height: 1.3; }
   #auftrag b { color: #c2306f; }
   #auftrag .ziel { font-size: 13px; opacity: .8; margin-top: 2px; }
+  #stempel { pointer-events: auto; cursor: pointer; }
   #punkte { left: 12px; bottom: max(12px, env(safe-area-inset-bottom)); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .chip { background: var(--paper); border: 3px solid var(--ink); border-radius: 999px; padding: 4px 12px; font-size: 15px; font-weight: bold; box-shadow: 0 3px 0 var(--ink); white-space: nowrap; }
   .chip.strasse { background: #fff; border-color: #2a4d8f; color: #2a4d8f; box-shadow: 0 3px 0 #2a4d8f; }
@@ -45,6 +46,24 @@
   #karteBtn { top: calc(max(12px, env(safe-area-inset-top)) + 286px); }
   #musik { top: calc(max(12px, env(safe-area-inset-top)) + 340px); }
   #musik.aus { opacity: .45; }
+  #passBtn { top: calc(max(12px, env(safe-area-inset-top)) + 394px); }
+  #pass .karte-box, #idee .karte-box { max-width: 640px; max-height: 92vh; overflow: auto; }
+  #pass h3 { margin: 14px 0 6px; font-size: 17px; }
+  .ziele { display: grid; gap: 6px; }
+  .zielz { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; align-items: center; font-size: 15px; background: #fff; border: 2px solid var(--ink); border-radius: 12px; padding: 5px 10px; }
+  .zielz.da { background: #fff3b0; }
+  .zielz .em { font-size: 22px; filter: grayscale(1); opacity: .5; } .zielz.da .em { filter: none; opacity: 1; }
+  .zielz .bal { grid-column: 2 / 4; height: 7px; border-radius: 4px; background: #e6e2d6; overflow: hidden; } .zielz .bal i { display: block; height: 100%; background: var(--pink); }
+  .stempel { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+  .stempel div { border: 2px dashed #b8c0cc; border-radius: 12px; padding: 6px 4px; text-align: center; font-size: 11px; line-height: 1.2; color: #8a93a3; }
+  .stempel div b { display: block; font-size: 24px; filter: grayscale(1); opacity: .35; }
+  .stempel div.da { border: 2px solid var(--ink); background: #fff; color: var(--ink); transform: rotate(-2deg); } .stempel div.da b { filter: none; opacity: 1; }
+  #idee textarea, #idee input { width: 100%; font: inherit; font-size: 16px; border: 3px solid var(--ink); border-radius: 12px; padding: 9px 11px; background: #fff; color: var(--ink); }
+  #idee textarea { height: 120px; resize: vertical; }
+  #idee label { display: block; font-size: 14px; font-weight: bold; margin: 10px 0 4px; }
+  #idee .klein { font-size: 12px; opacity: .7; }
+  #ideeMeldung { min-height: 22px; font-weight: bold; }
+  #start .ideeLink { margin-top: 8px; background: none; border: 0; color: #fff; font: inherit; font-size: 14px; text-decoration: underline; cursor: pointer; }
   body:not(.ingame) .rund { display: none; }
 
   /* Touch */
@@ -111,6 +130,7 @@
 <button class="rund" id="quit" aria-label="Zurück zum Startbildschirm">✖</button>
 <button class="rund" id="mute" aria-label="Ton an oder aus">🔊</button>
 <button class="rund" id="musik" aria-label="Musik an oder aus">🎵</button>
+<button class="rund" id="passBtn" aria-label="Dorfpass">📒</button>
 <button class="rund" id="karteBtn" aria-label="Karte">🗺️</button>
 <button id="tun" aria-label="Hier etwas machen">👆</button>
 <button id="aktion" aria-label="Aktion">🛴<small>aufsteigen</small></button>
@@ -176,7 +196,8 @@
     <div class="band">✋ High fives statt Hupen · Schwarzach in Vorarlberg</div>
     <div class="unten">
       <button class="knopf" id="los">Los geht's! 🛴</button>
-      <p class="steuerung">↑ vorwärts · ↓ bremsen · ← → drehen (oder WASD) · Leertaste: Scooter auf/ab · E: bei einem Ort etwas machen · M: Karte · T: Ton · N: Musik<br>Tablet: links den Daumen nach oben schieben und lenken, rechts die Knöpfe</p>
+      <p class="steuerung">↑ vorwärts · ↓ bremsen · ← → drehen (oder WASD) · Leertaste: Scooter auf/ab · E: bei einem Ort etwas machen · M: Karte · P: Dorfpass · T: Ton · N: Musik<br>Tablet: links den Daumen nach oben schieben und lenken, rechts die Knöpfe</p>
+      <button class="ideeLink" id="ideeStart">💡 Idee fürs Spiel vorschlagen</button>
       <a class="zurueck" href="/">⟵ zurück zu maia.games</a>
     </div>
   </div>
@@ -187,6 +208,28 @@
     <h2><span class="emo" id="dEmo"></span><span id="dTitel"></span></h2>
     <div id="dText"></div>
     <button class="knopf" id="dOk">Okay!</button><button class="knopf grau" id="dNein" hidden>Später</button>
+  </div>
+</div>
+
+<div class="overlay" id="pass">
+  <div class="karte-box">
+    <h2><span class="emo">📒</span><span>Dein Dorfpass</span></h2>
+    <div id="passInhalt"></div>
+    <button class="knopf" id="passZu">Weiter flitzen!</button><button class="knopf blau" id="ideeAuf" style="margin-left:8px">💡 Idee vorschlagen</button>
+  </div>
+</div>
+
+<div class="overlay" id="idee">
+  <div class="karte-box">
+    <h2><span class="emo">💡</span><span>Deine Idee fürs Spiel</span></h2>
+    <p>Was fehlt in Schwarzach? Ein Ort, ein Auftrag, eine Figur, die herumradelt? Schreib es auf, wir lesen alles!</p>
+    <label for="ideeText">Deine Idee</label>
+    <textarea id="ideeText" maxlength="600" placeholder="Zum Beispiel: Beim Fußballplatz soll man Elfmeter schießen können."></textarea>
+    <label for="ideeName">Dein Vorname oder Spitzname (wenn du magst)</label>
+    <input id="ideeName" maxlength="40" autocomplete="off">
+    <p class="klein">Gespeichert werden nur dein Text und der Name, den du hier eintippst. Bitte keine Adressen oder Telefonnummern schreiben.</p>
+    <p id="ideeMeldung"></p>
+    <button class="knopf" id="ideeSenden">Abschicken 📮</button><button class="knopf grau" id="ideeZu">Zurück</button>
   </div>
 </div>
 
@@ -576,12 +619,15 @@ function streuScooter() {
 /* ---------------- Eingabe ---------------- */
 const keys = {};
 addEventListener('keydown', e => {
+  if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) { if (e.key === 'Escape') ideeZu(); return; }
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+  if (passOn || ideeOn) { if (e.key === 'Escape' || (passOn && !e.repeat && [' ', 'Enter', 'p'].includes(e.key.toLowerCase()))) { ideeOn ? ideeZu() : togglePass(); } return; }
   keys[e.key.toLowerCase()] = true;
   if (e.repeat) return;
   if (e.key === ' ') aktion();
   if (e.key.toLowerCase() === 'e' || e.key === 'Enter') tun();
   if (e.key.toLowerCase() === 'm') toggleKarte();
+  if (e.key.toLowerCase() === 'p' && laeuft && !dialogOffen && !gkOn) togglePass();
   if (e.key.toLowerCase() === 't') tonUmschalten();
   if (e.key.toLowerCase() === 'n') musikUmschalten();
   if (e.key === 'Escape') { if (gkOn) toggleKarte(); else if (dialogOffen) schliesseDialog(true); }
@@ -950,6 +996,52 @@ function hudAuftrag() {
   if (s.hol && [].concat(s.ort).length > 1) was = 'Hol ' + s.hol + ' bei ' + [].concat(s.ort).map(o => (auftrag.erledigt.has(o) ? '✅ ' : '') + ORTE[o].name).join(' und ') + ' · nächstes: ';
   el.innerHTML = X + auftrag.a.emo + ' <b>' + auftrag.a.titel + '</b><div class="ziel">' + was + (z ? z.emo + ' ' + z.name : '') + '</div>';
 }
+/* ---------------- Dorfpass: Fortschritt und Ziele ---------------- */
+const ZIELE = [
+  { id: 'stempel', emo: '🏅', name: 'Dorfpass voll: bei jedem Ort einen Stempel holen', hat: () => state.stempel.filter(k => ORTE[k]).length, von: () => Object.keys(ORTE).length, lob: 'Du warst an jedem Ort in Schwarzach. Du kennst das Dorf jetzt besser als der Briefträger!' },
+  { id: 'helfer', emo: '🦸', name: 'Dorfheld: allen Leuten helfen, die 🆘 rufen', hat: () => state.zufall.filter(i => ZUFALL.some(z => z.id === i)).length, von: () => ZUFALL.length, lob: 'Du hast wirklich allen geholfen. Ganz Schwarzach sagt Danke!' },
+  { id: 'sterne', emo: '⭐', name: 'Alle Stern-Aufträge erledigen', hat: () => state.fertig.filter(i => AUFTRAEGE.some(a => a.id === i)).length, von: () => AUFTRAEGE.length, lob: 'Alle Stern-Aufträge geschafft. Der Bürgermeister ist beeindruckt!' },
+  { id: 'wissen', emo: '📜', name: 'Alle Geschichts-Tafeln finden', hat: () => TAFELN.filter(t => t.gefunden).length, von: () => TAFELN.length, lob: 'Du hast alle Tafeln gefunden und weißt jetzt richtig viel über Schwarzach.' },
+  { id: 'hi5', emo: '✋', name: '200 High fives verteilen', hat: () => Math.min(200, state.hi5), von: () => 200, lob: '200 High fives! Deine Hand ist jetzt offiziell die freundlichste im Dorf.' },
+];
+let passOn = false, ideeOn = false, zielT = 1;
+function pruefeZiele() {
+  if (!laeuft || dialogOffen) return; state.ziele = state.ziele || [];
+  for (const z of ZIELE) if (!state.ziele.includes(z.id) && z.hat() >= z.von()) { state.ziele.push(z.id); save(); jingle(); setTimeout(jingle, 450);
+    const alle = state.ziele.length === ZIELE.length;
+    zeigeDialog(alle ? '🏆' : z.emo, alle ? 'Schwarzach-Meister!' : 'Ziel geschafft!', [z.lob, alle ? '<b>Du hast alle Ziele im Dorfpass erreicht. Mehr geht nicht. Oder hast du eine Idee, was noch fehlt?</b>' : 'Schau in deinen 📒 Dorfpass, was es noch zu holen gibt.'], 'Juhu!'); return; }
+}
+function zeichnePass() {
+  const zh = ZIELE.map(z => { const h = z.hat(), v = z.von(), da = h >= v; return '<div class="zielz' + (da ? ' da' : '') + '"><span class="em">' + z.emo + '</span><span>' + z.name + '</span><b>' + h + ' / ' + v + '</b><span class="bal"><i style="width:' + Math.round(h / v * 100) + '%"></i></span></div>'; }).join('');
+  const sh = Object.keys(ORTE).map(k => '<div class="' + (state.stempel.includes(k) ? 'da' : '') + '"><b>' + ORTE[k].emo + '</b>' + ORTE[k].name + '</div>').join('');
+  document.getElementById('passInhalt').innerHTML = '<p>Dein Fortschritt wird auf diesem Gerät gespeichert. Du kannst jederzeit weiterspielen.</p><h3>Ziele</h3><div class="ziele">' + zh + '</div><h3>Stempel</h3><div class="stempel">' + sh + '</div>';
+}
+function togglePass() { passOn = !passOn; if (passOn) zeichnePass(); document.getElementById('pass').classList.toggle('on', passOn); for (const k in keys) keys[k] = false; }
+/* Anregungen: werden in einer Tabelle gespeichert, in die das Spiel nur schreiben darf */
+const ANREGUNG = { url: '', key: '', tabelle: 'schwarzach_anregungen' };
+let ideeVonPass = false, ideeZeit = 0;
+function ideeAuf(vonPass) { ideeVonPass = !!vonPass; if (passOn) togglePass(); ideeOn = true; document.getElementById('idee').classList.add('on'); document.getElementById('ideeMeldung').textContent = ''; for (const k in keys) keys[k] = false;
+  try { document.getElementById('ideeName').value = localStorage.getItem('schwarzach-name') || ''; } catch (e) {} setTimeout(() => document.getElementById('ideeText').focus(), 50); }
+function ideeZu() { if (!ideeOn) return; ideeOn = false; document.getElementById('idee').classList.remove('on'); document.activeElement && document.activeElement.blur(); if (ideeVonPass && laeuft) togglePass(); }
+async function ideeSenden() {
+  const tx = document.getElementById('ideeText'), nm = document.getElementById('ideeName'), ml = document.getElementById('ideeMeldung'), kn = document.getElementById('ideeSenden');
+  const text = tx.value.trim(), name = nm.value.trim();
+  if (text.length < 5) { ml.textContent = 'Schreib bitte noch ein bisschen mehr. ✏️'; return; }
+  if (Date.now() - ideeZeit < 20000) { ml.textContent = 'Kurz verschnaufen, dann kannst du die nächste Idee schicken.'; return; }
+  if (!ANREGUNG.url) { ml.textContent = 'Der Ideen-Briefkasten wird gerade erst aufgestellt. Probier es bald wieder!'; return; }
+  kn.disabled = true; ml.textContent = 'Wird abgeschickt …';
+  try {
+    const r = await fetch(ANREGUNG.url + '/rest/v1/' + ANREGUNG.tabelle, { method: 'POST', headers: { apikey: ANREGUNG.key, Authorization: 'Bearer ' + ANREGUNG.key, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ text: text.slice(0, 600), name: name.slice(0, 40) || null, stand: { stempel: state.stempel.length, sterne: state.sterne, hi5: state.hi5 } }) });
+    if (!r.ok) throw new Error(r.status);
+    ideeZeit = Date.now(); tx.value = ''; try { localStorage.setItem('schwarzach-name', name); } catch (e) {} ml.textContent = 'Danke! Deine Idee ist angekommen. 🎉'; jingle();
+  } catch (e) { ml.textContent = 'Das hat leider nicht geklappt. Hast du Internet? Probier es später nochmal.'; }
+  kn.disabled = false;
+}
+document.getElementById('passBtn').addEventListener('click', togglePass); document.getElementById('passZu').addEventListener('click', togglePass);
+document.getElementById('stempel').addEventListener('click', togglePass);
+document.getElementById('ideeAuf').addEventListener('click', () => ideeAuf(true)); document.getElementById('ideeStart').addEventListener('click', () => ideeAuf(false));
+document.getElementById('ideeZu').addEventListener('click', ideeZu); document.getElementById('ideeSenden').addEventListener('click', ideeSenden);
 function hudPunkte() {
   document.getElementById('hi5').textContent = '✋ ' + state.hi5;
   document.getElementById('wissen').textContent = '📜 ' + TAFELN.filter(t => t.gefunden).length + '/' + TAFELN.length;
@@ -1348,7 +1440,8 @@ function zeichneMini() {
 let laeuft = false, laeuftSchon = false, last = 0;
 function loop(t) {
   const dt = Math.min(.05, (t - last) / 1000 || 0); last = t; T += dt;
-  if (laeuft && !dialogOffen && !gkOn) update(dt);
+  if (laeuft && !dialogOffen && !gkOn && !passOn && !ideeOn) update(dt);
+  if ((zielT -= dt) < 0) { zielT = 1; pruefeZiele(); }
   draw(); laeuftSchon = true;
   requestAnimationFrame(loop);
 }
