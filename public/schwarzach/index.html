@@ -1018,7 +1018,7 @@ function zeichnePass() {
 }
 function togglePass() { passOn = !passOn; if (passOn) zeichnePass(); document.getElementById('pass').classList.toggle('on', passOn); for (const k in keys) keys[k] = false; }
 /* Anregungen: werden in einer Tabelle gespeichert, in die das Spiel nur schreiben darf */
-const ANREGUNG = { url: '', key: '', tabelle: 'schwarzach_anregungen' };
+const ANREGUNG = { url: 'https://lfiadqrbacphpoeihfpg.supabase.co', key: 'sb_publishable_Nd6UwPbp1kpRb1AOu5aKbA_K8Zwgwsi', tabelle: 'schwarzach_anregungen' };
 let ideeVonPass = false, ideeZeit = 0;
 function ideeAuf(vonPass) { ideeVonPass = !!vonPass; if (passOn) togglePass(); ideeOn = true; document.getElementById('idee').classList.add('on'); document.getElementById('ideeMeldung').textContent = ''; for (const k in keys) keys[k] = false;
   try { document.getElementById('ideeName').value = localStorage.getItem('schwarzach-name') || ''; } catch (e) {} setTimeout(() => document.getElementById('ideeText').focus(), 50); }
@@ -1031,7 +1031,7 @@ async function ideeSenden() {
   if (!ANREGUNG.url) { ml.textContent = 'Der Ideen-Briefkasten wird gerade erst aufgestellt. Probier es bald wieder!'; return; }
   kn.disabled = true; ml.textContent = 'Wird abgeschickt …';
   try {
-    const r = await fetch(ANREGUNG.url + '/rest/v1/' + ANREGUNG.tabelle, { method: 'POST', headers: { apikey: ANREGUNG.key, Authorization: 'Bearer ' + ANREGUNG.key, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    const r = await fetch(ANREGUNG.url + '/rest/v1/' + ANREGUNG.tabelle, { method: 'POST', headers: { apikey: ANREGUNG.key, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
       body: JSON.stringify({ text: text.slice(0, 600), name: name.slice(0, 40) || null, stand: { stempel: state.stempel.length, sterne: state.sterne, hi5: state.hi5 } }) });
     if (!r.ok) throw new Error(r.status);
     ideeZeit = Date.now(); tx.value = ''; try { localStorage.setItem('schwarzach-name', name); } catch (e) {} ml.textContent = 'Danke! Deine Idee ist angekommen. 🎉'; jingle();
