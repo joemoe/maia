@@ -70,13 +70,13 @@ const WORLDS = [
     foes: [], boss: true, secretAt: [0.45, 0.8],
     helper: { kind: 'hibiskus', name: 'Partyblume', tip: 'Juhuu! Willkommen auf der großen Blumenparty! Psst, hier sind auch zwei Geheimtüren versteckt.' } },
   { name: 'Regenbogenland', sky: ['#9fe3ff', '#fff0fb'], hill: '#b9a6ff', hill2: '#9fd8ff', ground: '#a8f0a0', dirt: '#8a6bc9', deco: 'regenbogen', len: 12000,
-    foes: ['wolke', 'wolke', 'leaf'], helper: { kind: 'regenbogenblume', name: 'Regenbogenblume', tip: 'Hallo! Pass auf die graue Grummelwolke auf, sie will alle Farben wegregnen! Hüpf drüber oder grab dich ein.' } },
+    foes: ['wurm', 'wurm', 'leaf'], helper: { kind: 'regenbogenblume', name: 'Regenbogenblume', tip: 'Hallo! Pass auf das Regenwurmmonster auf, es schlängelt sich hier herum! Hüpf drüber oder grab dich ein.' } },
   { name: 'Süßigkeitenland', sky: ['#ffc4e1', '#fff6e0'], hill: '#ff9ecb', hill2: '#ffd1e8', ground: '#fff5fa', dirt: '#7b4a2e', deco: 'suess', len: 13000,
-    foes: ['gummi', 'gummi', 'leaf'], helper: { kind: 'zuckerblume', name: 'Zuckerblume', tip: 'Mmmh, hier ist alles süß! Aber Vorsicht vor dem klebrigen Kaugummi-Monster! Hüpf drüber oder grab dich ein.' } },
+    foes: ['lolli', 'lolli', 'leaf'], helper: { kind: 'zuckerblume', name: 'Zuckerblume', tip: 'Mmmh, hier ist alles süß! Aber Vorsicht vor dem Lolly-Monster, das ist gar nicht süß! Hüpf drüber oder grab dich ein.' } },
   { name: 'Nachtgarten', sky: ['#141a4a', '#3b2f7a'], hill: '#2a3a6a', hill2: '#1e2a55', ground: '#2f6b4f', dirt: '#3a2a40', deco: 'nacht', len: 14000,
-    foes: ['fleder', 'fleder', 'leaf'], helper: { kind: 'mondblume', name: 'Mondblume', tip: 'Psst, ganz leise! Nachts fliegen freche Fledermäuse herum. Hüpf drüber oder grab dich ein!' } },
+    foes: ['nachtm', 'nachtm', 'fleder'], helper: { kind: 'mondblume', name: 'Mondblume', tip: 'Psst, ganz leise! Hier schleicht ein Nachtmonster herum, und freche Fledermäuse fliegen auch. Hüpf drüber oder grab dich ein!' } },
   { name: 'Unterwasserwelt', sky: ['#5fd0ff', '#1a6fb0'], hill: '#3a8fc0', hill2: '#2a7ab0', ground: '#f2dca0', dirt: '#d4b878', deco: 'wasser', len: 14000,
-    foes: ['hai', 'hai', 'qualle'], helper: { kind: 'seerose', name: 'Seeanemone', tip: 'Blubb! Willkommen unter Wasser! Vorsicht vor dem Hai und den Quallen. Hüpf drüber oder grab dich ein!' } },
+    foes: ['krake', 'krake', 'qualle'], helper: { kind: 'seerose', name: 'Seeanemone', tip: 'Blubb! Willkommen unter Wasser! Vorsicht vor dem Tintenfischmonster und den Quallen. Hüpf drüber oder grab dich ein!' } },
 ];
 
 /* ---------- Zustand ---------- */
@@ -920,6 +920,64 @@ function drawFlowerMonster(x, y, t) {
   for (const d of [-8, -1, 6]) { cx.beginPath(); cx.moveTo(x + d * s, hy + 9 * s - mh); cx.lineTo(x + (d + 2.5) * s, hy + 9 * s - mh + 5 * s); cx.lineTo(x + (d + 5) * s, hy + 9 * s - mh); cx.fill(); }
   for (const d of [-5, 2]) { cx.beginPath(); cx.moveTo(x + d * s, hy + 9 * s + mh); cx.lineTo(x + (d + 2.5) * s, hy + 9 * s + mh - 5 * s); cx.lineTo(x + (d + 5) * s, hy + 9 * s + mh); cx.fill(); }
 }
+const angryEyes = (x, y, s, gap, r, pupil, brow) => {
+  circle(x - gap * s, y, r * s, '#fff'); circle(x + gap * s, y, r * s, '#fff');
+  circle(x - (gap + 1) * s, y + 1 * s, r * 0.5 * s, pupil); circle(x + (gap - 1) * s, y + 1 * s, r * 0.5 * s, pupil);
+  cx.strokeStyle = brow; cx.lineWidth = 3.2 * s; cx.lineCap = 'round';
+  cx.beginPath(); cx.moveTo(x - (gap + r + 2) * s, y - (r + 5) * s); cx.lineTo(x - (gap - r + 2) * s, y - (r + 1) * s);
+  cx.moveTo(x + (gap + r + 2) * s, y - (r + 5) * s); cx.lineTo(x + (gap - r + 2) * s, y - (r + 1) * s); cx.stroke();
+};
+// Regenwurmmonster (Regenbogenland): bunt geringelt, schlängelt sich
+function drawWormMonster(x, y, t) {
+  const s = S;
+  for (let i = 5; i >= 0; i--) { const sx = x + i * 13 * s, sy = y - 12 * s - Math.max(0, Math.sin(t * 7 - i * 0.9)) * 14 * s;
+    circle(sx, sy, (13 - i * 0.6) * s, '#e88a9a'); cx.strokeStyle = RAINBOW[i % 6]; cx.lineWidth = 3 * s; cx.beginPath(); cx.arc(sx, sy, (10 - i * 0.6) * s, -1.2, 1.2); cx.stroke(); }
+  const hy = y - 26 * s - Math.max(0, Math.sin(t * 7)) * 14 * s;
+  circle(x - 4 * s, hy, 20 * s, '#f29aab');
+  angryEyes(x - 8 * s, hy - 5 * s, s, 7, 5.5, '#300', '#7a1f3c');
+  cx.fillStyle = '#7a1f3c'; cx.beginPath(); cx.ellipse(x - 10 * s, hy + 9 * s, 8 * s, 4 * s, 0, 0, 7); cx.fill();
+  cx.fillStyle = '#fff'; for (const d of [-15, -9]) { cx.beginPath(); cx.moveTo(x + d * s, hy + 6 * s); cx.lineTo(x + (d + 2) * s, hy + 10 * s); cx.lineTo(x + (d + 4) * s, hy + 6 * s); cx.fill(); }
+}
+// Lolly-Monster (Süßigkeitenland): Lutscherkopf auf Stöckchenbeinen
+function drawLollyMonster(x, y, t) {
+  const s = S, step = Math.sin(t * 8) * 5 * s, hy = y - 62 * s;
+  cx.strokeStyle = '#fff'; cx.lineWidth = 6 * s; cx.lineCap = 'round';
+  cx.beginPath(); cx.moveTo(x - 6 * s, y - 30 * s); cx.lineTo(x - 12 * s + step, y); cx.moveTo(x + 6 * s, y - 30 * s); cx.lineTo(x + 12 * s - step, y); cx.stroke(); // Beine
+  cx.beginPath(); cx.moveTo(x, hy + 20 * s); cx.lineTo(x, y - 28 * s); cx.stroke(); // Stiel
+  cx.beginPath(); cx.moveTo(x, y - 38 * s); cx.lineTo(x - 22 * s, y - 50 * s + step); cx.moveTo(x, y - 38 * s); cx.lineTo(x + 22 * s, y - 50 * s - step); cx.stroke(); // Arme
+  circle(x, hy, 30 * s, '#ff5fa2');
+  cx.strokeStyle = '#ffe14d'; cx.lineWidth = 7 * s; cx.beginPath(); for (let a = 0; a < 15; a += 0.2) cx.lineTo(x + Math.cos(a + t * 3) * a * 1.9 * s, hy + Math.sin(a + t * 3) * a * 1.9 * s); cx.stroke();
+  cx.strokeStyle = '#6fd3ff'; cx.lineWidth = 3 * s; cx.beginPath(); for (let a = 0; a < 15; a += 0.2) cx.lineTo(x + Math.cos(a + t * 3 + 3) * a * 1.9 * s, hy + Math.sin(a + t * 3 + 3) * a * 1.9 * s); cx.stroke();
+  cx.fillStyle = '#ffffffcc'; rr(x - 22 * s, hy - 16 * s, 44 * s, 30 * s, 12 * s); cx.fill(); // Gesichtsfeld
+  angryEyes(x, hy - 4 * s, s, 9, 5.5, '#300', '#7a1f5c');
+  cx.strokeStyle = '#7a1f5c'; cx.lineWidth = 3 * s; cx.beginPath(); cx.arc(x, hy + 14 * s, 7 * s, Math.PI * 1.15, Math.PI * 1.85); cx.stroke();
+}
+// Nachtmonster (Nachtgarten): zotteliger Schatten mit Leuchtaugen
+function drawNightMonster(x, y, t) {
+  const s = S, bob = Math.abs(Math.sin(t * 6)) * 5 * s, hy = y - 40 * s - bob;
+  for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; circle(x + Math.cos(a) * 28 * s, hy + Math.sin(a) * 30 * s, 12 * s, '#2a1f4a'); }
+  cx.fillStyle = '#2a1f4a'; cx.beginPath(); cx.ellipse(x, hy, 32 * s, 34 * s, 0, 0, 7); cx.fill();
+  for (const d of [-1, 1]) { cx.beginPath(); cx.moveTo(x + d * 14 * s, hy - 28 * s); cx.lineTo(x + d * 22 * s, hy - 50 * s); cx.lineTo(x + d * 26 * s, hy - 24 * s); cx.fill(); } // Ohren
+  const gl = 0.75 + Math.sin(t * 4) * 0.25;
+  circle(x - 11 * s, hy - 6 * s, 12 * s, `rgba(255,230,80,${0.25 * gl})`); circle(x + 11 * s, hy - 6 * s, 12 * s, `rgba(255,230,80,${0.25 * gl})`);
+  cx.fillStyle = `rgba(255,236,110,${gl})`;
+  for (const d of [-1, 1]) { cx.beginPath(); cx.ellipse(x + d * 11 * s, hy - 6 * s, 7 * s, 5 * s, d * 0.35, 0, 7); cx.fill(); circle(x + d * 11 * s, hy - 6 * s, 2.5 * s, '#2a1f4a'); }
+  cx.fillStyle = '#15102a'; cx.beginPath(); cx.ellipse(x, hy + 14 * s, 13 * s, 6 * s, 0, 0, 7); cx.fill();
+  cx.fillStyle = '#fff'; for (const d of [-9, -3, 3]) { cx.beginPath(); cx.moveTo(x + d * s, hy + 9 * s); cx.lineTo(x + (d + 3) * s, hy + 14 * s); cx.lineTo(x + (d + 6) * s, hy + 9 * s); cx.fill(); }
+  cx.fillStyle = '#2a1f4a'; for (const d of [-1, 1]) { rr(x + d * 14 * s - 7 * s, y - 14 * s, 14 * s, 14 * s, 6 * s); cx.fill(); } // Füße
+}
+// Tintenfischmonster (Unterwasserwelt): krabbelt auf Tentakeln
+function drawOctoMonster(x, y, t) {
+  const s = S, hy = y - 52 * s;
+  cx.strokeStyle = '#9b4dff'; cx.lineWidth = 8 * s; cx.lineCap = 'round';
+  for (let k = 0; k < 6; k++) { const bx = x + (k - 2.5) * 10 * s; cx.beginPath(); cx.moveTo(bx, hy + 20 * s);
+    for (let q = 1; q <= 4; q++) cx.lineTo(bx + (k - 2.5) * q * 3 * s + Math.sin(t * 7 + k + q) * 5 * s, hy + 20 * s + q * 9 * s); cx.stroke(); }
+  cx.fillStyle = '#b06bff'; cx.beginPath(); cx.ellipse(x, hy, 32 * s, 30 * s, 0, 0, 7); cx.fill();
+  for (const [dx, dy] of [[-16, -16], [12, -20], [20, -4]]) circle(x + dx * s, hy + dy * s, 4 * s, '#d4a6ff');
+  angryEyes(x, hy + 2 * s, s, 11, 7, '#300', '#4a1f7a');
+  cx.strokeStyle = '#4a1f7a'; cx.lineWidth = 3 * s; cx.beginPath(); cx.arc(x, hy + 22 * s, 7 * s, Math.PI * 1.15, Math.PI * 1.85); cx.stroke();
+  for (let i = 0; i < 3; i++) { const q = (t * 0.8 + i / 3) % 1; cx.globalAlpha = 1 - q; cx.strokeStyle = '#ffffffaa'; cx.lineWidth = 1.5; cx.beginPath(); cx.arc(x + 26 * s, hy - 30 * s - q * 40 * s, (3 + i) * s, 0, 7); cx.stroke(); } cx.globalAlpha = 1;
+}
 // graue Grummelwolke (Regenbogenland, fliegt)
 function drawGrumpCloud(x, y, t) {
   const s = S;
@@ -1675,6 +1733,10 @@ function drawPlay(t) {
     else if (L.type === 'meer') drawSeaMonster(L.x - cam, L.y + 4 * S, L.t);
     else if (L.type === 'blumi') drawFlowerMonster(L.x - cam, L.y + 4 * S, L.t);
     else if (L.type === 'wolke') drawGrumpCloud(L.x - cam, L.y, L.t);
+    else if (L.type === 'wurm') drawWormMonster(L.x - cam, L.y + 4 * S, L.t);
+    else if (L.type === 'lolli') drawLollyMonster(L.x - cam, L.y + 4 * S, L.t);
+    else if (L.type === 'nachtm') drawNightMonster(L.x - cam, L.y + 4 * S, L.t);
+    else if (L.type === 'krake') drawOctoMonster(L.x - cam, L.y + 4 * S, L.t);
     else if (L.type === 'gummi') drawGumMonster(L.x - cam, L.y + 4 * S, L.t);
     else if (L.type === 'fleder') drawBat(L.x - cam, L.y, L.t);
     else if (L.type === 'hai') drawShark(L.x - cam, L.y, L.t);
