@@ -153,13 +153,13 @@ function enterVisit(i) {
   beep(880, .1, 'triangle'); setTimeout(() => beep(660, .12, 'triangle'), 140); // Klopf klopf
 }
 function leaveVisit() { st.screen = 'play'; st.visit = null; say('Tschüss! Komm bald wieder!'); }
-// Schlafenszeit: nachts geht die Blume ins Bett, am Morgen weckt sie der Hahn
+// Schlafenszeit: nachts geht die Blume ins Bett, am Morgen weckt sie das Schweinchen
 function goToBed() {
   st.screen = 'home'; st.homeMode = 'night'; st.homeFrom = 'night'; st.sleepT = 0; st.nightHeartT = 0; st.crowed = false;
   st.leaves = []; st.rain = null; st.jet = null; for (const p of P) Object.assign(p.keys, mkKeys());
   beep(523, .3, 'sine', .08); setTimeout(() => beep(392, .4, 'sine', .08), 300);
 }
-function crow() { [[500, 700], [700, 900], [900, 1300], [1300, 800]].forEach(([a, b], k) => setTimeout(() => beep(a, .18, 'sawtooth', .07, b - a), k * 160)); }
+function crow() { [[180, 140], [200, 150], [0, 0], [170, 130], [210, 150]].forEach(([a, b], k) => { if (a) setTimeout(() => beep(a, .16, 'sawtooth', .09, b - a), k * 190); }); } // Oink oink!
 // Schatzkisten: in jedem Land ist eine versteckt
 const TREASURES = [['eine goldene Eichel', '#e0a020'], ['ein Glitzer-Marienkäfer', '#ff4f6d'], ['eine Perle', '#f4f0ff'], ['ein goldener Kaktus', '#ffd23f'], ['eine Kristall-Schneeflocke', '#bfe6ff'],
   ['eine Party-Krone', '#ff8ad8'], ['ein Regenbogenstein', '#b58cff'], ['ein Riesen-Bonbon', '#ff7bb5'], ['eine Dose Sternenstaub', '#fff3a0'], ['eine Schatz-Muschel', '#ffb3c8'], ['ein goldener Schlüssel', '#ffc233']];
@@ -566,7 +566,7 @@ function update(dt) {
     if (st.homeMode === 'night') {
       st.nightHeartT += dt; if (st.hearts < 4 && st.nightHeartT > 1.2 && st.sleepT < 5) { st.hearts++; st.nightHeartT = 0; beep(700 + st.hearts * 120, .2, 'triangle'); }
       if (st.sleepT > 5.5 && !st.crowed) { st.crowed = true; crow(); }
-      if (st.sleepT > 9) { st.screen = 'play'; st.homeMode = 'menu'; st.dayT = Math.floor(st.dayT / DAY) * DAY + 147; say('Kikeriki! Guten Morgen! Ein neuer Tag beginnt.'); }
+      if (st.sleepT > 9) { st.screen = 'play'; st.homeMode = 'menu'; st.dayT = Math.floor(st.dayT / DAY) * DAY + 147; say('Oink oink! Guten Morgen! Ein neuer Tag beginnt.'); }
     } else if (st.homeMode === 'sleep') {
       if (st.hearts < 4 && st.sleepT > 1.2) { st.hearts++; st.sleepT = 0; beep(700 + st.hearts * 120, .2, 'triangle'); }
       else if (st.hearts >= 4 && st.sleepT > 1.6) { st.homeMode = 'menu'; say('Gut ausgeschlafen!'); }
@@ -1716,130 +1716,21 @@ function drawVisit(t) {
     cx.fillText(V.gift === 'heart' ? 'Geschenk: ein Herz!' : 'Geschenk: zwei Samen!', gx + 10 * s, gy + 1); }
   if (V.t > 1) bigText('Tippe, um wieder rauszugehen', H * 0.95, 18 * S, '#fff6c0');
 }
-// Hahn, der morgens alle weckt
-function drawRooster(x, y, s, t, crowing) {
-  const open = crowing && Math.sin(t * 10) > 0;
-  cx.strokeStyle = '#e8a020'; cx.lineWidth = 4 * s; cx.lineCap = 'round';
-  for (const d of [-8, 8]) { cx.beginPath(); cx.moveTo(x + d * s, y - 34 * s); cx.lineTo(x + d * s, y - 4 * s); cx.lineTo(x + (d + 9) * s, y); cx.stroke(); }
-  for (const [c, a] of [['#2a8a5a', -0.6], ['#1f5fa8', -0.2], ['#c0392b', 0.2]]) { cx.fillStyle = c; cx.beginPath(); cx.ellipse(x - 34 * s, y - 70 * s, 12 * s, 34 * s, a - 0.5, 0, 7); cx.fill(); } // Schwanzfedern
-  cx.fillStyle = '#fff6ea'; cx.beginPath(); cx.ellipse(x, y - 56 * s, 34 * s, 26 * s, 0, 0, 7); cx.fill();
-  cx.fillStyle = '#f0d9b5'; cx.beginPath(); cx.ellipse(x - 4 * s, y - 54 * s, 18 * s, 12 * s, 0.3, 0, 7); cx.fill(); // Flügel
-  cx.fillStyle = '#fff6ea'; cx.beginPath(); cx.ellipse(x + 22 * s, y - 88 * s, 15 * s, 22 * s, 0.2, 0, 7); cx.fill(); // Hals + Kopf
-  for (let k = 0; k < 3; k++) circle(x + (16 + k * 7) * s, y - 110 * s - (k === 1 ? 4 : 0) * s, 6 * s, '#e8222e'); // Kamm
-  circle(x + 26 * s, y - 92 * s, 2.8 * s, '#222');
-  cx.fillStyle = '#ffb000'; cx.beginPath(); cx.moveTo(x + 34 * s, y - 90 * s); cx.lineTo(x + 48 * s, y - (open ? 94 : 86) * s); cx.lineTo(x + 34 * s, y - 86 * s); cx.fill();
-  if (open) { cx.beginPath(); cx.moveTo(x + 34 * s, y - 85 * s); cx.lineTo(x + 46 * s, y - 78 * s); cx.lineTo(x + 34 * s, y - 82 * s); cx.fill(); }
-  cx.fillStyle = '#e8222e'; cx.beginPath(); cx.ellipse(x + 33 * s, y - 78 * s, 4 * s, 7 * s, 0, 0, 7); cx.fill(); // Kehllappen
-  if (crowing) for (let i = 0; i < 3; i++) { const q = (t * 1.2 + i / 3) % 1; cx.globalAlpha = 1 - q; cx.fillStyle = '#7a1f5c'; cx.font = `bold ${(14 + i * 4) * s}px sans-serif`; cx.textAlign = 'center'; cx.fillText('♪', x + 60 * s + q * 40 * s, y - 100 * s - q * 40 * s + i * 8 * s); } cx.globalAlpha = 1;
-}
-// Schatzkiste (halb in der Erde, glänzt ab und zu)
-function drawChest(x, y, s, open, t, tr, w) {
-  const bw = 46 * s, bh = 28 * s;
-  if (!open && w) { cx.fillStyle = w.dirt; cx.beginPath(); cx.ellipse(x, y, bw * 0.8, 10 * s, 0, 0, 7); cx.fill(); }
-  cx.fillStyle = '#9a5a2a'; rr(x - bw / 2, y - bh, bw, bh, 4 * s); cx.fill();
-  cx.fillStyle = '#ffc233'; cx.fillRect(x - bw / 2, y - bh * 0.55, bw, 4 * s); cx.fillRect(x - bw * 0.3, y - bh, 4 * s, bh); cx.fillRect(x + bw * 0.3 - 4 * s, y - bh, 4 * s, bh);
-  if (!open) {
-    cx.fillStyle = '#b06a32'; cx.beginPath(); cx.moveTo(x - bw / 2, y - bh); cx.quadraticCurveTo(x, y - bh - 22 * s, x + bw / 2, y - bh); cx.closePath(); cx.fill();
-    rr(x - 5 * s, y - bh - 4 * s, 10 * s, 12 * s, 2 * s); cx.fillStyle = '#ffd23f'; cx.fill(); circle(x, y - bh + 2 * s, 1.8 * s, '#7a4a10');
-    const q = (performance.now() / 1000) % 3; if (q < 0.5) star4(x + bw * 0.35, y - bh - 10 * s, 6 * s * Math.sin(q / 0.5 * Math.PI), '#fff6a0');
-  } else {
-    cx.fillStyle = '#b06a32'; cx.beginPath(); cx.moveTo(x - bw / 2, y - bh); cx.lineTo(x - bw / 2 - 6 * s, y - bh - 26 * s); cx.quadraticCurveTo(x, y - bh - 40 * s, x + bw / 2 - 6 * s, y - bh - 26 * s); cx.lineTo(x + bw / 2, y - bh); cx.closePath(); cx.fill();
-    cx.fillStyle = '#4a2a10'; cx.fillRect(x - bw / 2 + 3 * s, y - bh - 2 * s, bw - 6 * s, 6 * s);
-    for (const [dx, c] of [[-10, '#ffd23f'], [0, '#ffe066'], [10, '#ffd23f']]) circle(x + dx * s, y - bh + 1 * s, 6 * s, c); // Goldmünzen
-    if (tr) { const up = Math.min(1, t * 1.2), gy = y - bh - 20 * s - up * 50 * s + Math.sin(t * 3) * 4 * s; cx.globalAlpha = Math.max(0, 1 - Math.max(0, t - 3) * 0.5);
-      if (cx.globalAlpha > 0) { cx.globalAlpha *= 0.4; circle(x, gy, 22 * s, '#fff6a0'); cx.globalAlpha = Math.max(0, 1 - Math.max(0, t - 3) * 0.5);
-        cx.fillStyle = tr[1]; cx.beginPath(); cx.moveTo(x, gy - 14 * s); cx.lineTo(x + 12 * s, gy - 3 * s); cx.lineTo(x, gy + 14 * s); cx.lineTo(x - 12 * s, gy - 3 * s); cx.closePath(); cx.fill();
-        cx.strokeStyle = '#fff'; cx.lineWidth = 2 * s; cx.stroke(); star4(x + 8 * s, gy - 8 * s, 4 * s, '#fff'); }
-      cx.globalAlpha = 1; }
-  }
-}
-// Mein Garten hinter dem Blumenhaus
-function drawGarden(t, s) {
-  const night = nightOutside(), fy = H * 0.6;
-  const g = cx.createLinearGradient(0, 0, 0, fy); g.addColorStop(0, night ? '#141a4a' : '#8fd3ff'); g.addColorStop(1, night ? '#3b2f7a' : '#e6f7ff'); cx.fillStyle = g; cx.fillRect(0, 0, W, H);
-  if (night) { for (let i = 0; i < 30; i++) star4((i * 97.3) % W, (i * 41.7) % (H * 0.4), (1 + Math.abs(Math.sin(t * 2 + i))) * s, '#fff'); circle(W * 0.8, H * 0.14, 30 * s, '#fff6c8'); }
-  else circle(W * 0.8, H * 0.15, 40 * s, '#fff7b0');
-  cx.fillStyle = night ? '#2f6b4f' : '#7fd16a'; cx.fillRect(0, fy, W, H - fy);
-  // Zaun
-  cx.fillStyle = night ? '#c9bfa8' : '#fff4e0';
-  for (let x = 10 * s; x < W; x += 34 * s) { cx.fillRect(x, fy - 54 * s, 18 * s, 60 * s); cx.beginPath(); cx.moveTo(x, fy - 54 * s); cx.lineTo(x + 9 * s, fy - 66 * s); cx.lineTo(x + 18 * s, fy - 54 * s); cx.fill(); }
-  cx.fillRect(0, fy - 40 * s, W, 8 * s); cx.fillRect(0, fy - 16 * s, W, 8 * s);
-  // Hauswand links
-  cx.fillStyle = '#fff4e0'; rr(-40 * s, fy - 200 * s, 120 * s, 210 * s, 10 * s); cx.fill(); cx.fillStyle = '#ff9ec7'; cx.beginPath(); cx.moveTo(-60 * s, fy - 190 * s); cx.lineTo(100 * s, fy - 190 * s); cx.lineTo(20 * s, fy - 250 * s); cx.fill();
-  cx.fillStyle = '#a0623a'; rr(14 * s, fy - 80 * s, 46 * s, 80 * s, 23 * s); cx.fill(); circle(50 * s, fy - 40 * s, 3 * s, '#ffd23f');
-  bigText('Mein Garten', H * 0.14, 30 * s);
-  // Beete
-  const n = 6, left = 110 * s, pw = (W - left - 20 * s) / n, by = H * 0.74, btns = [];
-  for (let i = 0; i < n; i++) {
-    const x = left + pw * (i + 0.5), G = garden[i];
-    cx.fillStyle = '#7a4e2d'; cx.beginPath(); cx.ellipse(x, by, pw * 0.42, 16 * s, 0, 0, 7); cx.fill();
-    cx.fillStyle = '#5e3a20'; for (let k = -2; k <= 2; k++) circle(x + k * pw * 0.12, by + 2 * s, 2 * s, '#5e3a20');
-    if (!G) { cx.fillStyle = '#ffffffaa'; cx.font = `bold ${Math.min(26 * s, pw * 0.3)}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('+', x, by - 26 * s); }
-    else {
-      const a = plotAge(G), k = Math.min(1, a / GROW), wig = G.wiggle && Date.now() - G.wiggle < 800 ? Math.sin(t * 30) * 0.15 : 0;
-      cx.save(); cx.translate(x, by); cx.rotate(wig); cx.translate(-x, -by);
-      if (k < 0.25) { cx.fillStyle = '#8a5a33'; cx.beginPath(); cx.ellipse(x, by - 4 * s, 18 * s, 9 * s, 0, Math.PI, 0); cx.fill(); circle(x, by - 10 * s, 4 * s, '#9b4dff'); }
-      else if (k < 1) { const h = (14 + (k - 0.25) / 0.75 * 70) * s; cx.strokeStyle = '#3a9a40'; cx.lineWidth = 5 * s; cx.lineCap = 'round'; cx.beginPath(); cx.moveTo(x, by - 4 * s); cx.lineTo(x, by - h); cx.stroke();
-        cx.fillStyle = '#4fbf55'; cx.beginPath(); cx.ellipse(x - 10 * s, by - h * 0.45, 11 * s, 5 * s, 0.5, 0, 7); cx.ellipse(x + 10 * s, by - h * 0.6, 11 * s, 5 * s, -0.5, 0, 7); cx.fill();
-        if (k > 0.6) { cx.fillStyle = '#ff9ec7'; cx.beginPath(); cx.ellipse(x, by - h - 6 * s, 7 * s, 11 * s, 0, 0, 7); cx.fill(); cx.fillStyle = '#4fbf55'; cx.beginPath(); cx.ellipse(x, by - h + 2 * s, 8 * s, 5 * s, 0, 0, Math.PI); cx.fill(); } }
-      else { drawHelper(x, by - 2 * s, G.kind, t * 2 + i, Math.min(0.75 * s, pw / 150)); if (!G.harvested) { drawSeedSmall(x + 26 * s, by - 100 * s + Math.sin(t * 3 + i) * 4 * s, t); } }
-      cx.restore();
-      if (k < 1) { rr(x - pw * 0.3, by + 22 * s, pw * 0.6, 7 * s, 3 * s); cx.fillStyle = '#ffffff88'; cx.fill(); rr(x - pw * 0.3, by + 22 * s, pw * 0.6 * k, 7 * s, 3 * s); cx.fillStyle = '#7fe07a'; cx.fill(); }
-    }
-    btns.push({ id: 'plot' + i, x: x - pw / 2, y: by - 140 * s, w: pw, h: 170 * s });
-  }
-  // Gießkanne
-  if (st.waterT > 0) { st.waterT -= 1 / 60; cx.strokeStyle = '#6fc3ff'; cx.lineWidth = 2 * s;
-    for (let i = 0; i < 40; i++) { const x = left + ((i * 53.7) % (W - left)), y = by - 160 * s + ((t * 400 + i * 37) % (150 * s)); cx.beginPath(); cx.moveTo(x, y); cx.lineTo(x - 2 * s, y + 8 * s); cx.stroke(); } }
-  const bh = 50 * s, bw = Math.min(200 * s, (W - 48) / 2), y0 = H * 0.87;
-  const btn = (id, label, col, x0) => { rr(x0, y0, bw, bh, bh / 2); cx.fillStyle = col; cx.fill(); cx.strokeStyle = '#fff'; cx.lineWidth = 4; cx.stroke();
-    cx.fillStyle = '#5a1745'; cx.font = `bold ${20 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(label, x0 + bw / 2, y0 + bh / 2, bw - 16); btns.push({ id, x: x0, y: y0, w: bw, h: bh }); };
-  btn('water', 'Gießen', '#8fd3ff', W / 2 - bw - 8); btn('back', 'Zurück ins Haus', '#ffd6e8', W / 2 + 8);
-  // Samen-Anzeige
-  cx.fillStyle = '#ffffffcc'; rr(W / 2 - 80 * s, H * 0.19, 160 * s, 30 * s, 15 * s); cx.fill(); drawSeedSmall(W / 2 - 58 * s, H * 0.19 + 15 * s, t);
-  cx.fillStyle = '#5a1745'; cx.font = `bold ${15 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(st.seeds + ' Samen', W / 2 + 8 * s, H * 0.19 + 15 * s);
-  st.gbtns = btns;
-}
-// Anleitung mit Bildern
-function keyCap(x, y, s, dir, on) {
-  rr(x - 22 * s, y - 22 * s, 44 * s, 44 * s, 10 * s); cx.fillStyle = on ? '#ff6fae' : '#ffffffdd'; cx.fill(); cx.strokeStyle = '#7a1f5c55'; cx.lineWidth = 3; cx.stroke();
-  cx.fillStyle = on ? '#fff' : '#7a1f5c'; cx.save(); cx.translate(x, y); cx.rotate({ r: 0, d: Math.PI / 2, l: Math.PI, u: -Math.PI / 2 }[dir]);
-  cx.beginPath(); cx.moveTo(11 * s, 0); cx.lineTo(-7 * s, -10 * s); cx.lineTo(-7 * s, 10 * s); cx.closePath(); cx.fill(); cx.restore();
-}
-function drawHelp(t) {
-  const w = WORLDS[1], pg = st.helpPage, [title, text] = HELP[pg], s = Math.min(Math.max(0.85, S), W / 440), gy = H * 0.66, cxm = W / 2, q = st.screenT;
-  sky(w); cx.fillStyle = w.ground; cx.fillRect(0, gy, W, H - gy); cx.fillStyle = w.dirt; cx.fillRect(0, gy + 14 * s, W, H - gy);
-  bigText('So spielst du', H * 0.07, Math.min(34 * s, W * 0.07));
-  bigText((pg + 1) + '. ' + title, H * 0.15, Math.min(30 * s, W * 0.065), '#fff6c0');
-  const k = st.kind;
-  cx.save(); cx.beginPath(); cx.rect(0, 0, W, gy + 6 * s); cx.clip();
-  if (pg === 0) { const x = cxm + Math.sin(q * 1.5) * 120 * s; drawFlower(x, gy, k, s, { lean: Math.cos(q * 1.5) > 0 ? 0.6 : -0.6, bob: -Math.abs(Math.sin(q * 9)) * 6 * s }); }
-  else if (pg === 1) { const got = (q % 3) > 1.8; drawFlower(cxm - 100 * s + Math.min(1, (q % 3) / 1.8) * 100 * s, gy, k, s, { lean: 0.5, seeds: got ? 1 : 0 }); if (!got) drawSeed(cxm + 20 * s, gy - 90 * s + Math.sin(q * 3) * 5 * s, q); else star4(cxm + 10 * s, gy - 100 * s, 10 * s, '#fff6a0'); }
-  else if (pg === 2) { const ph = (q % 2.4) / 2.4, j = Math.sin(ph * Math.PI) * 120 * s; drawFlowerMonster(cxm + 30 * s, gy + 4 * s, q); drawFlower(cxm - 150 * s + ph * 300 * s, gy - j, k, s, {}); }
-  else if (pg === 3) { const d = Math.min(1, Math.max(0, Math.sin(q * 1.2) * 1.5 + 0.5)), lx = cxm + 200 * s - ((q * 120 * s) % (420 * s)); drawFlower(cxm, gy + d * 82 * s, k, s, { mood: d > 0.5 ? 'happy' : 'happy' }); drawLeaf(lx, gy - 40 * s, q); }
-  else if (pg === 4) { drawHouse(cxm + 110 * s, gy + 6 * s, s, true, true); drawFlower(cxm - 110 * s, gy, k, s, {}); for (let i = 0; i < 4; i++) heart(cxm - 60 * s + i * 40 * s, H * 0.26, 16 * s, i < 1 + Math.floor(q * 1.5) % 4); }
-  else { cx.save(); cx.translate(cxm + 150 * s, gy - 130 * s); cx.scale(2, 2); drawLeaf(0, 0, q); cx.restore(); drawFlower(cxm - 160 * s, gy, k, s, {}); const sx = cxm - 140 * s + ((q * 260 * s) % (260 * s)); cx.fillStyle = '#9b4dff'; cx.beginPath(); cx.ellipse(sx, gy - 95 * s, 9 * s, 6 * s, q * 20, 0, 7); cx.fill(); }
-  cx.restore();
-  if (pg === 3) { const d = Math.min(1, Math.max(0, Math.sin(q * 1.2) * 1.5 + 0.5)); if (d > 0.3) { cx.fillStyle = w.dirt; cx.beginPath(); cx.ellipse(cxm, gy + 4 * s, 40 * s * d, 14 * s * d, 0, Math.PI, 0); cx.fill(); drawFeet(cxm, gy + d * 82 * s + 6 * s, k, t, Math.min(1, (d - 0.3) * 3), true); } }
-  // Tasten
-  const ky = H * 0.27;
-  if (pg === 0) { keyCap(cxm - 30 * s, ky, s, 'l', Math.cos(q * 1.5) < 0); keyCap(cxm + 30 * s, ky, s, 'r', Math.cos(q * 1.5) > 0); }
-  if (pg === 2) keyCap(cxm, ky, s, 'u', (q % 2.4) < 0.4);
-  if (pg === 3) keyCap(cxm, ky, s, 'd', Math.sin(q * 1.2) > -0.3);
-  if (pg === 5) { rr(cxm - 70 * s, ky - 20 * s, 140 * s, 40 * s, 10 * s); cx.fillStyle = '#ffffffdd'; cx.fill(); cx.fillStyle = '#7a1f5c'; cx.font = `bold ${16 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('Leertaste', cxm, ky + 1); }
-  // Text
-  const tw = Math.min(560 * s, W - 32), ty = gy + 34 * s; rr(cxm - tw / 2, ty, tw, 70 * s, 18 * s); cx.fillStyle = '#ffffffee'; cx.fill();
-  cx.fillStyle = '#5a1745'; cx.font = `bold ${Math.min(19 * s, W * 0.042)}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
-  const words = text.split(' '), lines = ['']; for (const wd of words) { const tl = lines[lines.length - 1] + (lines[lines.length - 1] ? ' ' : '') + wd; if (cx.measureText(tl).width > tw - 30) lines.push(wd); else lines[lines.length - 1] = tl; }
-  lines.forEach((l, i) => cx.fillText(l, cxm, ty + 35 * s + (i - (lines.length - 1) / 2) * 24 * s));
-  // Punkte und Knöpfe
-  for (let i = 0; i < HELP.length; i++) circle(cxm + (i - (HELP.length - 1) / 2) * 20 * s, H * 0.86, 6 * s, i === pg ? '#ff6fae' : '#ffffff99');
-  st.btns = []; const bh = 48 * s, bw = Math.min(180 * s, (W - 56) / 3), by = H * 0.9;
-  const btn = (id, label, col, fg, x0) => { rr(x0, by, bw, bh, bh / 2); cx.fillStyle = col; cx.fill(); cx.strokeStyle = '#fff'; cx.lineWidth = 3; cx.stroke();
-    cx.fillStyle = fg; cx.font = `bold ${18 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(label, x0 + bw / 2, by + bh / 2, bw - 12); st.btns.push({ id, x: x0, y: by, w: bw, h: bh }); };
-  if (pg > 0) btn('hprev', 'Zurück', '#ffffffcc', '#7a1f5c', cxm - bw * 1.5 - 12);
-  btn('hskip', 'Überspringen', '#ffffffcc', '#7a1f5c', cxm - bw / 2);
-  btn('hnext', pg === HELP.length - 1 ? 'Los geht\'s!' : 'Weiter', '#ff6fae', '#fff', cxm + bw / 2 + 12);
+// Schweinchen, das morgens alle weckt
+function drawPig(x, y, s, t, oink) {
+  const hop = oink ? Math.abs(Math.sin(t * 8)) * 6 * s : 0, by = y - 40 * s - hop, pink = '#ffb3c8', dark = '#f08aa8';
+  for (const d of [-22, -8, 10, 24]) { cx.fillStyle = dark; rr(x + d * s - 5 * s, by + 10 * s, 10 * s, 30 * s + hop, 4 * s); cx.fill(); }
+  cx.strokeStyle = dark; cx.lineWidth = 3 * s; cx.beginPath(); // Ringelschwanz
+  for (let a = 0; a < 9; a++) { const r = 3 * s + a * 0.6 * s, ang = a * 0.9 + t * (oink ? 6 : 1); cx.lineTo(x - 40 * s + Math.cos(ang) * r, by - 6 * s + Math.sin(ang) * r); } cx.stroke();
+  cx.fillStyle = pink; cx.beginPath(); cx.ellipse(x, by, 40 * s, 28 * s, 0, 0, 7); cx.fill();
+  const hx = x + 34 * s, hy = by - 16 * s;
+  for (const d of [-1, 1]) { cx.fillStyle = dark; cx.beginPath(); cx.moveTo(hx + d * 10 * s - 6 * s, hy - 16 * s); cx.lineTo(hx + d * 14 * s, hy - 32 * s); cx.lineTo(hx + d * 18 * s + 4 * s, hy - 12 * s); cx.fill(); } // Ohren
+  circle(hx, hy, 22 * s, pink);
+  circle(hx - 8 * s, hy - 6 * s, 3 * s, '#333'); circle(hx + 10 * s, hy - 6 * s, 3 * s, '#333');
+  circle(hx - 13 * s, hy + 6 * s, 4 * s, '#ff8fb0aa'); circle(hx + 16 * s, hy + 6 * s, 4 * s, '#ff8fb0aa');
+  cx.fillStyle = dark; cx.beginPath(); cx.ellipse(hx + 2 * s, hy + 8 * s, 11 * s, (oink ? 9 : 7) * s, 0, 0, 7); cx.fill(); // Rüssel
+  circle(hx - 2 * s, hy + 8 * s, 2.2 * s, '#a0506a'); circle(hx + 6 * s, hy + 8 * s, 2.2 * s, '#a0506a');
+  if (oink) for (let i = 0; i < 3; i++) { const q = (t * 1.2 + i / 3) % 1; cx.globalAlpha = 1 - q; cx.fillStyle = '#7a1f5c'; cx.font = `bold ${(14 + i * 4) * s}px sans-serif`; cx.textAlign = 'center'; cx.fillText('♪', hx + 30 * s + q * 40 * s, hy - 20 * s - q * 40 * s + i * 8 * s); } cx.globalAlpha = 1;
 }
 function drawJet(t) {
   const J = st.jet; if (!J) return;
@@ -2512,15 +2403,15 @@ function drawHome(t) {
     drawBee(W / 2 + Math.cos(t * 1.2) * 150 * s, H * 0.45 + Math.sin(t * 2.4) * 30 * s, t, -Math.sign(Math.sin(t * 1.2)) || 1, 1.2 * s);
   }
 
-  if (mode === 'night') { // dunkles Zimmer, und am Morgen kommt der Hahn
+  if (mode === 'night') { // dunkles Zimmer, und am Morgen kommt das Schweinchen
     if (asleep) { cx.fillStyle = `rgba(20,24,80,${Math.min(0.45, st.sleepT * 0.3)})`; cx.fillRect(0, 0, W, H); }
-    else { const k = Math.min(1, (st.sleepT - 5.5) * 1.5); drawRooster(W * 0.5 + (1 - k) * 260 * s, floor, s * 1.2, t, st.sleepT < 8);
-      if (st.sleepT > 5.8 && st.sleepT < 8.2) bubble('Kikeriki!', W * 0.5, floor - 190 * s); }
+    else { const k = Math.min(1, (st.sleepT - 5.5) * 1.5); drawPig(W * 0.5 + (1 - k) * 260 * s, floor, s * 1.2, t, st.sleepT < 8);
+      if (st.sleepT > 5.8 && st.sleepT < 8.2) bubble('Oink oink!', W * 0.5, floor - 150 * s); }
   }
   if (mode === 'garden') drawGarden(t, s);
   // Herzen
   for (let i = 0; i < 4; i++) heart(W / 2 - 60 * s + i * 40 * s, H * 0.07, 16 * s, i < st.hearts);
-  const txt = mode === 'night' ? (asleep ? 'Gute Nacht! Schlaf schön...' : 'Kikeriki! Guten Morgen!') : mode === 'sleep' ? (st.hearts >= 4 ? 'Ausgeschlafen!' : 'Schlaf gut...') : mode === 'eat' ? 'Guten Appetit!'
+  const txt = mode === 'night' ? (asleep ? 'Gute Nacht! Schlaf schön...' : 'Oink oink! Guten Morgen!') : mode === 'sleep' ? (st.hearts >= 4 ? 'Ausgeschlafen!' : 'Schlaf gut...') : mode === 'eat' ? 'Guten Appetit!'
     : (st.hidCount ? 'Hier drin bist du sicher vor den Blättern!' : 'Willkommen im Blumenhaus!');
   if (mode !== 'doors' && mode !== 'ward' && mode !== 'swap' && mode !== 'album' && mode !== 'cook' && mode !== 'garden') bigText(txt, H * 0.14, 26 * s);
 
