@@ -119,6 +119,14 @@ const POWER = {
   magnet: { name: 'Samenmagnet', dur: 20, c: '#ff6fae', say: 'den Samenmagnet! Die Samen fliegen jetzt zu dir.' },
   herz:   { name: 'Herzzauber', dur: 0, c: '#ff4f6d', say: 'den Herzzauber! Alle Herzen sind wieder voll.' },
 };
+// Tag und Nacht: alle zweieinhalb Minuten wird es eine Weile Nacht
+const DAY = 150;
+function nightAmt() {
+  if (st.screen !== 'play' && st.screen !== 'star') return 0;
+  const d = WORLDS[st.world].deco; if (d === 'nacht' || d === 'wasser') return 0;
+  const q = (st.dayT || 0) % DAY;
+  return q < 90 ? 0 : q < 100 ? (q - 90) / 10 : q < 140 ? 1 : 1 - (q - 140) / 10;
+}
 const hasPower = k => st.power && st.power.kind === k;
 const RAINBOW = ['#ff6b6b', '#ffb347', '#ffe66b', '#7ee081', '#6fc3ff', '#b58cff'];
 const FLY = new Set(['leaf', 'wolke', 'fleder', 'hai', 'qualle']); // diese Gegner fliegen/schwimmen
@@ -432,7 +440,7 @@ function continueGame() {
   startWorld(g.world, g.at > 140 ? g.at : null);
   say('Weiter geht\'s in: ' + WORLDS[g.world].name + '!');
 }
-function begin() { st.power = null; st.hearts = 4; st.seeds = 0; st.stars = 0; beep(660, .1); startWorld(st.startWorld || 0); }
+function begin() { st.dayT = 0; st.power = null; st.hearts = 4; st.seeds = 0; st.stars = 0; beep(660, .1); startWorld(st.startWorld || 0); }
 
 function tryHop(p) {
   if (st.screen !== 'play' || (p.jumpY > 0 && !onObstacle(p)) || p.digging > 0.2) return;
@@ -471,6 +479,10 @@ function update(dt) {
   if (st.screen !== 'play') return;
   const w = WORLDS[st.world];
   const speed = 210 * S * (hasPower('flitz') ? 1.6 : 1);
+  { const before = (st.dayT || 0) % DAY; st.dayT = (st.dayT || 0) + dt; const now = st.dayT % DAY, d = w.deco;
+    if (d !== 'nacht' && d !== 'wasser') {
+      if (before < 90 && now >= 90) say('Es wird Nacht! Schau mal, die Glühwürmchen kommen.');
+      if (before < 140 && now >= 140) say('Guten Morgen! Die Sonne geht wieder auf.'); } }
   const ps = players();
 
   for (const p of ps) {
@@ -1681,11 +1693,22 @@ function sky(w) {
       cx.strokeStyle = '#ffffff99'; cx.lineWidth = 1.5; cx.beginPath(); cx.arc(x, y, (2 + i % 4) * S, 0, 7); cx.stroke(); }
     return;
   }
+  const nn = nightAmt();
+  if (nn > 0) { // Nachthimmel mit Sternen und Mond
+    cx.fillStyle = `rgba(20,24,80,${0.5 * nn})`; cx.fillRect(0, 0, W, H);
+    cx.globalAlpha = nn;
+    for (let i = 0; i < 50; i++) { const x = ((i * 157.3 - st.camX * 0.05) % W + W) % W, y = (i * 83.7) % (H * 0.5); star4(x, y, (1 + Math.abs(Math.sin(performance.now() / 600 + i)) * 1.8) * S, '#fff6c0'); }
+    { const mx = W * 0.62, my = H * 0.13; cx.globalAlpha = nn * 0.25; circle(mx, my, 54 * S, '#fff6c8'); cx.globalAlpha = nn; circle(mx, my, 34 * S, '#fff6c8'); circle(mx - 10 * S, my - 8 * S, 7 * S, '#efe2a8'); circle(mx + 12 * S, my + 6 * S, 5 * S, '#efe2a8'); circle(mx + 2 * S, my + 16 * S, 4 * S, '#efe2a8'); }
+    cx.globalAlpha = 1;
+  }
+  cx.globalAlpha = 1 - nn;
   circle(W * 0.82, H * 0.2, 46 * S, w.deco === 'wueste' ? '#fff3a0' : '#fff7b0');
+  cx.globalAlpha = 1 - nn * 0.6;
   for (let i = 0; i < 4; i++) {
     const x = ((i * 380 - st.camX * 0.1 + performance.now() * 0.01) % (W + 300) + W + 300) % (W + 300) - 150, y = H * (0.12 + (i % 2) * 0.1);
     circle(x, y, 26 * S, '#ffffffcc'); circle(x + 28 * S, y - 10 * S, 30 * S, '#ffffffcc'); circle(x + 58 * S, y, 24 * S, '#ffffffcc');
   }
+  cx.globalAlpha = 1;
 }
 
 // Summsi, die kleine Biene: fliegt mit und zeigt dir die Geheimgänge
@@ -1889,6 +1912,12 @@ function drawPlay(t) {
     }
     if (p.jumpY > 12 * S && p.digging < 0.1) drawFeet(p.x - cam, groundY(p.x) - p.jumpY + 4 * S, kindOf(p), t, Math.min(1, (p.jumpY - 12 * S) / (20 * S)), false); // beim Springen
   }
+  { const nn = nightAmt(); if (nn > 0) { // Nacht: alles wird dunkler, Glühwürmchen leuchten
+    cx.fillStyle = `rgba(15,18,70,${0.42 * nn})`; cx.fillRect(0, 0, W, H);
+    const now = performance.now() / 1000;
+    for (let i = 0; i < 18; i++) { const x = ((i * 211.7 - cam * 0.6 + Math.sin(now * 0.5 + i) * 40 * S) % (W + 40) + W + 40) % (W + 40) - 20, y = H * (0.45 + (i % 6) * 0.06) + Math.sin(now * 1.3 + i * 2) * 14 * S;
+      const a = nn * (0.5 + 0.5 * Math.sin(now * 3 + i * 1.7)); cx.globalAlpha = a * 0.35; circle(x, y, 9 * S, '#fff9a0'); cx.globalAlpha = a; circle(x, y, 3 * S, '#fffbd0'); }
+    cx.globalAlpha = 1; } }
   // Glitzer
   for (const p of st.sparkles) star4(p.x - cam, p.y, 3 * S * p.t, p.c);
   // Schnee
