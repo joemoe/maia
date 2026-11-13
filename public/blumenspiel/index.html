@@ -67,7 +67,7 @@ const WORLDS = [
   { name: 'Schneeberg', sky: ['#9fb8ff', '#f2f6ff'], hill: '#c9d6f2', hill2: '#aebfe6', ground: '#ffffff', dirt: '#9aa9c9', deco: 'schnee', len: 16000,
     foes: ['yeti', 'yeti', 'leaf'], helper: { kind: 'schneegloeckchen', name: 'Schneeglöckchen', tip: 'Brrr! Die Schneemonster sind gemein. Und wenn ein Schneesturm kommt: grab dich ein oder geh ins Blumenhaus!' } },
   { name: 'Blumenparty', sky: ['#ffb3e6', '#fff0fa'], hill: '#ff8ad8', hill2: '#c77dff', ground: '#9be07a', dirt: '#8a5a33', deco: 'party', len: 7000,
-    foes: [], boss: true, secretAt: [0.45, 0.8],
+    foes: [], boss: 'koenig', secretAt: [0.45, 0.8],
     helper: { kind: 'hibiskus', name: 'Partyblume', tip: 'Juhuu! Willkommen auf der großen Blumenparty! Psst, hier sind auch zwei Geheimtüren versteckt.' } },
   { name: 'Regenbogenland', sky: ['#9fe3ff', '#fff0fb'], hill: '#b9a6ff', hill2: '#9fd8ff', ground: '#a8f0a0', dirt: '#8a6bc9', deco: 'regenbogen', len: 12000,
     foes: ['wurm', 'wurm', 'leaf'], helper: { kind: 'regenbogenblume', name: 'Regenbogenblume', tip: 'Hallo! Pass auf das Regenwurmmonster auf, es schlängelt sich hier herum! Hüpf drüber oder grab dich ein.' } },
@@ -76,7 +76,9 @@ const WORLDS = [
   { name: 'Nachtgarten', sky: ['#141a4a', '#3b2f7a'], hill: '#2a3a6a', hill2: '#1e2a55', ground: '#2f6b4f', dirt: '#3a2a40', deco: 'nacht', len: 14000,
     foes: ['nachtm', 'nachtm', 'fleder'], helper: { kind: 'mondblume', name: 'Mondblume', tip: 'Psst, ganz leise! Hier schleicht ein Nachtmonster herum, und freche Fledermäuse fliegen auch. Hüpf drüber oder grab dich ein!' } },
   { name: 'Unterwasserwelt', sky: ['#5fd0ff', '#1a6fb0'], hill: '#3a8fc0', hill2: '#2a7ab0', ground: '#f2dca0', dirt: '#d4b878', deco: 'wasser', len: 14000,
-    foes: ['krake', 'krake', 'qualle'], helper: { kind: 'seerose', name: 'Seeanemone', tip: 'Blubb! Willkommen unter Wasser! Vorsicht vor dem Tintenfischmonster und den Quallen. Hüpf drüber oder grab dich ein!' } },
+    foes: ['krake', 'krake', 'qualle'], boss: 'krake', helper: { kind: 'seerose', name: 'Seeanemone', tip: 'Blubb! Willkommen unter Wasser! Vorsicht vor dem Tintenfischmonster und den Quallen. Und ganz am Ende wartet der Krakenkönig. Sammle Samen zum Werfen!' } },
+  { name: 'Blumen-City', sky: ['#9fdcff', '#fff4fb'], hill: '#c9b8ff', hill2: '#ffc4e1', ground: '#9be07a', dirt: '#8a5a33', deco: 'city', len: 9000,
+    foes: [], helper: { kind: 'stadtblume', name: 'Bürgermeisterblume', tip: 'Willkommen in Blumen-City! Hier wohnen alle Blumen aus allen Ländern zusammen. Keine Bösewichte, nur Freunde! Du hast es geschafft!' } },
 ];
 
 /* ---------- Zustand ---------- */
@@ -107,6 +109,17 @@ function groundY(x) {
 }
 
 const HOUSE_X = 240;
+const BOSSNAME = { koenig: 'Blätterkönig', krake: 'Krakenkönig' };
+// Blumenfeen: in jedem Land eine, sie schenkt einen Zauber
+const POWERS = ['huepf', 'schild', 'flitz', 'magnet', 'schild', 'herz', 'huepf', 'flitz', 'schild', 'magnet', 'herz'];
+const POWER = {
+  schild: { name: 'Schutzblase', dur: 20, c: '#6fd3ff', say: 'eine Schutzblase! Jetzt können dir die Bösewichte nichts tun.' },
+  huepf:  { name: 'Hüpfzauber', dur: 20, c: '#c77dff', say: 'den Hüpfzauber! Jetzt kannst du ohne Samen hüpfen.' },
+  flitz:  { name: 'Flitzezauber', dur: 15, c: '#ffb000', say: 'den Flitzezauber! Jetzt bist du superschnell.' },
+  magnet: { name: 'Samenmagnet', dur: 20, c: '#ff6fae', say: 'den Samenmagnet! Die Samen fliegen jetzt zu dir.' },
+  herz:   { name: 'Herzzauber', dur: 0, c: '#ff4f6d', say: 'den Herzzauber! Alle Herzen sind wieder voll.' },
+};
+const hasPower = k => st.power && st.power.kind === k;
 const RAINBOW = ['#ff6b6b', '#ffb347', '#ffe66b', '#7ee081', '#6fc3ff', '#b58cff'];
 const FLY = new Set(['leaf', 'wolke', 'fleder', 'hai', 'qualle']); // diese Gegner fliegen/schwimmen
 const OBST_KIND = { regenbogen: 'kristall', suess: 'torte', nacht: 'kuerbis', wasser: 'muschel', wiese: 'stamm', strand: 'wal', wueste: 'loewe', schnee: 'yeti' };
@@ -126,11 +139,12 @@ function startWorld(i, fromX) {
   st.helperX = Math.round(w.len * 0.4); st.helperTalk = 0; st.helperMet = false;
   // zwei geheime Eingänge ins Blumenhaus
   st.secrets = (w.secretAt || [0.24, 0.7]).map((f, n) => ({ x: Math.round(w.len * f + (Math.random() - 0.5) * 600), found: false, n }));
+  st.fairy = { x: Math.round(w.len * (w.deco === 'party' ? 0.62 : 0.56)), got: false, t: 0, kind: POWERS[i] || 'herz' };
   // Hindernisse: passend zum Land (Wald und Party haben keine)
   st.obst = []; st.storm = null; st.stormAt = null; st.stormSheltered = false;
   const OB = OBST_KIND[w.deco];
   if (OB) for (let x = 1800 + Math.random() * 400; x < w.len - 800; x += 1700 + Math.random() * 900) {
-    if (Math.abs(x - st.helperX) < 400 || st.secrets.some(q => Math.abs(x - q.x) < 320) || Math.abs(x - base) < 300) continue;
+    if (Math.abs(x - st.helperX) < 400 || st.secrets.some(q => Math.abs(x - q.x) < 320) || Math.abs(x - base) < 300 || Math.abs(x - st.fairy.x) < 350 || (w.boss === 'krake' && x > w.len - 2000)) continue;
     st.obst.push({ x, kind: OB, w: OBST[OB].w, h: OBST[OB].h, t: Math.random() * 6 });
     // ein Samen liegt immer vor dem Hindernis, damit man drüberhüpfen kann
     st.seedsOnMap.push({ x: x - 330, t: Math.random() * 6, got: false, up: 70 });
@@ -138,7 +152,8 @@ function startWorld(i, fromX) {
   }
   if (w.deco === 'schnee' && st.secrets[1]) st.stormAt = st.secrets[1].x - 900; // Schneesturm, kurz vor dem 2. Geheimgang
   st.shots = [];
-  st.boss = w.boss ? { x: 1700, hp: st.two ? 6 : 8, max: st.two ? 6 : 8, t: 0, atk: 4, hitT: 0, gone: 0, defeated: false, seedT: 0, intro: false } : null;
+  { const kr = w.boss === 'krake', hp = kr ? (st.two ? 7 : 10) : (st.two ? 6 : 8);
+    st.boss = w.boss ? { kind: w.boss, x: kr ? w.len - 1100 : 1700, hp, max: hp, t: 0, atk: 4, hitT: 0, gone: 0, defeated: false, seedT: 0, intro: false } : null; }
   st.flakes = [];
   for (let k = 0; k < 60; k++) st.flakes.push({ x: Math.random(), y: Math.random(), s: 1 + Math.random() * 2.5, v: 0.3 + Math.random() * 0.6 });
   st.screen = 'play';
@@ -150,7 +165,7 @@ function startWorld(i, fromX) {
 }
 function say(m) { st.msg = m; st.msgT = 3; }
 // Sammelalbum: merkt sich besuchte Länder, Sterne, Geheimtüren und den Blätterkönig
-let album = { seen: [], star: [], sec: [], boss: 0 };
+let album = { seen: [], star: [], sec: [], boss: 0, boss2: 0 };
 try { const a = JSON.parse(localStorage.getItem('blumen-album') || 'null'); if (a) album = Object.assign(album, a); } catch (e) {}
 for (const k of ['seen', 'star', 'sec']) while (album[k].length < WORLDS.length) album[k].push(0);
 function saveAlbum() { try { localStorage.setItem('blumen-album', JSON.stringify(album)); } catch (e) {} }
@@ -179,6 +194,7 @@ const SONGS = {
   suess:  { key: 65, bpm: 132, prog: [0, 5, 7, 5], mel: 'square', bass: 'triangle', seed: 41, melVol: .45, bounce: true },
   nacht:  { key: 57, bpm: 84, prog: [0, 8, 5, 7], minor: true, mel: 'sine', bass: 'sine', seed: 23, bell: true },
   wasser: { key: 62, bpm: 96, prog: [0, 7, 9, 5], mel: 'sine', bass: 'triangle', seed: 37, swing: true },
+  city:   { key: 67, bpm: 124, prog: [0, 5, 9, 7], mel: 'triangle', bass: 'triangle', seed: 51, drums: true, melVol: .45, bounce: true },
   party:  { key: 67, bpm: 140, prog: [0, 7, 9, 5], mel: 'square', bass: 'triangle', seed: 9, drums: true, melVol: .5, bounce: true },
   boss:   { key: 62, bpm: 150, prog: [0, 0, 10, 8], minor: true, mel: 'sawtooth', bass: 'triangle', seed: 13, drums: true, melVol: .35 },
   house:  { key: 60, bpm: 72, prog: [0, 5, 0, 7], mel: 'sine', bass: 'sine', seed: 2, bell: true },
@@ -412,23 +428,23 @@ function loadGame() { try { return JSON.parse(localStorage.getItem('blumen-spiel
 function clearGame() { try { localStorage.removeItem('blumen-spielstand'); } catch (e) {} }
 function continueGame() {
   const g = loadGame(); if (!g) { begin(); return; }
-  st.hearts = 4; st.seeds = Math.min(g.seeds || 0, seedMax()); st.stars = g.stars || 0; beep(660, .1);
+  st.power = null; st.hearts = 4; st.seeds = Math.min(g.seeds || 0, seedMax()); st.stars = g.stars || 0; beep(660, .1);
   startWorld(g.world, g.at > 140 ? g.at : null);
   say('Weiter geht\'s in: ' + WORLDS[g.world].name + '!');
 }
-function begin() { st.hearts = 4; st.seeds = 0; st.stars = 0; beep(660, .1); startWorld(st.startWorld || 0); }
+function begin() { st.power = null; st.hearts = 4; st.seeds = 0; st.stars = 0; beep(660, .1); startWorld(st.startWorld || 0); }
 
 function tryHop(p) {
   if (st.screen !== 'play' || (p.jumpY > 0 && !onObstacle(p)) || p.digging > 0.2) return;
   if (p.nearDoor) { st.returnX = p.nearDoor; goHome('visit'); return; }
-  if (st.seeds > 0) {
-    st.seeds--; p.vy = 640 * S; p.jumpY = Math.max(0.01, p.jumpY); sfx.hop();
+  if (st.seeds > 0 || hasPower('huepf')) {
+    if (!hasPower('huepf')) st.seeds--; p.vy = 640 * S; p.jumpY = Math.max(0.01, p.jumpY); sfx.hop();
     for (let i = 0; i < 12; i++) st.sparkles.push(spark(p.x, groundY(p.x) - 10 * S, '#c77dff'));
   } else say('Sammle lila Samen, dann kannst du hüpfen!');
 }
 function throwSeed(p) {
   if (st.screen !== 'play' || p.digging > 0.3) return;
-  if (!st.boss || st.boss.defeated) { say('Samen werfen geht nur beim Blätterkönig!'); return; }
+  if (!st.boss || st.boss.defeated) { say('Samen werfen geht nur bei einem König!'); return; }
   if (st.seeds <= 0) { say('Keine Samen mehr! Sammle neue, sie fallen vom Himmel.'); return; }
   st.seeds--; beep(760, .1, 'triangle', .12, 300);
   st.shots.push({ x: p.x + 20 * S, y: groundY(p.x) - p.jumpY - 95 * S, vx: 700 * S, t: 0 });
@@ -454,7 +470,7 @@ function update(dt) {
   }
   if (st.screen !== 'play') return;
   const w = WORLDS[st.world];
-  const speed = 210 * S;
+  const speed = 210 * S * (hasPower('flitz') ? 1.6 : 1);
   const ps = players();
 
   for (const p of ps) {
@@ -504,10 +520,10 @@ function update(dt) {
   if (B && !B.defeated) {
     for (const p of ps) p.x = Math.min(p.x, B.x - 140 * S);
     const near = ps.some(p => B.x - p.x < W * 0.8);
-    if (near && !B.intro) { B.intro = true; say('Der Blätterkönig! Wirf Samen auf ihn (Leertaste oder lila Samen-Knopf)!'); }
+    if (near && !B.intro) { B.intro = true; say('Der ' + BOSSNAME[B.kind] + '! Wirf Samen auf ihn (Leertaste oder lila Samen-Knopf)!'); }
     if (near) {
       B.t += dt; B.atk -= dt;
-      if (B.atk <= 0) { st.leaves.push({ type: 'leaf', x: B.x - 70 * S, t: 0, sp: (120 + Math.random() * 40) * S, hit: false }); B.atk = (st.two ? 4.5 : 3) + Math.random() * 1.5; beep(220, .2, 'sawtooth', .05, -60); }
+      if (B.atk <= 0) { st.leaves.push({ type: B.kind === 'krake' ? 'qualle' : 'leaf', x: B.x - 70 * S, t: 0, sp: (120 + Math.random() * 40) * S, hit: false }); B.atk = (st.two ? 4.5 : 3) + Math.random() * 1.5; beep(220, .2, 'sawtooth', .05, -60); }
       // Samen fallen vom Himmel, damit man immer genug hat
       B.seedT -= dt;
       const lying = st.seedsOnMap.filter(sd => !sd.got && sd.x < B.x).length;
@@ -524,8 +540,8 @@ function update(dt) {
       sh.dead = true; B.hp--; B.hitT = 0.35; beep(990, .12, 'triangle');
       for (let i = 0; i < 10; i++) st.sparkles.push(spark(B.x - 40 * S, sh.y, i % 2 ? '#c77dff' : '#fff6a0'));
       if (B.hp <= 0) {
-        B.defeated = true; B.gone = 0; album.boss = 1; saveAlbum(); st.leaves = []; sfx.star();
-        say('Danke! Jetzt bin ich wieder ein fröhliches grünes Blatt. Viel Spaß auf der Party!'); st.msgT = 5;
+        B.defeated = true; B.gone = 0; if (B.kind === 'krake') album.boss2 = 1; else album.boss = 1; saveAlbum(); st.leaves = []; sfx.star();
+        say(B.kind === 'krake' ? 'Blubb, danke! Jetzt bin ich ein lieber rosa Krake. Schwimm weiter, gleich kommt Blumen-City!' : 'Danke! Jetzt bin ich wieder ein fröhliches grünes Blatt. Viel Spaß auf der Party!'); st.msgT = 5;
         st.checkpoint = B.x + 200;
       }
     }
@@ -534,7 +550,8 @@ function update(dt) {
 
   // Kamera
   const mid = ps.reduce((a, p) => a + p.x, 0) / ps.length;
-  const target = mid - W * (st.two ? 0.5 : 0.35);
+  let target = mid - W * (st.two ? 0.5 : 0.35);
+  if (B && !B.defeated && B.x - mid < W * 0.7) target = Math.max(target, B.x - W * 0.78); // König gut sichtbar
   st.camX += (Math.max(0, Math.min(w.len + 200 - W, target)) - st.camX) * Math.min(1, dt * 5);
   updateBee(dt, ps);
 
@@ -542,6 +559,23 @@ function update(dt) {
   const nearHelper = ps.some(p => Math.abs(p.x - st.helperX) < 160);
   st.helperTalk = nearHelper ? Math.min(1, st.helperTalk + dt * 3) : Math.max(0, st.helperTalk - dt * 3);
   if (nearHelper && !st.helperMet) { st.helperMet = true; st.checkpoint = st.helperX; saveGame(); beep(990, .1); setTimeout(() => beep(1200, .12), 90); }
+  // Blumenfee: anfassen, dann schenkt sie einen Zauber
+  const F = st.fairy;
+  if (F) { F.t += dt;
+    if (!F.got && ps.some(p => Math.abs(p.x - F.x) < 70 && p.digging < 0.5)) {
+      F.got = true; const pw = POWER[F.kind];
+      if (F.kind === 'herz') { st.hearts = 4; st.power = { kind: 'herz', t: 2.5, max: 2.5 }; }
+      else st.power = { kind: F.kind, t: pw.dur, max: pw.dur };
+      say('Die Blumenfee schenkt dir ' + pw.say); st.msgT = 4;
+      [1046, 1318, 1568, 2093].forEach((f, k) => setTimeout(() => beep(f, .18, 'triangle', .1), k * 90));
+      for (let k = 0; k < 30; k++) st.sparkles.push(spark(F.x, groundY(F.x) - 130 * S, [pw.c, '#fff6a0', '#ffffff'][k % 3]));
+    } }
+  if (st.power) { st.power.t -= dt;
+    if (st.power.t <= 0) { if (st.power.kind !== 'herz') say('Der ' + POWER[st.power.kind].name + ' ist vorbei.'); st.power = null; } }
+  // Samenmagnet: Samen in der Nähe fliegen zu dir
+  if (hasPower('magnet') && st.seeds < seedMax()) for (const sd of st.seedsOnMap) { if (sd.got) continue;
+    const p = ps.reduce((a, b) => Math.abs(b.x - sd.x) < Math.abs(a.x - sd.x) ? b : a);
+    if (Math.abs(p.x - sd.x) < 600) { sd.x += Math.sign(p.x - sd.x) * Math.min(Math.abs(p.x - sd.x), 520 * dt); sd.up += (70 - sd.up) * Math.min(1, dt * 3); } }
 
   // Samen einsammeln (die Samen gehören allen zusammen)
   for (const sd of st.seedsOnMap) {
@@ -562,7 +596,7 @@ function update(dt) {
   st.leafTimer -= dt;
   const lead = leadX();
   const safeZone = st.world === 0 && lead < 1000; // im Blumendorf ist es sicher
-  if (w.foes.length && st.leafTimer <= 0 && !st.storm && lead < w.len - 500 && !safeZone && Math.abs(lead - st.helperX) > 400) {
+  if (w.foes.length && st.leafTimer <= 0 && !st.storm && !(B && !B.defeated && B.x - lead < W * 1.5) && lead < w.len - 500 && !safeZone && Math.abs(lead - st.helperX) > 400) {
     const type = w.foes[Math.floor(Math.random() * w.foes.length)];
     const base = type === 'leaf' ? 95 : 80;
     st.leaves.push({ type, x: st.camX + W + 60, t: Math.random() * 6, sp: (base + Math.random() * 40 + st.world * 6) * S, hit: false });
@@ -578,6 +612,8 @@ function update(dt) {
       const touching = FLY.has(L.type)
         ? Math.abs(L.x - p.x) < 34 * S && L.y > py - 115 * S * (1 - p.digging * 0.9) && L.y < py + 5
         : Math.abs(L.x - p.x) < 38 * S && p.jumpY < 62 * S;
+      if (touching && hasPower('schild')) { // die Schutzblase schubst den Gegner weg
+        L.hit = true; beep(880, .12, 'sine', .1, 400); for (let k = 0; k < 10; k++) st.sparkles.push(spark(p.x, py - 60 * S, k % 2 ? '#6fd3ff' : '#ffffff')); break; }
       if (touching) {
         L.hit = true; p.hurt = 1.6; st.hearts--; sfx.hurt();
         if (st.hearts <= 0) { goHome('die'); return; }
@@ -600,7 +636,7 @@ function update(dt) {
     const sm = st.storm; sm.t += dt;
     if (sm.t > sm.warn + sm.dur) { st.storm = null; say('Der Schneesturm ist vorbei!'); sfx.star(); }
     else if (sm.t > sm.warn) for (const p of ps) {
-      if (p.digging > 0.7) { sm.cold[p.id] = Math.max(0, sm.cold[p.id] - dt); continue; }
+      if (p.digging > 0.7 || hasPower('schild')) { sm.cold[p.id] = Math.max(0, sm.cold[p.id] - dt); continue; }
       sm.cold[p.id] += dt;
       if (sm.cold[p.id] >= 3) { sm.cold[p.id] = 0; p.hurt = 1; st.hearts--; sfx.hurt();
         if (st.hearts <= 0) { goHome('die'); return; }
@@ -857,7 +893,7 @@ function drawHelper(x, y, kind, t, s) {
   cx.beginPath(); cx.moveTo(x, y); cx.quadraticCurveTo(x + 6 * s, y - 45 * s, x + sway, y - 90 * s); cx.stroke();
   cx.fillStyle = '#4fbf55'; cx.beginPath(); cx.ellipse(x + 16 * s, y - 35 * s, 18 * s, 7 * s, -0.5, 0, 7); cx.fill();
   const bx = x + sway, by = y - 110 * s;
-  const P = { regenbogenblume: ['#ff6b6b', '#fff6c0', 12], zuckerblume: ['#ff7bb5', '#ffffff', 10], mondblume: ['#dfe9ff', '#fff3a0', 8], seerose: ['#ff9ed8', '#ffd23f', 14], gaensebluemchen: ['#ffffff', '#ffd23f', 12], sonnenblume: ['#ffcc00', '#8a5a2b', 14], hibiskus: ['#ff4f6d', '#ffd23f', 5],
+  const P = { stadtblume: ['#c77dff', '#ffd23f', 9], regenbogenblume: ['#ff6b6b', '#fff6c0', 12], zuckerblume: ['#ff7bb5', '#ffffff', 10], mondblume: ['#dfe9ff', '#fff3a0', 8], seerose: ['#ff9ed8', '#ffd23f', 14], gaensebluemchen: ['#ffffff', '#ffd23f', 12], sonnenblume: ['#ffcc00', '#8a5a2b', 14], hibiskus: ['#ff4f6d', '#ffd23f', 5],
               kaktusbluete: ['#ff7ad1', '#fff2a6', 8], loewenzahn: ['#ffd400', '#f2b600', 16], schneegloeckchen: ['#eef6ff', '#b8e0a8', 6] }[kind];
   for (let i = 0; i < P[2]; i++) { const a = i / P[2] * Math.PI * 2 + t * 0.2; cx.fillStyle = kind === 'regenbogenblume' ? RAINBOW[i % 6] : P[0]; cx.beginPath();
     cx.ellipse(bx + Math.cos(a) * 26 * s, by + Math.sin(a) * 26 * s, (P[2] > 8 ? 13 : 18) * s, 9 * s, a, 0, 7); cx.fill();
@@ -1174,6 +1210,18 @@ function decoFar(w, cam, t) {
       const c = ['#ffb347', '#ff6fae', '#ffe66b'][i % 3]; cx.fillStyle = c; cx.beginPath(); cx.ellipse(x, y, 14 * S, 8 * S, 0, 0, 7); cx.fill();
       cx.beginPath(); cx.moveTo(x - 12 * S, y); cx.lineTo(x - 22 * S, y - 7 * S); cx.lineTo(x - 22 * S, y + 7 * S); cx.fill(); circle(x + 7 * S, y - 2 * S, 1.8 * S, '#123'); }
   }
+  if (d === 'city') { // Blumen-Hochhäuser hinten
+    const sp = 120 * S, off = (cam * 0.2) % sp;
+    for (let k = -1; k < W / sp + 2; k++) { const idx = k + Math.floor(cam * 0.2 / sp), r = Math.abs(Math.sin(idx * 7.13) * 99) % 1, x = k * sp - off;
+      const bw = (60 + r * 30) * S, bh = (140 + r * 150) * S, by = H * 0.68 - bh, col = ['#ffd6ec', '#e3d4ff', '#d4f0ff', '#fff0c4'][Math.abs(idx) % 4];
+      rr(x - bw / 2, by, bw, bh + 20 * S, 10 * S); cx.fillStyle = col; cx.fill();
+      for (let wy = by + 16 * S; wy < H * 0.66 - 10 * S; wy += 26 * S) for (const wx of [-0.25, 0.25]) { rr(x + wx * bw - 7 * S, wy, 14 * S, 14 * S, 7 * S); cx.fillStyle = (Math.floor(wy / 26 + idx) % 3) ? '#ffffffcc' : '#fff3a0'; cx.fill(); }
+      // eine große Blume oben auf dem Dach
+      const fc = ['#ff6fae', '#ffd23f', '#c77dff', '#6fd3ff'][Math.abs(idx * 3) % 4], fy = by - 14 * S;
+      cx.strokeStyle = '#3a9a40'; cx.lineWidth = 4 * S; cx.beginPath(); cx.moveTo(x, by); cx.lineTo(x, fy); cx.stroke();
+      for (let q = 0; q < 6; q++) { const a = q * Math.PI / 3 + t * 0.3; circle(x + Math.cos(a) * 11 * S, fy + Math.sin(a) * 11 * S, 8 * S, fc); }
+      circle(x, fy, 7 * S, '#fff3a0'); }
+  }
   // ferne Hügel
   cx.fillStyle = w.hill2; cx.beginPath(); cx.moveTo(0, H);
   for (let x = 0; x <= W + 20; x += 20) cx.lineTo(x, H * 0.58 + Math.sin((x + cam * 0.3) * 0.004) * 40 * S);
@@ -1200,10 +1248,10 @@ function decoFar(w, cam, t) {
 }
 
 // ein paar kleine Blumen am Boden (nicht zu viele)
-const SMALL_COLS = { regenbogen: ['#ff6b6b', '#ffb347', '#ffe66b', '#7ee081', '#6fc3ff', '#b58cff'], suess: ['#ff7bb5', '#ffffff', '#8fd3ff', '#ffd23f'], nacht: ['#bff0ff', '#fff3a0', '#e0c3ff'], wasser: [], wald: ['#ff9ec7', '#ffffff', '#8fb8ff', '#ffd23f'], wiese: ['#ff6fae', '#c77dff', '#ffffff'], strand: ['#ff6f91', '#ffb347', '#ffffff'],
+const SMALL_COLS = { city: ['#ff6fae', '#ffd23f', '#ffffff', '#c77dff', '#6fd3ff'], regenbogen: ['#ff6b6b', '#ffb347', '#ffe66b', '#7ee081', '#6fc3ff', '#b58cff'], suess: ['#ff7bb5', '#ffffff', '#8fd3ff', '#ffd23f'], nacht: ['#bff0ff', '#fff3a0', '#e0c3ff'], wasser: [], wald: ['#ff9ec7', '#ffffff', '#8fb8ff', '#ffd23f'], wiese: ['#ff6fae', '#c77dff', '#ffffff'], strand: ['#ff6f91', '#ffb347', '#ffffff'],
   wueste: ['#ff8a5c', '#ffd23f', '#ff6fae'], schnee: ['#ffffff', '#cfe3ff', '#e6d4ff'], party: [] };
 // ab und zu eine große Blume
-const BIG_COLS = { regenbogen: [['#ff6b6b', '#ffb347'], ['#6fc3ff', '#b58cff']], suess: [['#ff7bb5', '#ffffff'], ['#8fd3ff', '#ffffff']], nacht: [['#bff0ff', '#7fd6ff'], ['#e0c3ff', '#b58cff']], wald: [['#ff9ec7', '#ff6fae'], ['#8fb8ff', '#5c8fe6']], wiese: [['#ffd23f', '#ffb000'], ['#c77dff', '#9b4dff']], strand: [['#ff6f91', '#e64a6f'], ['#ffb347', '#ff8a1f']],
+const BIG_COLS = { city: [['#ff6fae', '#e0458a'], ['#ffd23f', '#ffb000'], ['#c77dff', '#9b4dff']], regenbogen: [['#ff6b6b', '#ffb347'], ['#6fc3ff', '#b58cff']], suess: [['#ff7bb5', '#ffffff'], ['#8fd3ff', '#ffffff']], nacht: [['#bff0ff', '#7fd6ff'], ['#e0c3ff', '#b58cff']], wald: [['#ff9ec7', '#ff6fae'], ['#8fb8ff', '#5c8fe6']], wiese: [['#ffd23f', '#ffb000'], ['#c77dff', '#9b4dff']], strand: [['#ff6f91', '#e64a6f'], ['#ffb347', '#ff8a1f']],
   wueste: [['#ff8a5c', '#e8603a'], ['#ff6fae', '#e0458a']], schnee: [['#cfe3ff', '#8fb8ff'], ['#e6d4ff', '#c4a6ff']] };
 function bigFlowers(w, cam, t) {
   const cols = BIG_COLS[w.deco]; if (!cols) return;
@@ -1332,6 +1380,21 @@ function decoNear(w, cam, t) {
         const br = (x0, y0, a, l, n) => { const x1 = x0 + Math.cos(a) * l, y1 = y0 + Math.sin(a) * l; cx.beginPath(); cx.moveTo(x0, y0); cx.lineTo(x1, y1); cx.stroke(); if (n) { br(x1, y1, a - 0.5, l * 0.7, n - 1); br(x1, y1, a + 0.5, l * 0.7, n - 1); } };
         br(sx, gy, -Math.PI / 2, 34 * s, 2); }
       else { cx.fillStyle = '#8a8fa0'; cx.beginPath(); cx.ellipse(sx, gy, 30 * s, 18 * s, 0, Math.PI, 0); cx.fill(); star5(sx + 34 * s, gy - 6 * s, 10 * s, '#ff8a5c'); }
+    } else if (d === 'city') {
+      if (r > 0.62) drawHouse(sx, gy + 2, s * 0.8, false, true); // Blumenhäuschen
+      else if (r > 0.25) { // Blumen aus allen Ländern wohnen hier und winken
+        const kinds = ['gaensebluemchen', 'loewenzahn', 'hibiskus', 'kaktusbluete', 'schneegloeckchen', 'regenbogenblume', 'zuckerblume', 'mondblume', 'seerose'];
+        drawHelper(sx, gy + 4, kinds[Math.abs(i) % kinds.length], t * 2 + i, s * 0.75);
+        const hy = gy - 95 * s, wave = Math.sin(t * 6 + i) * 0.5; // winkendes Blatt
+        cx.fillStyle = '#4fbf55'; cx.beginPath(); cx.ellipse(sx - 22 * s, hy, 14 * s, 6 * s, -1.1 + wave, 0, 7); cx.fill();
+      } else { // Blumen-Laterne
+        cx.strokeStyle = '#6b5b8a'; cx.lineWidth = 5 * s; cx.lineCap = 'round'; cx.beginPath(); cx.moveTo(sx, gy); cx.lineTo(sx, gy - 110 * s); cx.quadraticCurveTo(sx, gy - 128 * s, sx + 18 * s, gy - 124 * s); cx.stroke();
+        for (let q = 0; q < 5; q++) { const a = q * 1.2566 + Math.PI / 2; circle(sx + 20 * s + Math.cos(a) * 9 * s, gy - 112 * s + Math.sin(a) * 9 * s, 7 * s, '#ff9ed8'); }
+        circle(sx + 20 * s, gy - 112 * s, 7 * s, '#fff3a0'); cx.globalAlpha = 0.25 + Math.sin(t * 3 + i) * 0.1; circle(sx + 20 * s, gy - 112 * s, 22 * s, '#fff3a0'); cx.globalAlpha = 1;
+      }
+      // bunte Wimpelkette
+      if (Math.abs(i) % 2 === 0) { const x2 = sx + 260 * s, ly = gy - 170 * s; cx.strokeStyle = '#ffffffaa'; cx.lineWidth = 1.5; cx.beginPath(); cx.moveTo(sx, ly); cx.quadraticCurveTo(sx + 130 * s, ly + 30 * s, x2, ly); cx.stroke();
+        for (let q = 1; q < 8; q++) { const fx = sx + q * 32.5 * s, fy = ly + Math.sin(q / 8 * Math.PI) * 15 * s; cx.fillStyle = RAINBOW[q % 6]; cx.beginPath(); cx.moveTo(fx - 7 * s, fy); cx.lineTo(fx + 7 * s, fy); cx.lineTo(fx, fy + 14 * s); cx.fill(); } }
     } else if (d === 'schnee') {
       if (r > 0.55) { // Tannenbaum mit Schnee
         cx.fillStyle = '#7b4a26'; cx.fillRect(sx - 6 * s, gy - 20 * s, 12 * s, 22 * s);
@@ -1389,7 +1452,8 @@ function drawBoss(B, cam, t) {
   if (B.defeated && B.gone > 4) return;
   const fly = B.defeated ? B.gone * 120 * s : 0;
   const y = groundY(B.x) - 130 * s + Math.sin(t * 2) * 10 * s - fly;
-  if (x < -200 || x > W + 200) return;
+  if (x < -260 || x > W + 260) return;
+  if (B.kind === 'krake') drawKraken(B, x, y, t); else {
   cx.save(); cx.translate(x, y); cx.rotate(Math.sin(t * 1.5) * 0.12 + (B.defeated ? B.gone : 0)); cx.scale(3, 3);
   // großes Blatt
   cx.fillStyle = B.defeated ? '#5cc85c' : (B.hitT > 0 ? '#fff' : '#7b4a1e');
@@ -1406,16 +1470,81 @@ function drawBoss(B, cam, t) {
   // Krone
   cx.fillStyle = '#ffd23f'; cx.beginPath(); cx.moveTo(-8 * s, -22 * s); cx.lineTo(-8 * s, -32 * s); cx.lineTo(-3 * s, -26 * s); cx.lineTo(2 * s, -34 * s); cx.lineTo(7 * s, -26 * s); cx.lineTo(12 * s, -32 * s); cx.lineTo(12 * s, -22 * s); cx.fill();
   circle(2 * s, -26 * s, 1.6 * s, '#ff4f6d');
-  cx.restore();
+  cx.restore(); }
   if (!B.defeated) { // Lebensbalken
     const bw = 150 * s, bx = x - bw / 2, by = y - 130 * s;
     rr(bx, by, bw, 12 * s, 6 * s); cx.fillStyle = '#ffffff88'; cx.fill();
     rr(bx, by, bw * B.hp / B.max, 12 * s, 6 * s); cx.fillStyle = '#c0582c'; cx.fill();
     cx.font = `bold ${16 * Math.max(.8, s)}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'bottom';
-    cx.lineWidth = 4; cx.strokeStyle = '#4e2f12'; cx.strokeText('Blätterkönig', x, by - 4 * s); cx.fillStyle = '#fff'; cx.fillText('Blätterkönig', x, by - 4 * s);
+    cx.lineWidth = 4; cx.strokeStyle = '#4e2f12'; cx.strokeText(BOSSNAME[B.kind], x, by - 4 * s); cx.fillStyle = '#fff'; cx.fillText(BOSSNAME[B.kind], x, by - 4 * s);
   }
 }
 
+// Krakenkönig: riesiger lila Krake mit Krone (wird nach dem Besiegen rosa und lieb)
+function drawKraken(B, x, y, t) {
+  const s = S, good = B.defeated, body = good ? '#ff9ec7' : B.hitT > 0 ? '#ffffff' : '#8a3ad0', dark = good ? '#d9578f' : '#4a1680', spot = good ? '#ffc8de' : '#b37aff';
+  cx.save(); cx.translate(x, y + 20 * s); cx.rotate(good ? Math.sin(B.gone * 3) * 0.25 : Math.sin(t * 1.5) * 0.05);
+  cx.lineCap = 'round'; cx.lineJoin = 'round';
+  for (let k = 0; k < 8; k++) { const bx = (k - 3.5) * 17 * s;
+    cx.strokeStyle = body; cx.lineWidth = (20 - Math.abs(k - 3.5) * 1.5) * s; cx.beginPath(); cx.moveTo(bx, 20 * s);
+    const pts = []; for (let q = 1; q <= 6; q++) { const px = bx + (k - 3.5) * q * 5 * s + Math.sin(t * 3.5 + k + q * 0.9) * 11 * s, py = 20 * s + q * 17 * s; pts.push([px, py]); cx.lineTo(px, py); }
+    cx.stroke(); for (const [px, py] of pts.slice(1, 5)) circle(px, py, 3 * s, spot); }
+  cx.fillStyle = body; cx.beginPath(); cx.ellipse(0, -20 * s, 78 * s, 70 * s, 0, 0, 7); cx.fill();
+  for (const [dx, dy, r] of [[-44, -52, 11], [36, -62, 9], [54, -24, 7], [-58, -14, 6]]) circle(dx * s, dy * s, r * s, spot);
+  if (!good) {
+    for (const d of [-1, 1]) { circle(d * 24 * s, -18 * s, 15 * s, '#fff'); circle(d * 22 * s, -14 * s, 7 * s, '#300'); }
+    cx.strokeStyle = dark; cx.lineWidth = 6 * s; cx.beginPath(); cx.moveTo(-44 * s, -42 * s); cx.lineTo(-12 * s, -30 * s); cx.moveTo(44 * s, -42 * s); cx.lineTo(12 * s, -30 * s); cx.stroke();
+    cx.lineWidth = 5 * s; cx.beginPath(); cx.arc(0, 30 * s, 16 * s, Math.PI * 1.15, Math.PI * 1.85); cx.stroke();
+  } else {
+    cx.strokeStyle = dark; cx.lineWidth = 5 * s;
+    for (const d of [-1, 1]) { cx.beginPath(); cx.arc(d * 24 * s, -14 * s, 10 * s, Math.PI * 1.15, Math.PI * 1.85); cx.stroke(); circle(d * 46 * s, 2 * s, 9 * s, '#ff6fae88'); }
+    cx.beginPath(); cx.arc(0, 4 * s, 16 * s, Math.PI * 0.15, Math.PI * 0.85); cx.stroke();
+  }
+  // Krone
+  cx.fillStyle = '#ffd23f'; cx.beginPath(); cx.moveTo(-30 * s, -78 * s); cx.lineTo(-34 * s, -112 * s); cx.lineTo(-16 * s, -94 * s); cx.lineTo(0, -120 * s); cx.lineTo(16 * s, -94 * s); cx.lineTo(34 * s, -112 * s); cx.lineTo(30 * s, -78 * s); cx.closePath(); cx.fill();
+  circle(0, -96 * s, 5 * s, '#6fd3ff'); circle(-22 * s, -88 * s, 3.5 * s, '#ff4f6d'); circle(22 * s, -88 * s, 3.5 * s, '#ff4f6d');
+  // Blubberblasen
+  for (let i = 0; i < 4; i++) { const q = (t * 0.6 + i / 4) % 1; cx.globalAlpha = 1 - q; cx.strokeStyle = '#ffffffcc'; cx.lineWidth = 2 * s; cx.beginPath(); cx.arc(70 * s + i * 6 * s, -60 * s - q * 90 * s, (4 + i * 1.5) * s, 0, 7); cx.stroke(); }
+  cx.globalAlpha = 1; cx.restore();
+}
+// Blumenfee: schwebt mit Glitzerflügeln und Zauberstab
+function drawFairy(F, x, t) {
+  const s = S * 1.5, gy = groundY(F.x), y = gy - 105 * s + Math.sin(t * 2.5) * 8 * s, c = POWER[F.kind].c, f = 0.7 + Math.abs(Math.sin(t * 9)) * 0.3;
+  cx.save(); cx.globalAlpha = F.got ? 0.85 : 1;
+  // Glanz am Boden
+  cx.fillStyle = c + '33'; cx.beginPath(); cx.ellipse(x, gy + 2 * s, 34 * s, 8 * s, 0, 0, 7); cx.fill();
+  // Flügel
+  for (const d of [-1, 1]) { cx.fillStyle = '#ffffffaa'; cx.strokeStyle = c; cx.lineWidth = 2 * s;
+    cx.beginPath(); cx.ellipse(x + d * 20 * s * f, y - 10 * s, 20 * s * f, 13 * s, d * -0.5, 0, 7); cx.fill(); cx.stroke();
+    cx.beginPath(); cx.ellipse(x + d * 15 * s * f, y + 8 * s, 13 * s * f, 9 * s, d * 0.5, 0, 7); cx.fill(); cx.stroke(); }
+  // Kleid aus Blütenblättern
+  for (let k = 0; k < 5; k++) { const a = Math.PI * 0.15 + k * Math.PI * 0.175; cx.fillStyle = k % 2 ? c : '#ffffff'; cx.beginPath(); cx.ellipse(x + Math.cos(a) * 9 * s, y + 8 * s + Math.sin(a) * 9 * s, 6 * s, 13 * s, a - Math.PI / 2, 0, 7); cx.fill(); }
+  circle(x, y, 8 * s, c);
+  // Kopf mit Blütenkranz
+  circle(x, y - 18 * s, 11 * s, '#ffe0c4');
+  for (let k = 0; k < 7; k++) { const a = Math.PI + k * Math.PI / 6; circle(x + Math.cos(a) * 11 * s, y - 20 * s + Math.sin(a) * 11 * s, 3.5 * s, ['#ff6fae', '#ffd23f', '#c77dff'][k % 3]); }
+  circle(x - 4 * s, y - 18 * s, 1.6 * s, '#333'); circle(x + 4 * s, y - 18 * s, 1.6 * s, '#333'); circle(x - 7 * s, y - 14 * s, 2.2 * s, '#ff9ec788'); circle(x + 7 * s, y - 14 * s, 2.2 * s, '#ff9ec788');
+  cx.strokeStyle = '#a0504f'; cx.lineWidth = 1.5 * s; cx.beginPath(); cx.arc(x, y - 15 * s, 3.5 * s, 0.2, Math.PI - 0.2); cx.stroke();
+  // Zauberstab
+  const wa = Math.sin(t * 4) * 0.4; cx.strokeStyle = '#a0623a'; cx.lineWidth = 2.5 * s; cx.beginPath(); cx.moveTo(x + 9 * s, y + 2 * s);
+  const wx = x + 9 * s + Math.cos(-0.9 + wa) * 26 * s, wy = y + 2 * s + Math.sin(-0.9 + wa) * 26 * s; cx.lineTo(wx, wy); cx.stroke();
+  star5(wx, wy, 7 * s, '#ffd23f', '#fff');
+  for (let i = 0; i < 5; i++) { const q = (t * 0.7 + i / 5) % 1; star4(wx + Math.sin(i * 7 + t) * 14 * s, wy + q * 50 * s, 3 * s * (1 - q), [c, '#fff6a0'][i % 2]); }
+  cx.restore();
+  if (!F.got) { cx.font = `bold ${14 * Math.max(.8, s)}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'bottom';
+    cx.lineWidth = 4; cx.strokeStyle = '#7a1f5c'; cx.strokeText('Blumenfee', x, y - 38 * s); cx.fillStyle = '#fff'; cx.fillText('Blumenfee', x, y - 38 * s); }
+}
+// Zauber an der Blume sichtbar machen
+function drawPowerFx(p, px, gy, t) {
+  if (!st.power) return;
+  const k = st.power.kind, c = POWER[k].c, s = S, cy = gy - p.jumpY - 70 * s + p.digging * 70 * s, end = st.power.t < 3 && Math.floor(st.power.t * 6) % 2 === 0;
+  if (end) return;
+  if (k === 'schild') { cx.fillStyle = '#9fe6ff33'; cx.strokeStyle = '#bff0ffcc'; cx.lineWidth = 3 * s; cx.beginPath(); cx.ellipse(px, cy, 62 * s, 82 * s, 0, 0, 7); cx.fill(); cx.stroke();
+    circle(px - 26 * s, cy - 44 * s, 8 * s, '#ffffff88'); return; }
+  if (k === 'flitz' && (p.keys.left || p.keys.right)) { cx.strokeStyle = c; cx.lineWidth = 3 * s; cx.lineCap = 'round';
+    for (let i = 0; i < 3; i++) { const yy = cy - 30 * s + i * 30 * s, xx = px - p.face * 40 * s; cx.beginPath(); cx.moveTo(xx, yy); cx.lineTo(xx - p.face * (30 + Math.sin(t * 20 + i) * 10) * s, yy); cx.stroke(); } }
+  for (let i = 0; i < 4; i++) { const a = t * 3 + i * Math.PI / 2; star4(px + Math.cos(a) * 46 * s, cy - 30 * s + Math.sin(a) * 20 * s, 4 * s, c); }
+}
 function drawJet(t) {
   const J = st.jet; if (!J) return;
   const s = S, cols = ['#ff4f6d', '#ff9a3c', '#ffd23f', '#5cc85c', '#36b6f0', '#a66bff'];
@@ -1495,6 +1624,13 @@ function hud(t) {
   rr(px, py, pw, 10 * s, 5 * s); cx.fillStyle = '#ffffff55'; cx.fill();
   rr(px, py, pw * Math.min(1, leadX() / w.len), 10 * s, 5 * s); cx.fillStyle = '#ff6fae'; cx.fill();
   star5(px + pw + 14 * s, py + 5 * s, 10 * s, '#ffd23f');
+  if (st.power && st.power.kind !== 'herz') { // Zauber-Abzeichen mit Zeit
+    const pw = POWER[st.power.kind], bx = 14 * s, by = 76 * s + Math.ceil(seedMax() / 5) * 28 * s - 6 * s, bw = 150 * s, bh = 30 * s;
+    rr(bx, by, bw, bh, bh / 2); cx.fillStyle = '#ffffffcc'; cx.fill(); cx.strokeStyle = pw.c; cx.lineWidth = 3; cx.stroke();
+    star4(bx + 16 * s, by + bh / 2, 7 * s, pw.c);
+    cx.fillStyle = '#5a1745'; cx.font = `bold ${13 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'left'; cx.textBaseline = 'middle'; cx.fillText(pw.name, bx + 30 * s, by + bh / 2 - 4 * s);
+    rr(bx + 30 * s, by + bh - 9 * s, (bw - 42 * s) * Math.max(0, st.power.t / st.power.max), 4 * s, 2 * s); cx.fillStyle = pw.c; cx.fill();
+  }
   if (st.msgT > 0) bubble(st.msg, W / 2, Math.max(H * 0.2, 160 * s), Math.min(1, st.msgT));
 }
 function drawSeedSmall(x, y, t) { const s = Math.max(0.75, S); cx.fillStyle = '#9b4dff'; cx.beginPath(); cx.ellipse(x, y, 7 * s, 10 * s, 0, 0, 7); cx.fill(); circle(x - 2 * s, y - 4 * s, 2 * s, '#e9d2ff'); star4(x + 8 * s, y - 8 * s, (1.5 + Math.abs(Math.sin(t * 4)) * 1.5) * s, '#fff6c0'); }
@@ -1695,6 +1831,7 @@ function drawPlay(t) {
       if (st.helperTalk > 0) speech(h.name + ': ' + h.tip, hx, groundY(st.helperX) - 160 * S, st.helperTalk);
   } }
   { const d = players().find(p => p.nearDoor); if (d) bubble(d.nearDoor === HOUSE_X ? '⬆ Ins Blumenhaus gehen' : '⬆ Geheimgang ins Blumenhaus', d.nearDoor - cam, groundY(d.nearDoor) - 200 * S); }
+  if (st.fairy) { const fx = st.fairy.x - cam; if (fx > -100 && fx < W + 100) drawFairy(st.fairy, fx, t); }
   // Samen
   for (const s of st.seedsOnMap) if (!s.got) { const sx = s.x - cam; if (sx > -40 && sx < W + 40) drawSeed(sx, groundY(s.x) - s.up * S + Math.sin(s.t * 2) * 5 * S, s.t); }
   // Blume
@@ -1709,6 +1846,7 @@ function drawPlay(t) {
       drawFlower(px, gy + sink - p.jumpY, kindOf(p), S, { wear: st.wear[p.id], seeds: st.seeds, bob, lean: (p.keys.left || p.keys.right) && p.digging < .3 ? p.face * 0.6 : 0, mood: p.hurt > 0.8 ? 'sad' : 'happy' });
       cx.restore();
     }
+    drawPowerFx(p, px, gy, t);
     if (p.digging > 0.1) { // Erdhügel
       cx.fillStyle = w.dirt; cx.beginPath(); cx.ellipse(px, gy + 4 * S, 40 * S * p.digging, 14 * S * p.digging, 0, Math.PI, 0); cx.fill();
     }
@@ -1777,7 +1915,7 @@ function drawStart(t) {
     st.btns.push({ id, x: x0, y: my, w: mw, h: mh });
   });
   // Land zum Starten (zum Testen)
-  { const nR = 5, lw = Math.min(150 * u, (W - 32 - (nR - 1) * 8) / nR), lh = 28 * u, tot = lw * nR + (nR - 1) * 8;
+  { const nR = 6, lw = Math.min(150 * u, (W - 32 - (nR - 1) * 8) / nR), lh = 28 * u, tot = lw * nR + (nR - 1) * 8;
     WORLDS.forEach((wd, i) => { const x0 = W / 2 - tot / 2 + (i % nR) * (lw + 8), ly = H * 0.15 + 46 * u + Math.floor(i / nR) * (lh + 6 * u), on = (st.startWorld || 0) === i;
       rr(x0, ly, lw, lh, lh / 2); cx.fillStyle = on ? wd.hill : '#ffffff88'; cx.fill(); cx.strokeStyle = on ? '#fff' : wd.hill; cx.lineWidth = 3; cx.stroke();
       cx.fillStyle = on ? '#fff' : '#5a1745'; cx.font = `bold ${14 * u}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
@@ -2106,7 +2244,7 @@ function drawHome(t) {
   if (mode === 'doors') {
     cx.fillStyle = '#5a174566'; cx.fillRect(0, 0, W, H);
     bigText('Durch welche Tür möchtest du gehen?', H * 0.14, 26 * s);
-    const n = 5, gap = 14, dw = Math.min(100 * s, (W - 32 - gap * (n - 1)) / n), dh = dw * 1.3, total = dw * n + gap * (n - 1);
+    const n = 6, gap = 14, dw = Math.min(100 * s, (W - 32 - gap * (n - 1)) / n), dh = dw * 1.3, total = dw * n + gap * (n - 1);
     WORLDS.forEach((wd, i) => {
       const x0 = W / 2 - total / 2 + (i % n) * (dw + gap), y1 = H * 0.21 + dh + Math.floor(i / n) * (dh + 40 * s), y0 = y1 - dh;
       // Türrahmen mit Blick ins Land
@@ -2138,14 +2276,14 @@ function drawAlbum(t, s) {
   rr(bx - 8 * s, by - 8 * s, bw + 16 * s, bh + 16 * s, 22 * s); cx.fillStyle = '#c0477f'; cx.fill();
   rr(bx, by, bw, bh, 16 * s); cx.fillStyle = '#fff8e8'; cx.fill();
   cx.strokeStyle = '#e8c9a8'; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(W / 2, by + 10 * s); cx.lineTo(W / 2, by + bh - 10 * s); cx.stroke();
-  const total = album.seen.reduce((a, v) => a + v, 0) + album.star.reduce((a, v) => a + v, 0) + album.sec.reduce((a, v) => a + (v & 1) + (v >> 1 & 1), 0) + album.boss;
+  const total = album.seen.reduce((a, v) => a + v, 0) + album.star.reduce((a, v) => a + v, 0) + album.sec.reduce((a, v) => a + (v & 1) + (v >> 1 & 1), 0) + album.boss + (album.boss2 || 0);
   cx.fillStyle = '#7a1f5c'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
   cx.font = `bold ${Math.min(30 * s, bw * 0.05)}px "Comic Sans MS", sans-serif`; cx.fillText('📖 Mein Sammelalbum', W / 2, by + 30 * s);
   cx.font = `bold ${Math.min(17 * s, bw * 0.03)}px "Comic Sans MS", sans-serif`; cx.fillStyle = '#a0507f';
-  const maxT = WORLDS.length * 4 + 1;
+  const maxT = WORLDS.length * 4 + 2;
   cx.fillText(total >= maxT ? 'Alles gefunden! Du bist ein Sammel-Profi! 🏆' : 'Schon ' + total + ' von ' + maxT + ' Sachen gefunden!', W / 2, by + 60 * s);
   // Länder: 3 Spalten, 2 Reihen
-  const cols = 5, gx = 10 * s, gy = 12 * s, top = by + 80 * s, cw = (bw - 40 * s - gx * (cols - 1)) / cols, ch = (bh - (top - by) - 20 * s - gy) / 2;
+  const cols = 6, gx = 10 * s, gy = 12 * s, top = by + 80 * s, cw = (bw - 40 * s - gx * (cols - 1)) / cols, ch = (bh - (top - by) - 20 * s - gy) / 2;
   WORLDS.forEach((wd, i) => {
     const x0 = bx + 20 * s + (i % cols) * (cw + gx), y0 = top + Math.floor(i / cols) * (ch + gy), seen = album.seen[i];
     cx.save(); rr(x0, y0, cw, ch, 12 * s);
@@ -2163,13 +2301,14 @@ function drawAlbum(t, s) {
     // Stern + 2 Geheimtüren (+ Blätterkönig auf der Party)
     const icon = Math.min(ch * 0.2, cw * 0.12), iy = y0 + ch * 0.52;
     const items = [['star', album.star[i]], ['door', album.sec[i] & 1], ['door', album.sec[i] >> 1 & 1]];
-    if (WORLDS[i].boss) items.push(['boss', album.boss]);
+    if (WORLDS[i].boss) items.push([WORLDS[i].boss, WORLDS[i].boss === 'krake' ? album.boss2 : album.boss]);
     items.forEach(([k, on], j) => {
       const ix = x0 + cw / 2 + (j - (items.length - 1) / 2) * Math.min(icon * 2.4, (cw - icon * 2.4) / (items.length - 1));
       circle(ix, iy, icon * 1.05, on ? '#ffffffcc' : '#ffffff55');
       cx.globalAlpha = on ? 1 : 0.3;
       if (k === 'star') star5(ix, iy, icon * 0.8, on ? '#ffd23f' : '#888', on ? '#fff' : null);
       else if (k === 'door') { cx.fillStyle = on ? '#a0623a' : '#777'; cx.beginPath(); cx.moveTo(ix - icon * 0.5, iy + icon * 0.7); cx.lineTo(ix - icon * 0.5, iy - icon * 0.2); cx.arc(ix, iy - icon * 0.2, icon * 0.5, Math.PI, 0); cx.lineTo(ix + icon * 0.5, iy + icon * 0.7); cx.fill(); circle(ix + icon * 0.25, iy + icon * 0.2, icon * 0.1, '#ffd23f'); }
+      else if (k === 'krake') { cx.save(); cx.translate(ix, iy); cx.scale(icon / (60 * S), icon / (60 * S)); cx.translate(-ix, -iy); drawOctoMonster(ix, iy + 40 * S, 0); cx.restore(); }
       else { cx.save(); cx.translate(ix, iy); cx.scale(icon / (45 * S), icon / (45 * S)); cx.translate(-ix, -iy); drawLeaf(ix, iy, 0); cx.restore(); }
       cx.globalAlpha = 1;
       if (!on) { cx.fillStyle = '#5a1745'; cx.font = `bold ${icon * 0.9}px "Comic Sans MS", sans-serif`; cx.fillText('?', ix, iy + 1); }
@@ -2187,7 +2326,7 @@ function drawWin(t) {
   for (let i = 0; i < 5; i++) star5(W / 2 + (i - 2) * 90 * S, H * 0.32 + Math.sin(t * 3 + i) * 10 * S, 36 * S, '#ffd23f', '#fff');
   if (st.two) { drawFlower(W / 2 - 90 * S, H * 0.8, st.kind, S * 1.4, { wear: st.wear[0], bob: Math.sin(t * 5) * 8 }); drawFlower(W / 2 + 90 * S, H * 0.8, st.kind2, S * 1.4, { wear: st.wear[1], bob: Math.sin(t * 5 + 1) * 8 }); }
   else drawFlower(W / 2, H * 0.8, st.kind, S * 1.5, { wear: st.wear[0], bob: Math.sin(t * 5) * 8 });
-  bigText('' + (st.two ? 'Hurra! Ihr habt die ganze Welt besucht!' : 'Hurra! Du hast die ganze Welt besucht!') + '', H * 0.14, 34 * S);
+  bigText(st.two ? 'Hurra! Ihr habt Blumen-City erreicht!' : 'Hurra! Du hast Blumen-City erreicht!', H * 0.14, 34 * S);
   for (let i = 0; i < 30; i++) { const a = t * 0.8 + i; star4(W / 2 + Math.cos(a * 1.3) * W * 0.4, (H * 0.5 + Math.sin(a) * H * 0.3), 3 * S, ['#ff6fae', '#c77dff', '#ffd23f'][i % 3]); }
   if (st.screenT > 2) bigText('Tippe, um nochmal zu spielen', H * 0.93, 20 * S, '#fff6c0');
 }
