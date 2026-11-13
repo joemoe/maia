@@ -63,6 +63,8 @@
   #idee label { display: block; font-size: 14px; font-weight: bold; margin: 10px 0 4px; }
   #idee .klein { font-size: 12px; opacity: .7; }
   #ideeMeldung { min-height: 22px; font-weight: bold; }
+  #ideenListe { margin: 4px 0 2px; font-size: 15px; } #ideenListe summary { cursor: pointer; font-weight: bold; }
+  #ideenListe .idee { background: #fff3b0; border: 2px solid var(--ink); border-radius: 12px; padding: 6px 10px; margin-top: 6px; } #ideenListe .idee small { display: block; opacity: .7; }
   #start .ideeLink { margin-top: 8px; background: none; border: 0; color: #fff; font: inherit; font-size: 14px; text-decoration: underline; cursor: pointer; }
   body:not(.ingame) .rund { display: none; }
 
@@ -229,6 +231,7 @@
     <input id="ideeName" maxlength="40" autocomplete="off">
     <p class="klein">Gespeichert werden nur dein Text und der Name, den du hier eintippst. Bitte keine Adressen oder Telefonnummern schreiben.</p>
     <p id="ideeMeldung"></p>
+    <details id="ideenListe"><summary>🎁 Das haben wir aus euren Ideen gemacht</summary><div id="ideenInhalt"></div></details>
     <button class="knopf" id="ideeSenden">Abschicken 📮</button><button class="knopf grau" id="ideeZu">Zurück</button>
   </div>
 </div>
@@ -1019,6 +1022,11 @@ function zeichnePass() {
 function togglePass() { passOn = !passOn; if (passOn) zeichnePass(); document.getElementById('pass').classList.toggle('on', passOn); for (const k in keys) keys[k] = false; }
 /* Anregungen: werden in einer Tabelle gespeichert, in die das Spiel nur schreiben darf */
 const ANREGUNG = { url: 'https://lfiadqrbacphpoeihfpg.supabase.co', key: 'sb_publishable_Nd6UwPbp1kpRb1AOu5aKbA_K8Zwgwsi', tabelle: 'schwarzach_anregungen' };
+// Umgesetzte Ideen: hier eintragen, sobald eine Anregung im Spiel gelandet ist. { was: 'Was neu ist', von: 'Spitzname' oder '', wann: 'November 2026' }
+const UMGESETZT = [];
+document.getElementById('ideenInhalt').innerHTML = UMGESETZT.length
+  ? UMGESETZT.map(u => '<div class="idee">' + u.was + '<small>Idee von ' + (u.von || 'einem Kind aus Schwarzach') + (u.wann ? ' · ' + u.wann : '') + '</small></div>').join('')
+  : '<p>Noch ist keine Idee im Spiel gelandet. Deine könnte die erste sein! Wenn wir eine Idee einbauen, steht sie hier, mit deinem Spitznamen als Dankeschön.</p>';
 let ideeVonPass = false, ideeZeit = 0;
 function ideeAuf(vonPass) { ideeVonPass = !!vonPass; if (passOn) togglePass(); ideeOn = true; document.getElementById('idee').classList.add('on'); document.getElementById('ideeMeldung').textContent = ''; for (const k in keys) keys[k] = false;
   try { document.getElementById('ideeName').value = localStorage.getItem('schwarzach-name') || ''; } catch (e) {} setTimeout(() => document.getElementById('ideeText').focus(), 50); }
