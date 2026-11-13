@@ -127,6 +127,27 @@ function nightAmt() {
   const q = (st.dayT || 0) % DAY;
   return q < 90 ? 0 : q < 100 ? (q - 90) / 10 : q < 140 ? 1 : 1 - (q - 140) / 10;
 }
+// Blumen-City: in manchen Häuschen wohnen Blumen aus allen Ländern, man kann sie besuchen
+const RESIDENTS = [
+  ['gaensebluemchen', 'Gänseblümchen', 0, 'Hallo! Ich komme aus dem Wald. Dort habe ich dir gezeigt, wie man sich eingräbt. Weißt du noch?'],
+  ['loewenzahn', 'Löwenzahn', 1, 'Schön, dass du da bist! Auf der Wiese puste ich meine Schirmchen in den Wind. Hui!'],
+  ['hibiskus', 'Hibiskus', 2, 'Aloha! Ich vermisse den Strand ein bisschen. Aber hier in der Stadt gibt es so viele Freunde!'],
+  ['kaktusbluete', 'Kaktusblüte', 3, 'Willkommen! Ich brauche fast kein Wasser. Aber ein Besuch freut mich immer!'],
+  ['schneegloeckchen', 'Schneeglöckchen', 4, 'Brrr, hier ist es schön warm! Möchtest du einen heißen Kakao?'],
+  ['regenbogenblume', 'Regenbogenblume', 6, 'Hallo! Weißt du, welche Farbe ich am liebsten mag? Alle!'],
+  ['zuckerblume', 'Zuckerblume', 7, 'Mmmh, ich backe gerade Blumenkekse. Riechst du das?'],
+  ['mondblume', 'Mondblume', 8, 'Psst, ich bin ein bisschen müde. Ich bin ja die ganze Nacht wach gewesen!'],
+  ['seerose', 'Seeanemone', 9, 'Blubb! Ich wohne in einem Haus mit einem großen Aquarium. Schau mal, die Fische!'],
+];
+function cityHouse(i) { return Math.abs(Math.sin(i * 12.9898) * 43758.5) % 1 > 0.62; }
+function enterVisit(i) {
+  const res = RESIDENTS[Math.abs(i) % RESIDENTS.length];
+  st.visited = st.visited || {}; let gift = null;
+  if (!st.visited[i]) { st.visited[i] = 1; if (st.hearts < 4) { st.hearts++; gift = 'heart'; } else if (st.seeds < seedMax()) { st.seeds = Math.min(seedMax(), st.seeds + 2); gift = 'seed'; } }
+  st.visit = { i, res, t: 0, gift }; st.screen = 'visit'; for (const p of P) Object.assign(p.keys, mkKeys());
+  beep(880, .1, 'triangle'); setTimeout(() => beep(660, .12, 'triangle'), 140); // Klopf klopf
+}
+function leaveVisit() { st.screen = 'play'; st.visit = null; say('Tschüss! Komm bald wieder!'); }
 const hasPower = k => st.power && st.power.kind === k;
 const RAINBOW = ['#ff6b6b', '#ffb347', '#ffe66b', '#7ee081', '#6fc3ff', '#b58cff'];
 const FLY = new Set(['leaf', 'wolke', 'fleder', 'hai', 'qualle']); // diese Gegner fliegen/schwimmen
@@ -160,6 +181,7 @@ function startWorld(i, fromX) {
   }
   if (w.deco === 'schnee' && st.secrets[1]) st.stormAt = st.secrets[1].x - 900; // Schneesturm, kurz vor dem 2. Geheimgang
   st.shots = [];
+  st.rain = null; st.rainT = 30 + Math.random() * 30; st.grow = 1; st.rainbowT = 0; st.visited = {};
   { const kr = w.boss === 'krake', hp = kr ? (st.two ? 7 : 10) : (st.two ? 6 : 8);
     st.boss = w.boss ? { kind: w.boss, x: kr ? w.len - 1100 : 1700, hp, max: hp, t: 0, atk: 4, hitT: 0, gone: 0, defeated: false, seedT: 0, intro: false } : null; }
   st.flakes = [];
@@ -313,6 +335,7 @@ function mapKey(e) {
 addEventListener('keydown', e => {
   if (e.key === 'm' || e.key === 'M') { toggleMusic(); return; }
   if (e.key === 'Escape' && (st.screen === 'play' || st.screen === 'star' || st.screen === 'win' || (st.screen === 'home' && st.homeMode === 'menu'))) { toStart(); return; }
+  if (st.screen === 'visit') { if (st.visit.t > 0.6 && ['Enter', ' ', 'Escape', 'ArrowUp', 'ArrowDown', 'w', 's', 'Backspace'].includes(e.key)) leaveVisit(); return; }
   if (st.screen === 'home') {
     const m = st.homeMode === 'cook' ? ({ '1': 'ing0', '2': 'ing1', '3': 'ing2', '4': 'ing3', '5': 'ing4', '6': 'ing5', Enter: 'cookgo', ' ': 'cookgo', Escape: 'back', Backspace: 'back' }[e.key])
       : st.homeMode === 'album' ? ({ Escape: 'back', Backspace: 'back', Enter: 'back' }[e.key]) : st.homeMode === 'doors'
@@ -369,6 +392,7 @@ function onTapScreen(e) {
   } else if (st.screen === 'home') {
     if ((st.homeMode !== 'menu' && st.homeMode !== 'doors' && st.homeMode !== 'ward' && st.homeMode !== 'swap' && st.homeMode !== 'album' && st.homeMode !== 'cook') || !e) return;
     for (const b of st.btns) if (e.clientX > b.x && e.clientX < b.x + b.w && e.clientY > b.y && e.clientY < b.y + b.h) homeAction(b.id);
+  } else if (st.screen === 'visit') { if (st.visit.t > 0.6) leaveVisit();
   } else if (st.screen === 'star' && st.screenT > 1) {
     if (st.world + 1 < WORLDS.length) startWorld(st.world + 1); else { st.screen = 'win'; st.screenT = 0; sfx.star(); }
   } else if (st.screen === 'win' && st.screenT > 2) {
@@ -445,6 +469,7 @@ function begin() { st.dayT = 0; st.power = null; st.hearts = 4; st.seeds = 0; st
 function tryHop(p) {
   if (st.screen !== 'play' || (p.jumpY > 0 && !onObstacle(p)) || p.digging > 0.2) return;
   if (p.nearDoor) { st.returnX = p.nearDoor; goHome('visit'); return; }
+  if (p.nearHouse != null) { enterVisit(p.nearHouse); return; }
   if (st.seeds > 0 || hasPower('huepf')) {
     if (!hasPower('huepf')) st.seeds--; p.vy = 640 * S; p.jumpY = Math.max(0.01, p.jumpY); sfx.hop();
     for (let i = 0; i < 12; i++) st.sparkles.push(spark(p.x, groundY(p.x) - 10 * S, '#c77dff'));
@@ -476,6 +501,7 @@ function update(dt) {
     }
     return;
   }
+  if (st.screen === 'visit') { st.visit.t += dt; return; }
   if (st.screen !== 'play') return;
   const w = WORLDS[st.world];
   const speed = 210 * S * (hasPower('flitz') ? 1.6 : 1);
@@ -509,7 +535,8 @@ function update(dt) {
     if (p.jumpY > 0) { p.jumpY += p.vy * dt; p.vy -= 1500 * S * dt;
       for (const o of st.obst) if (Math.abs(p.x - o.x) < obHalf(o) && p.vy < 0 && p.jumpY < o.h * S && oldJ >= o.h * S - 3) { p.jumpY = o.h * S; p.vy = 0; } // oben drauf landen
       if (p.jumpY <= 0) { p.jumpY = 0; p.vy = 0; } }
-    p.nearDoor = 0;
+    p.nearDoor = 0; p.nearHouse = null;
+    if (w.deco === 'city' && p.digging < .3 && p.jumpY <= 0) { const hi = Math.round((p.x - 90) / 260); if (cityHouse(hi) && Math.abs(p.x - (hi * 260 + 90)) < 60) p.nearHouse = hi; }
     if (p.digging < .3 && p.jumpY <= 0) {
       if (st.world === 0 && Math.abs(p.x - HOUSE_X) < 110) p.nearDoor = HOUSE_X;
       for (const sc of st.secrets) if (Math.abs(p.x - sc.x) < 60) {
@@ -637,6 +664,14 @@ function update(dt) {
   st.leaves = st.leaves.filter(L => L.x > st.camX - 100);
   for (const o of st.obst) o.t += dt;
 
+  // Regen: ab und zu regnet es, dann wachsen die kleinen Blumen am Boden
+  if (!st.rain && !st.storm && w.deco !== 'wasser' && w.deco !== 'schnee') {
+    st.rainT -= dt;
+    if (st.rainT <= 0) { st.rain = { t: 0, dur: 16 }; say('Es regnet! Schau mal, die Blumen wachsen!'); }
+  }
+  if (st.rain) { st.rain.t += dt; st.grow = Math.min(2.4, st.grow + dt * 0.05);
+    if (st.rain.t > st.rain.dur) { st.rain = null; st.rainT = 50 + Math.random() * 50; st.rainbowT = 10; say('Der Regen ist vorbei. Da, ein Regenbogen!'); } }
+  if (st.rainbowT > 0) st.rainbowT -= dt;
   // Schneesturm am Schneeberg: eingraben oder ins Blumenhaus, sonst wird es kalt
   if (st.stormAt && !st.storm && lead > st.stormAt) {
     st.storm = { t: 0, warn: 4, dur: 14, cold: [0, 0] }; st.stormAt = null;
@@ -1290,12 +1325,12 @@ function smallFlowers(w, cam, t) {
     const n = r > 0.75 ? 3 : 2, base = i * step + 220;
     if (st.world === 0 && base < 900) continue;
     for (let k = 0; k < n; k++) {
-      const wx = base + k * 22, fx = wx - cam, fy = groundY(wx) + 3, h = (14 + ((i + k) % 3) * 5) * s, sw = Math.sin(t * 2 + i + k) * 2 * s;
+      const gr = st.grow || 1, wx = base + k * 22, fx = wx - cam, fy = groundY(wx) + 3, h = (14 + ((i + k) % 3) * 5) * s * gr, sw = Math.sin(t * 2 + i + k) * 2 * s * gr, hs = 1 + (gr - 1) * 0.5;
       cx.strokeStyle = w.deco === 'schnee' ? '#6aa86a' : '#3a8f3a'; cx.lineWidth = 2.5 * s; cx.lineCap = 'round';
       cx.beginPath(); cx.moveTo(fx, fy); cx.quadraticCurveTo(fx, fy - h / 2, fx + sw, fy - h); cx.stroke();
       const c = cols[(i + k) % cols.length], hx = fx + sw, hy = fy - h;
       if (w.deco === 'schnee') { cx.fillStyle = c; cx.beginPath(); cx.ellipse(hx, hy + 4 * s, 4 * s, 6 * s, 0, 0, 7); cx.fill(); } // Schneeglöckchen
-      else { for (let p = 0; p < 5; p++) { const a = p * 1.2566 + t * 0.3; circle(hx + Math.cos(a) * 4.5 * s, hy + Math.sin(a) * 4.5 * s, 3.6 * s, c); } circle(hx, hy, 2.6 * s, '#ffb000'); }
+      else { for (let p = 0; p < 5; p++) { const a = p * 1.2566 + t * 0.3; circle(hx + Math.cos(a) * 4.5 * s * hs, hy + Math.sin(a) * 4.5 * s * hs, 3.6 * s * hs, c); } circle(hx, hy, 2.6 * s * hs, '#ffb000'); }
     }
   }
 }
@@ -1557,6 +1592,41 @@ function drawPowerFx(p, px, gy, t) {
     for (let i = 0; i < 3; i++) { const yy = cy - 30 * s + i * 30 * s, xx = px - p.face * 40 * s; cx.beginPath(); cx.moveTo(xx, yy); cx.lineTo(xx - p.face * (30 + Math.sin(t * 20 + i) * 10) * s, yy); cx.stroke(); } }
   for (let i = 0; i < 4; i++) { const a = t * 3 + i * Math.PI / 2; star4(px + Math.cos(a) * 46 * s, cy - 30 * s + Math.sin(a) * 20 * s, 4 * s, c); }
 }
+// Besuch bei einer Blume in Blumen-City
+function drawVisit(t) {
+  const V = st.visit, [kind, name, land, text] = V.res, L = WORLDS[land], s = S, fy = H * 0.82;
+  const g = cx.createLinearGradient(0, 0, 0, fy); g.addColorStop(0, L.sky[1]); g.addColorStop(1, '#fff8f0'); cx.fillStyle = g; cx.fillRect(0, 0, W, fy);
+  for (let x = 20 * s; x < W; x += 60 * s) circle(x, H * 0.08 + (x / (60 * s) % 2) * 20 * s, 5 * s, L.hill + '55'); // Tapete mit Punkten
+  cx.fillStyle = '#c98f5a'; cx.fillRect(0, fy, W, H - fy); cx.strokeStyle = '#a8703e'; cx.lineWidth = 2;
+  for (let y = fy + 22 * s; y < H; y += 22 * s) { cx.beginPath(); cx.moveTo(0, y); cx.lineTo(W, y); cx.stroke(); }
+  // Fenster mit Blick ins Heimatland
+  const wx = W * 0.5, wy = H * 0.24, ww = Math.min(220 * s, W * 0.3), wh = ww * 0.75;
+  cx.save(); rr(wx - ww / 2, wy, ww, wh, 16 * s); const wg = cx.createLinearGradient(0, wy, 0, wy + wh); wg.addColorStop(0, L.sky[0]); wg.addColorStop(1, L.sky[1]); cx.fillStyle = wg; cx.fill(); cx.clip();
+  cx.fillStyle = L.hill2; cx.beginPath(); cx.ellipse(wx - ww * 0.2, wy + wh, ww * 0.6, wh * 0.4, 0, 0, 7); cx.fill();
+  cx.fillStyle = L.ground; cx.fillRect(wx - ww / 2, wy + wh * 0.85, ww, wh * 0.2); circle(wx + ww * 0.3, wy + wh * 0.25, 14 * s, L.deco === 'nacht' ? '#fff6c8' : '#fff3a0'); cx.restore();
+  cx.strokeStyle = '#fff'; cx.lineWidth = 8 * s; rr(wx - ww / 2, wy, ww, wh, 16 * s); cx.stroke(); cx.beginPath(); cx.moveTo(wx, wy); cx.lineTo(wx, wy + wh); cx.moveTo(wx - ww / 2, wy + wh / 2); cx.lineTo(wx + ww / 2, wy + wh / 2); cx.stroke();
+  cx.fillStyle = '#ff9ec7'; cx.fillRect(wx - ww / 2 - 26 * s, wy - 8 * s, 22 * s, wh + 16 * s); cx.fillRect(wx + ww / 2 + 4 * s, wy - 8 * s, 22 * s, wh + 16 * s); // Vorhänge
+  // Teppich, Tisch mit Tasse und Blumenvase
+  cx.fillStyle = L.hill + 'aa'; cx.beginPath(); cx.ellipse(W * 0.5, fy + 30 * s, W * 0.32, 26 * s, 0, 0, 7); cx.fill();
+  const tx = W * 0.5; cx.fillStyle = '#a0623a'; rr(tx - 70 * s, fy - 70 * s, 140 * s, 14 * s, 6 * s); cx.fill(); cx.fillRect(tx - 60 * s, fy - 58 * s, 10 * s, 58 * s); cx.fillRect(tx + 50 * s, fy - 58 * s, 10 * s, 58 * s);
+  rr(tx - 40 * s, fy - 92 * s, 22 * s, 22 * s, 4 * s); cx.fillStyle = '#fff'; cx.fill(); cx.strokeStyle = '#fff'; cx.lineWidth = 3 * s; cx.beginPath(); cx.arc(tx - 16 * s, fy - 82 * s, 6 * s, -1.2, 1.2); cx.stroke();
+  for (let k = 0; k < 3; k++) { const q = (t * 0.5 + k / 3) % 1; cx.globalAlpha = 1 - q; cx.strokeStyle = '#ffffff'; cx.lineWidth = 2 * s; cx.beginPath(); cx.moveTo(tx - 30 * s + k * 5 * s, fy - 96 * s - q * 30 * s); cx.quadraticCurveTo(tx - 24 * s + k * 5 * s, fy - 104 * s - q * 30 * s, tx - 30 * s + k * 5 * s, fy - 112 * s - q * 30 * s); cx.stroke(); } cx.globalAlpha = 1;
+  rr(tx + 18 * s, fy - 96 * s, 20 * s, 26 * s, 8 * s); cx.fillStyle = '#6fd3ff'; cx.fill(); for (const [dx, c] of [[-6, '#ff6fae'], [6, '#ffd23f'], [0, '#c77dff']]) { cx.strokeStyle = '#3a9a40'; cx.lineWidth = 2 * s; cx.beginPath(); cx.moveTo(tx + 28 * s, fy - 94 * s); cx.lineTo(tx + 28 * s + dx * s, fy - 116 * s); cx.stroke(); circle(tx + 28 * s + dx * s, fy - 118 * s, 6 * s, c); }
+  // Bewohnerin und Besuch
+  const hs = Math.min(1.5 * s, W / 600);
+  drawHelper(W * 0.78, fy + 6 * s, kind, t * 2, hs);
+  if (st.two) { drawFlower(W * 0.16, fy + 4 * s, st.kind, hs * 0.85, { wear: st.wear[0], bob: Math.sin(t * 4) * 4 }); drawFlower(W * 0.28, fy + 4 * s, st.kind2, hs * 0.85, { wear: st.wear[1], bob: Math.sin(t * 4 + 1) * 4 }); }
+  else drawFlower(W * 0.22, fy + 4 * s, st.kind, hs * 0.9, { wear: st.wear[0], bob: Math.sin(t * 4) * 4 });
+  bigText('Zu Besuch bei ' + name, H * 0.1, Math.min(30 * s, W * 0.06));
+  const a = Math.min(1, V.t * 2);
+  speech(name + ': ' + text, W * 0.72, fy - 175 * hs, a);
+  if (V.gift && V.t > 1) { const gy = H * 0.2 + Math.sin(t * 3) * 4 * s, gx = W * 0.5; const p = Math.min(1, (V.t - 1) * 2);
+    rr(gx - 120 * s, gy - 18 * s, 240 * s, 36 * s, 18 * s); cx.fillStyle = '#ffffffdd'; cx.fill();
+    if (V.gift === 'heart') heart(gx - 95 * s, gy, 11 * s * p, true); else drawSeedSmall(gx - 95 * s, gy, t);
+    cx.fillStyle = '#7a1f5c'; cx.font = `bold ${15 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    cx.fillText(V.gift === 'heart' ? 'Geschenk: ein Herz!' : 'Geschenk: zwei Samen!', gx + 10 * s, gy + 1); }
+  if (V.t > 1) bigText('Tippe, um wieder rauszugehen', H * 0.95, 18 * S, '#fff6c0');
+}
 function drawJet(t) {
   const J = st.jet; if (!J) return;
   const s = S, cols = ['#ff4f6d', '#ff9a3c', '#ffd23f', '#5cc85c', '#36b6f0', '#a66bff'];
@@ -1701,6 +1771,9 @@ function sky(w) {
     { const mx = W * 0.62, my = H * 0.13; cx.globalAlpha = nn * 0.25; circle(mx, my, 54 * S, '#fff6c8'); cx.globalAlpha = nn; circle(mx, my, 34 * S, '#fff6c8'); circle(mx - 10 * S, my - 8 * S, 7 * S, '#efe2a8'); circle(mx + 12 * S, my + 6 * S, 5 * S, '#efe2a8'); circle(mx + 2 * S, my + 16 * S, 4 * S, '#efe2a8'); }
     cx.globalAlpha = 1;
   }
+  if (st.screen === 'play' && st.rainbowT > 0) { cx.globalAlpha = Math.min(1, st.rainbowT / 2, (10 - st.rainbowT) / 1.5) * 0.7;
+    for (let k = 0; k < 6; k++) { cx.strokeStyle = RAINBOW[k]; cx.lineWidth = 12 * S; cx.beginPath(); cx.arc(W * 0.45, H * 0.75, (W * 0.38 - k * 12 * S), Math.PI, 0); cx.stroke(); }
+    cx.globalAlpha = 1; }
   cx.globalAlpha = 1 - nn;
   circle(W * 0.82, H * 0.2, 46 * S, w.deco === 'wueste' ? '#fff3a0' : '#fff7b0');
   cx.globalAlpha = 1 - nn * 0.6;
@@ -1853,6 +1926,7 @@ function drawPlay(t) {
       const h = w.helper; drawHelper(hx, groundY(st.helperX) + 4, h.kind, t, S);
       if (st.helperTalk > 0) speech(h.name + ': ' + h.tip, hx, groundY(st.helperX) - 160 * S, st.helperTalk);
   } }
+  { const h = players().find(p => p.nearHouse != null && !p.nearDoor); if (h) bubble('⬆ Klopf klopf! Besuch machen', h.nearHouse * 260 + 90 - cam, groundY(h.nearHouse * 260 + 90) - 170 * S); }
   { const d = players().find(p => p.nearDoor); if (d) bubble(d.nearDoor === HOUSE_X ? '⬆ Ins Blumenhaus gehen' : '⬆ Geheimgang ins Blumenhaus', d.nearDoor - cam, groundY(d.nearDoor) - 200 * S); }
   if (st.fairy) { const fx = st.fairy.x - cam; if (fx > -100 && fx < W + 100) drawFairy(st.fairy, fx, t); }
   // Samen
@@ -1912,6 +1986,14 @@ function drawPlay(t) {
     }
     if (p.jumpY > 12 * S && p.digging < 0.1) drawFeet(p.x - cam, groundY(p.x) - p.jumpY + 4 * S, kindOf(p), t, Math.min(1, (p.jumpY - 12 * S) / (20 * S)), false); // beim Springen
   }
+  if (st.rain) { const R2 = st.rain, a = Math.max(0, Math.min(1, R2.t / 2, (R2.dur - R2.t) / 2)), now = performance.now() / 1000;
+    cx.fillStyle = `rgba(70,80,110,${0.22 * a})`; cx.fillRect(0, 0, W, H);
+    for (let i = 0; i < 9; i++) { const x = ((i * 170 - cam * 0.15) % (W + 200) + W + 200) % (W + 200) - 100, y = 10 * S + (i % 2) * 18 * S; cx.globalAlpha = a; // Regenwolken
+      circle(x, y, 34 * S, '#8f9bb0'); circle(x + 36 * S, y - 10 * S, 40 * S, '#9aa6ba'); circle(x + 74 * S, y, 32 * S, '#8f9bb0'); }
+    cx.strokeStyle = '#d6ecff'; cx.lineWidth = 2 * S; cx.lineCap = 'round'; cx.globalAlpha = 0.75 * a;
+    for (let i = 0; i < 110; i++) { const x = ((i * 97.3 + now * 60 * S - cam * 0.9) % (W + 40) + W + 40) % (W + 40) - 20, y = ((i * 53.1 + now * 700 * S) % (H + 40)) - 20;
+      cx.beginPath(); cx.moveTo(x, y); cx.lineTo(x - 3 * S, y + 16 * S); cx.stroke(); }
+    cx.globalAlpha = 1; }
   { const nn = nightAmt(); if (nn > 0) { // Nacht: alles wird dunkler, Glühwürmchen leuchten
     cx.fillStyle = `rgba(15,18,70,${0.42 * nn})`; cx.fillRect(0, 0, W, H);
     const now = performance.now() / 1000;
@@ -2373,6 +2455,7 @@ function loop(now) {
   else if (st.screen === 'play') drawPlay(t);
   else if (st.screen === 'star') drawStar(t);
   else if (st.screen === 'home') drawHome(t);
+  else if (st.screen === 'visit') drawVisit(t);
   else drawWin(t);
   requestAnimationFrame(loop);
 }
