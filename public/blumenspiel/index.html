@@ -58,7 +58,7 @@ const WORLDS = [
   { name: 'Wald', sky: ['#8fd3ff', '#d9f4ff'], hill: '#4f9a4a', hill2: '#3a7d3c', ground: '#5cb85c', dirt: '#7a4e2d', deco: 'wald', len: 12000,
     foes: ['leaf'], helper: { kind: 'gaensebluemchen', name: 'Gänseblümchen', tip: 'Hallo! Halte ⬇ gedrückt, dann gräbst du dich ein. Das kostet einen lila Samen. Die Blätter fliegen dann über dich drüber!' } },
   { name: 'Wiese', sky: ['#7ec8ff', '#fff3c4'], hill: '#8fd16a', hill2: '#6dbb55', ground: '#9be07a', dirt: '#8a5a33', deco: 'wiese', len: 13000,
-    foes: ['leaf'], helper: { kind: 'loewenzahn', name: 'Löwenzahn', tip: 'Lila Samen sind kostbar! Mit jedem Samen kannst du einmal hüpfen oder dich einmal eingraben.' } },
+    foes: ['blumi', 'blumi', 'leaf'], helper: { kind: 'loewenzahn', name: 'Löwenzahn', tip: 'Vorsicht, hier stampft ein böses Blumenmonster herum! Hüpf drüber oder grab dich ein. Jeder lila Samen hilft dir einmal.' } },
   { name: 'Strand', sky: ['#5ec2ff', '#ffe9c9'], hill: '#3fb5d6', hill2: '#2a9cc4', ground: '#f6dc9a', dirt: '#d9b46a', deco: 'strand', len: 14000,
     foes: ['meer', 'meer', 'leaf'], helper: { kind: 'hibiskus', name: 'Hibiskus', tip: 'Huhu! Vorsicht, aus dem Wasser kriecht ein gemeines Meermonster! Hüpf drüber oder grab dich ein.' } },
   { name: 'Wüste', sky: ['#ffb36b', '#ffe6a8'], hill: '#e9b35f', hill2: '#d89a45', ground: '#f3c977', dirt: '#c98f45', deco: 'wueste', len: 15000,
@@ -872,6 +872,38 @@ function drawTroll(x, y, t) {
   cx.fillStyle = '#fff'; cx.beginPath(); cx.moveTo(x - 6 * s, y - 29 * s); cx.lineTo(x - 2 * s, y - 36 * s); cx.lineTo(x + 1 * s, y - 29 * s); cx.fill();
 }
 
+// böses Blumenmonster (Wiese): stampft auf Blattfüßen, großer Blütenkopf mit Zähnen
+function drawFlowerMonster(x, y, t) {
+  const s = S, step = Math.sin(t * 8) * 5 * s, chomp = Math.abs(Math.sin(t * 5));
+  // Blattfüße
+  cx.fillStyle = '#3e8e3e';
+  cx.beginPath(); cx.ellipse(x - 13 * s, y - 5 * s + Math.min(0, step), 14 * s, 6 * s, -0.2, 0, 7); cx.fill();
+  cx.beginPath(); cx.ellipse(x + 13 * s, y - 5 * s + Math.min(0, -step), 14 * s, 6 * s, 0.2, 0, 7); cx.fill();
+  // dicker Stiel mit Dornen und Blattarmen
+  cx.strokeStyle = '#3e8e3e'; cx.lineWidth = 12 * s; cx.lineCap = 'round';
+  cx.beginPath(); cx.moveTo(x, y - 8 * s); cx.quadraticCurveTo(x - 6 * s, y - 30 * s, x, y - 50 * s); cx.stroke();
+  cx.fillStyle = '#2d6b2d'; for (const [dx, dy] of [[-6, -20], [5, -32], [-5, -42]]) { cx.beginPath(); cx.moveTo(x + dx * s, y + dy * s); cx.lineTo(x + (dx + Math.sign(dx) * 8) * s, y + (dy - 3) * s); cx.lineTo(x + dx * s, y + (dy - 6) * s); cx.fill(); }
+  const wave = Math.sin(t * 6) * 0.4;
+  cx.fillStyle = '#4caf50';
+  for (const d of [-1, 1]) { cx.save(); cx.translate(x + d * 4 * s, y - 34 * s); cx.rotate(d * (-0.6 + wave * d)); cx.beginPath(); cx.ellipse(d * 18 * s, 0, 18 * s, 7 * s, 0, 0, 7); cx.fill(); cx.restore(); }
+  // Blütenkopf: spitze, dunkle Blätter
+  const hy = y - 72 * s;
+  for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2 + Math.sin(t * 3) * 0.05; cx.fillStyle = i % 2 ? '#8e1f6b' : '#b0277f';
+    cx.beginPath(); cx.moveTo(x + Math.cos(a - 0.3) * 18 * s, hy + Math.sin(a - 0.3) * 18 * s); cx.lineTo(x + Math.cos(a) * 38 * s, hy + Math.sin(a) * 38 * s); cx.lineTo(x + Math.cos(a + 0.3) * 18 * s, hy + Math.sin(a + 0.3) * 18 * s); cx.fill(); }
+  circle(x, hy, 24 * s, '#d94fa0');
+  // böse Augen
+  circle(x - 9 * s, hy - 8 * s, 6 * s, '#fff'); circle(x + 9 * s, hy - 8 * s, 6 * s, '#fff');
+  circle(x - 10 * s, hy - 7 * s, 3 * s, '#300'); circle(x + 8 * s, hy - 7 * s, 3 * s, '#300');
+  cx.strokeStyle = '#4a0f38'; cx.lineWidth = 3.5 * s; cx.lineCap = 'round';
+  cx.beginPath(); cx.moveTo(x - 17 * s, hy - 19 * s); cx.lineTo(x - 4 * s, hy - 13 * s); cx.stroke();
+  cx.beginPath(); cx.moveTo(x + 17 * s, hy - 19 * s); cx.lineTo(x + 4 * s, hy - 13 * s); cx.stroke();
+  // Maul, das auf und zu schnappt
+  const mh = (4 + chomp * 7) * s;
+  cx.fillStyle = '#4a0f38'; cx.beginPath(); cx.ellipse(x, hy + 9 * s, 13 * s, mh, 0, 0, 7); cx.fill();
+  cx.fillStyle = '#fff';
+  for (const d of [-8, -1, 6]) { cx.beginPath(); cx.moveTo(x + d * s, hy + 9 * s - mh); cx.lineTo(x + (d + 2.5) * s, hy + 9 * s - mh + 5 * s); cx.lineTo(x + (d + 5) * s, hy + 9 * s - mh); cx.fill(); }
+  for (const d of [-5, 2]) { cx.beginPath(); cx.moveTo(x + d * s, hy + 9 * s + mh); cx.lineTo(x + (d + 2.5) * s, hy + 9 * s + mh - 5 * s); cx.lineTo(x + (d + 5) * s, hy + 9 * s + mh); cx.fill(); }
+}
 function drawSeaMonster(x, y, t) {
   const s = S, sq = Math.sin(t * 7) * 0.06;
   // Tentakel
@@ -1497,6 +1529,7 @@ function drawPlay(t) {
     if (L.type === 'leaf') drawLeaf(L.x - cam, L.y, L.t);
     else if (L.type === 'troll') drawTroll(L.x - cam, L.y + 4 * S, L.t);
     else if (L.type === 'meer') drawSeaMonster(L.x - cam, L.y + 4 * S, L.t);
+    else if (L.type === 'blumi') drawFlowerMonster(L.x - cam, L.y + 4 * S, L.t);
     else drawYeti(L.x - cam, L.y + 4 * S, L.t);
   }
   drawGround(w, cam);
