@@ -230,7 +230,7 @@ function textPlane(text, w, h, opts = {}){
 }
 
 // world size
-const ZB = -14, ZF = 14, JZ = 34, END_X = 375, CITY0 = 398, CITY1 = 523;
+const ZB = -14, ZF = 14, JZ = 34, END_X = 375, CITY0 = 398, CITY1 = 640;
 const HOME = {x: 505, z: -7.4};
 // the giant lake: the meadow opens towards the front between LZ.x0 and LZ.x1
 const LAKE = {x: 292, z: 29, rx: 19, rz: 9, deep: .5, isle: 2.6};
@@ -250,6 +250,7 @@ const WILD = [
   {kind: 'schildkroete', x: 284, z: 27, r: 3.5}, {kind: 'schildkroete', x: 300, z: 32, r: 3.5}, {kind: 'schildkroete', x: 292, z: 29, r: .8}, {kind: 'schildkroete', x: 279, z: 33, r: 2.5},
   {kind: 'tiger', x: 240, z: 30, r: 4}, {kind: 'tiger', x: 335, z: 15, r: 4}, {kind: 'gorilla', x: 165, z: 12, r: 3}, {kind: 'gorilla', x: 95, z: 28, r: 3},
   {kind: 'faultier', x: 61.8, z: 5.6, perch: 11}, {kind: 'faultier', x: 272.8, z: 8.6, perch: 12}, {kind: 'faultier', x: 26, z: 30, r: 1.5}, {kind: 'chamaeleon', x: 175, z: -4, r: 2}, {kind: 'chamaeleon', x: 245, z: 20, r: 2},
+  {kind: 'tukan', x: 588.6, z: -5.8, captive: [150, 22], cr: 1.1}, {kind: 'gorilla', x: 616, z: -5.6, captive: [160, 14], cr: 1.3},
   {kind: 'loewe', x: 508.6, z: -5.8, captive: [352, 26], cr: 1.25}, {kind: 'zebra', x: 501.4, z: -5.8, captive: [120, 27], cr: 1.25},
   {kind: 'krokodil', x: 456.5, z: 11, captive: [284, 31], cr: 1.25}, {kind: 'affe', x: 424.5, z: -5.8, captive: [60, 28], cr: 1.1}
 ];
@@ -330,6 +331,31 @@ function bush(x, z){
 function fern(x, z){ const g = new T.Group(); g.position.set(x, 0, z); scene.add(g);
   for (let i = 0; i < 6; i++){ const l = mesh(new T.ConeGeometry(.25, 1.6, 4), M(0x3d9a5b, {flatShading: true}), 0, .6, 0, g); l.rotation.set(Math.cos(i)*.9, i, Math.sin(i)*.9); } }
 
+// branches: monkeys, gorillas and sloths can swing along them (hangeln)
+const HANG = [];
+function addHangBar(ax, az, bx, bz, y, course = false){ const L = Math.hypot(bx - ax, bz - az); HANG.push({ax, az, bx, bz, y, L, dx: (bx - ax)/L, dz: (bz - az)/L, course}); }
+function treeBranch(x, z, dir, y, L){
+  const m = mesh(new T.CylinderGeometry(.13, .24, L, 7), M(0x6b4430), x + dir*L/2, y, z); m.rotation.z = Math.PI/2;
+  const tw = mesh(new T.CylinderGeometry(.05, .08, 1, 5), M(0x6b4430), x + dir*L*.6, y + .35, z + .2); tw.rotation.set(.5, 0, -dir*.6);
+  for (let i = 0; i < 3; i++) mesh(new T.IcosahedronGeometry(.55 + i*.12, 0), M(leafCols[(i + 1) % 4], {flatShading: true}), x + dir*(L - .2 - i*.5), y + .45 + i*.1, z + (i - 1)*.35);
+  addSolid(Math.min(x, x + dir*L), Math.max(x, x + dir*L), z - .32, z + .32, y - .18, y + .18);
+  addHangBar(x + dir*.25, z, x + dir*(L - .2), z, y - .18);
+}
+function hangPost(x, z, h){
+  mesh(new T.CylinderGeometry(.4, .55, h + .8, 9), M(0x7a4e33), x, (h + .8)/2, z);
+  for (let i = 0; i < 4; i++){ const a = i*1.6; mesh(new T.IcosahedronGeometry(1.1 + (i % 2)*.3, 0), M(leafCols[i % 4], {flatShading: true}), x + Math.cos(a)*.9, h + 1.2 + (i % 2)*.4, z + Math.sin(a)*.9); }
+  addSolid(x - .45, x + .45, z - .45, z + .45, 0, h + .8, {trunk: true});
+}
+// a swinging course: posts with long branches between them, hanging vines and stars to grab
+function hangCourse(pts, y, stars = true){
+  pts.forEach(([x, z]) => hangPost(x, z, y));
+  for (let i = 0; i < pts.length - 1; i++){ const [ax, az] = pts[i], [bx, bz] = pts[i + 1], L = Math.hypot(bx - ax, bz - az), dx = (bx - ax)/L, dz = (bz - az)/L;
+    const m = mesh(new T.CylinderGeometry(.15, .17, L, 8), M(0x6b4430), (ax + bx)/2, y, (az + bz)/2); m.rotation.z = Math.PI/2; m.rotation.y = -Math.atan2(dz, dx);
+    for (let k = 1.5; k < L - 1; k += 2.6){ const v = mesh(new T.CylinderGeometry(.03, .03, 1.2 + (k % 1.7), 4), M(0x3d9a5b), ax + dx*k, y - .6 - (k % 1.7)/2, az + dz*k); v.rotation.x = .1; }
+    addHangBar(ax + dx*.5, az + dz*.5, bx - dx*.5, bz - dz*.5, y - .17, true);
+    if (stars) addStar(ax + dx*L/2, y - 1.1, az + dz*L/2); }
+}
+
 // climbable trees (thick trunk, platform in the crown, sometimes a hollow)
 const climbTrees = [];
 function climbTree(x, z, h, hollowY, starInHollow, starOnTop){ if (!capture) return trackTree(x, z, () => climbTreeInner(x, z, h, hollowY, starInHollow, starOnTop)); climbTreeInner(x, z, h, hollowY, starInHollow, starOnTop); }
@@ -342,6 +368,7 @@ function climbTreeInner(x, z, h, hollowY, starInHollow, starOnTop){
   for (let i = 0; i < 6; i++){ const a = i*1.05; mesh(new T.IcosahedronGeometry(.5, 0), M(leafCols[i % 4], {flatShading: true}), x + Math.cos(a)*1.8, h + .1, z + Math.sin(a)*1.8); }
   addSolid(x - r, x + r, z - r, z + r, 0, h - .4, {trunk: true});
   addSolid(x - 1.7, x + 1.7, z - 1.7, z + 1.7, h - .4, h);
+  treeBranch(x + r*.75, z - .1, 1, 3.9, 2.9); treeBranch(x - r*.75, z - .2, -1, Math.max(5.2, Math.min(h - 2.4, h*.6)), 2.6);
   const t = {x, z, r, h, hollowY};
   if (hollowY){
     const hole = mesh(new T.CircleGeometry(.55, 20), M(0x24160c), x, hollowY + .5, z + r*.98 + .02); hole.scale.y = 1.4;
@@ -522,6 +549,13 @@ function acaciaInner(x, z, h, starBelow){
   mesh(new T.BoxGeometry(3, 1.1, .15), [wood, wood, wood, wood, new T.MeshStandardMaterial({map: tx}), wood], 266, 2.8, 12.6);
 }
 
+// ---------- swinging courses ----------
+hangCourse([[110, 19.5], [118.5, 19.5], [127, 19.5], [135.5, 19.5], [144, 19.5]], 4.1);
+hangCourse([[271.6, 27.5], [290.2, 27.5], [312.4, 27.5]], 4.1);
+{ const wood = M(0xc9a26b), tx = canvasTex(256, 96, (g) => { g.fillStyle = '#e8c48a'; g.fillRect(0, 0, 256, 96); g.strokeStyle = '#7a5230'; g.lineWidth = 10; g.strokeRect(0, 0, 256, 96);
+    g.fillStyle = '#5a3a1a'; g.font = '800 34px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.fillText('Hangel-Wald 🐒', 128, 60); });
+  mesh(new T.CylinderGeometry(.15, .15, 3, 6), M(0x7a5230), 106, 1.5, 16); mesh(new T.BoxGeometry(3, 1.1, .15), [wood, wood, wood, wood, new T.MeshStandardMaterial({map: tx}), wood], 106, 2.8, 16); }
+
 // ---------- THE CITY ----------
 {
   const L = CITY1 - CITY0 + 10, cx = (CITY0 + CITY1)/2;
@@ -584,6 +618,31 @@ function acaciaInner(x, z, h, starBelow){
   climbTree(442, 12, 9, 4, true); climbTree(484, 11, 9, null, false, true); tree(410, 11, 8); tree(470, 12, 8); tree(500, 11, 8);
   addFood('brot', 407.5, .8, -6.6); addFood('pizza', 458, 0, 4.6); addFood('apfel', 478, 0, 9);
   addStar(505, 1, -4.5); addStar(515, 1, 10); addStar(398, 1, -10);
+  // ---- the new part of the city ----
+  building(529, 8, 10, 0xffc7e0, 'Eisdiele 🍦'); building(540, 10, 16, 0x9fc5e8); building(552, 12, 8, 0xb7d7a8, 'Supermarkt 🛒'); building(564, 8, 12, 0xf4a6a6);
+  building(577, 14, 10, 0xffe08a, 'Schule 🏫'); building(590, 9, 19, 0xa6d9e6); building(602, 12, 9, 0xe8455a, 'Feuerwehr 🚒'); building(614, 8, 11, 0xd5a6e6);
+  building(624, 9, 14, 0xf7c59f); building(635, 8, 10, 0xc9c9c9);
+  // ice cream table and a fire truck
+  box(1.6, .8, 1, 0xfff8e7, 531, .4, -6.6); addSolid(530.2, 531.8, -7.1, -6.1, 0, .8); addFood('keks', 531, .8, -6.6);
+  { const fx = 602, fz = -5.4; box(6, 1.6, 2.2, 0xe8455a, fx, 1.1, fz); box(1.8, 1.1, 2, 0xd8eef8, fx + 2, 2.3, fz); box(4, .25, .6, 0xc9c9c9, fx - .8, 2.1, fz);
+    [[-2, 1], [2, 1], [-2, -1], [2, -1]].forEach(([a, b]) => { const w = mesh(new T.CylinderGeometry(.45, .45, .3, 14), M(0x222222), fx + a, .45, fz + b); w.rotation.x = Math.PI/2; });
+    addSolid(fx - 3, fx + 3, fz - 1.1, fz + 1.1, 0, 1.9); addStar(fx - .8, 2.9, fz); }
+  car(547, 5.8, 0x7ccf6b); car(570, -5.6, 0xc78bff); car(620, 5.8, 0xff8a3d); addStar(570.3, 2.8, -5.6);
+  // playground in the park
+  const lawn2 = new T.Mesh(new T.PlaneGeometry(46, 9), M(0x5aae52)); lawn2.rotation.x = -Math.PI/2; lawn2.position.set(585, .03, 9.6); lawn2.receiveShadow = true; scene.add(lawn2);
+  const sand = new T.Mesh(new T.CircleGeometry(2.4, 20), M(0xf0d9a0)); sand.rotation.x = -Math.PI/2; sand.position.set(570, .04, 10); scene.add(sand);
+  box(4.6, .3, .3, 0x9a5a2e, 570, .35, 7.7); box(4.6, .3, .3, 0x9a5a2e, 570, .35, 12.3); box(.3, .3, 4.6, 0x9a5a2e, 567.7, .35, 10); box(.3, .3, 4.6, 0x9a5a2e, 572.3, .35, 10);
+  // climbing frame: steps up to a tower with a star
+  [[579, 9, .8], [580.6, 9, 1.6], [582.2, 9, 2.4], [583.8, 9, 3.2]].forEach(([x, z, h], i) => { box(1.4, .25, 1.6, [0xff6fae, 0xffd23f, 0x4fb8dc, 0x7ccf6b][i], x, h - .12, z);
+    [[-.6, -.7], [.6, -.7], [-.6, .7], [.6, .7]].forEach(([a, b]) => box(.1, h, .1, 0x888888, x + a, h/2, z + b)); addSolid(x - .7, x + .7, z - .8, z + .8, h - .25, h); });
+  box(.12, 1.4, .12, 0x888888, 584.4, 3.9, 8.4); box(.9, .6, .05, 0xffd23f, 584.8, 4.3, 8.4); addStar(583.8, 4.2, 9);
+  // slide down from the tower (decoration) and swings
+  { const sl = box(1, .12, 4, 0xff6fae, 583.8, 1.95, 11.45); sl.rotation.x = .62; [-.5, .5].forEach(o => { const r = box(.08, .3, 4, 0xffd23f, 583.8 + o, 2.15, 11.45); r.rotation.x = .62; }); }
+  [592, 595].forEach(x => { box(.12, 3.2, .12, 0x4fb8dc, x - 1.2, 1.6, 9); box(.12, 3.2, .12, 0x4fb8dc, x + 1.2, 1.6, 9); box(2.6, .12, .12, 0x4fb8dc, x, 3.2, 9);
+    box(.03, 2.2, .03, 0x333333, x - .35, 2.1, 9); box(.03, 2.2, .03, 0x333333, x + .35, 2.1, 9); box(.9, .1, .4, 0xe8455a, x, 1, 9); });
+  addStar(593.5, 3.9, 9);
+  bench(600, 10); bench(560, 10); climbTree(612, 11.5, 9, 4, true); tree(552, 12, 8); tree(628, 12, 8);
+  addFood('apfel', 575, 0, 13); addStar(625, 1, -4.5); addStar(637, 1, 9); addStar(545, 1, 10);
 }
 
 // ---------- THE MOUSE HOUSE (far away: inside it is bigger than outside!) ----------
@@ -1069,7 +1128,8 @@ const ANIMALS = {
   eich: {emoji: '🐿️', nom: 'ein Eichhörnchen', acc: 'ein Eichhörnchen', walk: 6, run: 10, jump: 12.5, climb: 7.5, PR: .33, PH: .8, hide: true, glide: true,
     can: 'Halte in der Luft die Sprungtaste gedrückt: Du segelst! Und du kletterst schnell.', make: makeSquirrel, iih: 'Oh, ein Eichhörnchen!'},
   affe: {emoji: '🐒', nom: 'ein Affe', acc: 'einen Affen', walk: 5.5, run: 9, jump: 13, climb: 9, PR: .4, PH: 1.25, hide: true,
-    can: 'Du kletterst super schnell und springst ganz hoch!', make: makeMonkey, iih: 'Hilfe, ein Affe!'},
+    hang: true, hangOff: 1.6, hangSpeed: 5.5,
+    can: 'Du kletterst super schnell, springst ganz hoch und kannst an Ästen hangeln! 🌳', make: makeMonkey, iih: 'Hilfe, ein Affe!'},
   giraffe: {emoji: '🦒', nom: 'eine Giraffe', acc: 'eine Giraffe', walk: 4.5, run: 8, jump: 8, climb: 0, PR: .6, PH: 4.3, hide: false, deep: true, big: true, drinks: true,
     can: 'Du bist riesig! Du kommst an hohe Sterne und läufst durch tiefes Wasser.', make: makeGiraffe, iih: 'Huch, eine Giraffe!'},
   schlange: {emoji: '🐍', nom: 'eine Schlange', acc: 'eine Schlange', walk: 4.8, run: 8, jump: 6.6, climb: 3.5, PR: .3, PH: .35, hide: true, camo: true, deep: true, swim: true,
@@ -1090,9 +1150,9 @@ const ANIMALS = {
     can: 'Bleib still: Dann versteckst du dich in deinem Panzer, und kein Tierfänger kann dich fangen! Im Wasser schwimmst du gut. 🌊', make: makeTurtle, iih: 'Oh, eine Schildkröte!'},
   tiger: {emoji: '🐅', nom: 'ein Tiger', acc: 'einen Tiger', walk: 7, run: 13, jump: 12, climb: 3, PR: .55, PH: 1.5, hide: true, deep: true, swim: true, swimFast: true, drinks: true,
     can: 'Du bist schnell und stark, und Tiger lieben Wasser: Du schwimmst super! 🌊', make: () => makeCheetah(false, true), iih: 'Hilfe, ein Tiger!'},
-  gorilla: {emoji: '🦍', nom: 'ein Gorilla', acc: 'einen Gorilla', walk: 5.5, run: 9, jump: 11, climb: 6, PR: .6, PH: 1.9, hide: false, big: true, strong: true,
+  gorilla: {emoji: '🦍', nom: 'ein Gorilla', acc: 'einen Gorilla', walk: 5.5, run: 9, jump: 11, climb: 6, PR: .6, PH: 1.9, hide: false, big: true, strong: true, hang: true, hangOff: 2.65, hangSpeed: 4,
     can: 'Du bist so stark, dass dich kein Tierfänger fangen kann! Und du kletterst! 💪', make: () => makeMonkey({fur: 0x2d2a2e, skin: 0x5a5258, noTail: true, s: 1.5, arm: .75, bob: .12}), iih: 'Hilfe, ein Gorilla!'},
-  faultier: {emoji: '🦥', nom: 'ein Faultier', acc: 'ein Faultier', walk: 1.8, run: 2.8, jump: 6, climb: 3, PR: .38, PH: 1.1, hide: true, treeHide: true,
+  faultier: {emoji: '🦥', nom: 'ein Faultier', acc: 'ein Faultier', walk: 1.8, run: 2.8, jump: 10, climb: 3, PR: .38, PH: 1.1, hide: true, treeHide: true, hang: true, hangOff: 1.82, hangSpeed: 1.6,
     can: 'Du bist ganz, ganz langsam. 😴 Aber wenn du im Baum hängst, sieht dich keiner!', make: () => makeMonkey({fur: 0x9a7a55, skin: 0xd8c3a0, mask: 0x4a3524, noTail: true, arm: .8, legRate: 1.2, bob: .03}), iih: 'Oh, ein Faultier!'},
   chamaeleon: {emoji: '🦎', nom: 'ein Chamäleon', acc: 'ein Chamäleon', walk: 4, run: 6.5, jump: 8, climb: 4, PR: .3, PH: .7, hide: true, camo: true, quickCamo: true,
     can: 'Du wechselst die Farbe! Bleib kurz still: Dann wirst du grün wie ein Blatt, und keiner sieht dich. 🌈', make: makeChameleon, iih: 'Oh, ein Chamäleon!'},
@@ -1114,6 +1174,9 @@ function animateAnimal(g, o){
   u.body.rotation.x = o.sleep ? 1.3 : 0;
   if (u.neck){ const nt = o.drink ? (u.neckDrink ?? -2.25) : o.sleep ? (u.neckRest !== undefined ? .3 : -1.2) : (u.neckRest ?? -.3); u.neck.rotation.z += (nt - u.neck.rotation.z)*.08; }
   u.eyes.forEach(e => e.scale.y = o.sleep ? .2 : 1);
+  if (o.hang && u.legs && u.legs.length === 4){ const sw = o.mv ? Math.sin(o.run*2.2) : Math.sin(o.t*1.5)*.15;
+    u.legs[2].rotation.z = Math.PI - .15 + sw*.55; u.legs[3].rotation.z = Math.PI - .15 - sw*.55; u.legs[0].rotation.z = sw*.4; u.legs[1].rotation.z = -sw*.4;
+    u.body.rotation.z = sw*.08; u.body.position.y = 0; }
   if (u.chamo){ if (o.hidden) u.chamo.color.lerp(CHAMO_LEAF, .08); else u.chamo.color.setHSL(((o.t*.08) % 1), .65, .5); }
   if (u.tuck){ const k = o.hidden ? .05 : 1; u.tuck.forEach(m => m.scale.setScalar(m.scale.x + (k - m.scale.x)*.25)); u.body.position.y -= o.hidden ? .08 : 0; }
   if (u.tail) u.tail.rotation.x = Math.sin(o.t*6)*.25 + (o.glide ? .6 : 0);
@@ -1215,9 +1278,9 @@ function makeRescueCage(w){
   addStar(w.x - r*.55, 1.6, w.z - r*.4); w.star = stars[stars.length - 1];
 }
 let zzz = new T.Sprite(new T.SpriteMaterial({map: BUB.zz, transparent: true, depthTest: false})); zzz.scale.set(1.5, 1, 1); zzz.visible = false; zzz.renderOrder = 11; scene.add(zzz);
-const CATCHER_PATHS = [[[50,20],[95,30]], [[185,18],[235,30]], [[330,30],[368,18]], [[78,-6],[100,6]], [[117,-8],[141,9]], [[158,7],[184,-6]], [[275,-8],[315,8]], [[345,8],[368,-8]], [[410,4.5],[495,-4.5]]];
+const CATCHER_PATHS = [[[50,20],[95,30]], [[185,18],[235,30]], [[330,30],[368,18]], [[78,-6],[100,6]], [[117,-8],[141,9]], [[158,7],[184,-6]], [[275,-8],[315,8]], [[345,8],[368,-8]], [[410,4.5],[495,-4.5]], [[535,4.5],[630,-4.5]], [[628,9],[548,4.5]]];
 const catchers = CATCHER_PATHS.map(([a, b]) => ({a, b, g: makeCatcher(), x: 0, z: 0, ang: 0, state: 'patrol', t: 0, cool: 0, walk: 0, tgt: 1, patrolT: 0}));
-const PEOPLE = [[[402, 4.6], [519, 4.6], 0x4fb8dc, 0x3b2a1a], [[519, -6.6], [402, -6.6], 0xe8455a, 0xe0b04a], [[405, 12.5], [510, 12.5], 0x7ccf6b, 0x222222], [[500, -4.6], [415, -4.6], 0xc78bff, 0x8a4b2a]];
+const PEOPLE = [[[402, 4.6], [519, 4.6], 0x4fb8dc, 0x3b2a1a], [[519, -6.6], [402, -6.6], 0xe8455a, 0xe0b04a], [[405, 12.5], [510, 12.5], 0x7ccf6b, 0x222222], [[500, -4.6], [415, -4.6], 0xc78bff, 0x8a4b2a], [[528, 4.6], [636, 4.6], 0xff8a3d, 0x5a3a1a], [[636, -6.6], [528, -6.6], 0x7fd0ff, 0xd9a64e], [[556, 12.5], [632, 12.5], 0xffd23f, 0x222222]];
 const people = PEOPLE.map(([a, b, shirt, hair]) => ({a, b, g: makePerson({shirt, hair, pants: 0x34495e}), x: a[0], z: a[1], ang: 0, walk: 0, tgt: 1, scared: 0, say: 0}));
 let p = {x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, ang: 0, onGround: true, hidden: false, still: 0, run: 0, inHouse: false, inTree: null, holeLock: false, climb: null, inHollow: false, boost: 0, sleepT: 0, drinkT: 0, drinkCD: 0, bathT: 0, bathing: false, clean: false, gliding: false};
 let cageT = 0, carried = false;
@@ -1236,7 +1299,7 @@ function reset(){
   use(C); updateStars();
 }
 function resetPl(i){
-  Object.assign(p, {x: 4 + i*1.6, y: 0, z: i*1.6, vx: 0, vy: 0, vz: 0, ang: 0, onGround: true, hidden: false, still: 0, inHouse: false, inTree: null, holeLock: false, climb: null, inHollow: false, boost: 0, sleepT: 0, drinkT: 0, drinkCD: 0, bathT: 0, bathing: false, clean: false, gliding: false});
+  Object.assign(p, {x: 4 + i*1.6, y: 0, z: i*1.6, vx: 0, vy: 0, vz: 0, ang: 0, onGround: true, hidden: false, still: 0, inHouse: false, inTree: null, holeLock: false, climb: null, hang: null, hangLock: 0, inHollow: false, boost: 0, sleepT: 0, drinkT: 0, drinkCD: 0, bathT: 0, bathing: false, clean: false, gliding: false});
   buddy = null; kind = 'maus'; A = ANIMALS.maus; PR = A.PR; PH = A.PH; p.ang = 0;
   cageHits = 0; holder = null; cage.visible = false; fading = false; carried = false; cageBox.hidden = true; sleepTime = 0;
   nightEl.classList.remove('on'); fadeEl.classList.remove('on'); zzz.visible = false;
@@ -1449,7 +1512,7 @@ document.getElementById('keepBtn').onclick = (e) => { document.getElementById('w
 
 function fadeTo(fn){
   if (fading) return; fading = true; sfx.door(); fadeEl.classList.add('on'); const P = cur;
-  setTimeout(() => { use(P); fn(); p.vx = p.vz = p.vy = 0; p.hidden = false; snapCam(); fadeEl.classList.remove('on'); setTimeout(() => { P.fading = false; if (cur === P) fading = false; }, 250); }, 380);
+  setTimeout(() => { use(P); p.hang = null; fn(); p.vx = p.vz = p.vy = 0; p.hidden = false; snapCam(); fadeEl.classList.remove('on'); setTimeout(() => { P.fading = false; if (cur === P) fading = false; }, 250); }, 380);
 }
 const HOL = {x: 1100, z: 0, r: 3};
 function enterTree(c){
@@ -1511,6 +1574,7 @@ function setKind(k){
   if (blocked){ toast(`Hier ist kein Platz für ${B.acc}! 😄`, 2.5); return; }
   if (!B.deep && !p.inHouse && isDeep(p.x, p.z)){ toast(`Hier ist es zu tief für ${B.acc}! 🌊`, 2.5); return; }
   if (p.climb && !B.climb){ p.climb = null; p.inHollow = false; }
+  if (p.hang && !B.hang){ p.hang = null; p.hangLock = .4; }
   kind = k; A = B; PR = B.PR; PH = B.PH; p.hidden = false; p.still = 0;
   avatars[k].rotation.y = p.ang;
   sfx.poof(); burst(p.x, p.y + Math.min(2, PH*.6), p.z, [0xffffff, 0xffd23f, 0xff9fc6], 22, 5, 4);
@@ -1573,6 +1637,24 @@ function updatePlayer(dt, t){
     wakeQ = false;
   }
 
+  // swinging along a branch (hangeln)
+  if (p.hang && state === 'play' && !fading){
+    let b = p.hang.b, hs = p.hang.s; const along = ix*b.dx + iz*b.dz;
+    hs += along*A.hangSpeed*dt;
+    if (hs < 0 || hs > b.L){ const ex = hs < 0 ? b.ax : b.bx, ez = hs < 0 ? b.az : b.bz;
+      const nb = HANG.find(o => o !== b && Math.abs(o.y - b.y) < .9 && (Math.hypot(o.ax - ex, o.az - ez) < 1.2 || Math.hypot(o.bx - ex, o.bz - ez) < 1.2));
+      if (nb){ const atA = Math.hypot(nb.ax - ex, nb.az - ez) < 1.2; b = nb; hs = atA ? .05 : nb.L - .05; sfx.climb(); }
+      else hs = Math.max(0, Math.min(b.L, hs)); }
+    p.hang.b = b; p.hang.s = hs;
+    p.x = b.ax + b.dx*hs; p.z = b.az + b.dz*hs; p.y = b.y - A.hangOff; p.vx = p.vz = p.vy = 0; p.onGround = false;
+    p.hangMv = Math.abs(along) > .15;
+    if (p.hangMv){ const sg = Math.sign(along); p.ang = Math.atan2(-b.dz*sg, b.dx*sg); p.run += A.hangSpeed*dt*Math.abs(along); if (Math.random() < dt*3) sfx.climb(); }
+    p.hidden = !!A.treeHide;
+    if (jumpQ && !A.deep && !p.inHouse && isDeep(p.x, p.z)){ jumpQ = false; if (!(flags.deepHangT > t)){ flags.deepHangT = t + 4; toast('🌊 Nicht loslassen! Hier ist das Wasser zu tief. Hangel weiter!', 3); } }
+    if (jumpQ){ p.hang = null; p.hangLock = .45; p.vy = 5; p.vx = Math.cos(p.ang)*3; p.vz = -Math.sin(p.ang)*3; sfx.jump(); jumpQ = false; }
+  }
+  p.hangLock = Math.max(0, (p.hangLock || 0) - dt);
+
   // climbing
   if (state === 'play' && !fading && p.climb){
     const c = p.climb; let ox = p.x - c.x, oz = p.z - c.z; const ol = Math.hypot(ox, oz) || 1; ox /= ol; oz /= ol;
@@ -1592,7 +1674,7 @@ function updatePlayer(dt, t){
     if (jumpQ && p.climb){ p.climb = null; p.inHollow = false; p.vy = 8; p.vx = ox*5; p.vz = oz*5; sfx.jump(); }
   }
 
-  if (state === 'play' && !fading && !p.climb){
+  if (state === 'play' && !fading && !p.climb && !p.hang){
     let sp = held('sprint') ? A.run : A.walk; if (inWater()) sp *= A.swimFast ? 1.8 : A.swim ? 1.1 : A.deep ? .85 : .6; if (inTub()) sp *= .5; if (p.boost > 0) sp *= 1.3;
     const k = Math.min(1, dt*(p.onGround ? 12 : 5));
     p.vx += (ix*sp - p.vx)*k; p.vz += (iz*sp - p.vz)*k;
@@ -1612,6 +1694,8 @@ function updatePlayer(dt, t){
       if (d < c.r + PR + .35 && p.y < c.h - 1.2 && -(ix*dx + iz*dz)/d > .5){
         p.climb = c; p.vy = 0; if (!flags.climbMsg){ flags.climbMsg = true; toast('🧗 Du kletterst! Weiter zum Baum drücken = hoch, weg = runter, Leertaste = abspringen.', 5); } break; }
     }
+    if (!flags.hangHint && !p.inHouse && HANG.some(b => b.course && Math.hypot(p.x - (b.ax + b.bx)/2, p.z - (b.az + b.bz)/2) < 7)){ flags.hangHint = true;
+      toast(A.hang ? '🌳 Hangel-Äste! Spring hoch und halt dich fest!' : '🌳 Hangel-Äste! Nur Affen 🐒, Gorillas 🦍 und Faultiere 🦥 können hangeln. Drück Q!', 5); }
     if (!flags.climbHint && climbTrees.some(c => Math.hypot(p.x - c.x, p.z - c.z) < 4) && !p.inHouse){ flags.climbHint = true; toast('🌳 Ein dicker Baum! Lauf dagegen, dann kletterst du hoch.', 4); }
     const speed = Math.hypot(p.vx, p.vz), b = bushAt();
     const inBush = b && A.hide && speed < .6 && p.onGround, camo = (A.camo && !p.inHouse && p.onGround && speed < .3 && !inWater()) || (A.shell && !p.inHouse && p.onGround && speed < .3);
@@ -1662,7 +1746,7 @@ function updatePlayer(dt, t){
   hiddenTag.textContent = p.inTree ? '🌳 Baumhöhle: sicher!' : p.inHouse ? '🏠 Zuhause: sicher!' : p.inHollow ? '🌳 Baumhöhle: sicher!' : '🙈 Versteckt!';
   boostTag.hidden = !(p.boost > 0);
 
-  if ((state === 'play' || state === 'win') && !p.climb){
+  if ((state === 'play' || state === 'win') && !p.climb && !p.hang){
     p.vy = Math.max(-25, p.vy - 30*dt);
     p.gliding = !!A.glide && held('jump') && !p.onGround && p.vy < -2.2 && state === 'play';
     if (p.gliding){ p.vy = -2.2; if (!flags.glideMsg){ flags.glideMsg = true; toast('🐿️ Wiiiie! Du segelst durch die Luft!', 3); } }
@@ -1687,6 +1771,14 @@ function updatePlayer(dt, t){
         if (s.bounce && state === 'play'){ p.vy = s.bounce; p.onGround = false; sfx.boing(); burst(p.x, .7, p.z, [0x4fb8dc, 0xffffff], 6, 3); } }
       else if (p.vy > 0 && prevY + PH <= s.y0 + .05 && p.y + PH > s.y0){ p.y = s.y0 - PH; p.vy = 0; } }
     p.run += Math.hypot(p.vx, p.vz)*dt;
+    // grab a branch from below (or when falling past it)
+    if (A.hang && state === 'play' && !p.onGround && p.hangLock <= 0) for (const b of HANG){
+      const ox = p.x - b.ax, oz = p.z - b.az, along = ox*b.dx + oz*b.dz; if (along < -.3 || along > b.L + .3) continue;
+      if (Math.abs(ox*b.dz - oz*b.dx) > .75) continue;
+      const top = p.y + A.hangOff; if (top < b.y - .75 || top > b.y + .45) continue;
+      p.hang = {b, s: Math.max(0, Math.min(b.L, along))}; p.climb = null; sfx.climb();
+      if (!flags.hangMsg){ flags.hangMsg = true; toast('🐒 Du hangelst! Lauf-Tasten = weiter hangeln, Springen = loslassen.', 4.5); }
+      break; }
   }
 
   if (state === 'play'){
@@ -1833,7 +1925,7 @@ function updateWorld(dt, t){
 
 function caught(c){
   state = 'cage'; holder = c; c.state = 'hold'; cageHits = 0; mashQ = 0; cageT = 10; carried = false;
-  p.vx = p.vz = 0; p.hidden = false; p.climb = null; sfx.caught(); cageBox.hidden = false; cageFill.style.width = '0%';
+  p.vx = p.vz = 0; p.hidden = false; p.climb = null; p.hang = null; sfx.caught(); cageBox.hidden = false; cageFill.style.width = '0%';
   cage.visible = true; cage.position.set(p.x, p.y, p.z); cage.scale.setScalar(Math.max(1, PH/1.4)); cage.userData.bars.forEach(b => b.rotation.set(0, 0, 0));
   toast(`Oh nein! Der Tierfänger hat ${cur.name}! 😱 Schnell, mach das Gitter kaputt!`, 3);
 }
@@ -1970,8 +2062,8 @@ function syncPlayer(dt, t, on){
   buddyMouse.visible = buddy === buddyMouse;
   av.position.set(p.x, p.y, p.z);
   let da = p.ang - av.rotation.y; da = Math.atan2(Math.sin(da), Math.cos(da)); av.rotation.y += da*Math.min(1, dt*14);
-  const sp = Math.hypot(p.vx, p.vz), moving = p.onGround && sp > .5;
-  animateAnimal(av, {mv: moving, run: p.run, t, air: !p.onGround, vy: p.vy, climb: !!p.climb, sleep: state === 'sleep', drink: p.drinkT > .3 && p.drinkCD <= 0, hidden: p.hidden, glide: p.gliding, fly: !p.onGround && A.fly});
+  const sp = Math.hypot(p.vx, p.vz), moving = (p.onGround && sp > .5) || (!!p.hang && p.hangMv);
+  animateAnimal(av, {hang: !!p.hang, mv: moving, run: p.run, t, air: !p.onGround, vy: p.vy, climb: !!p.climb, sleep: state === 'sleep', drink: p.drinkT > .3 && p.drinkCD <= 0, hidden: p.hidden, glide: p.gliding, fly: !p.onGround && A.fly});
   if (buddy) animateAnimal(buddy, {sleep: true, t});
   zzz.visible = state === 'sleep'; if (zzz.visible){ zzz.position.set(p.x + .4, p.y + Math.min(PH, 1.5) + .6 + (t % 2)*.4, p.z); zzz.material.opacity = 1 - (t % 2)/2; }
   if (cur.mark.visible) cur.mark.position.set(p.x, p.y + PH + .75 + Math.sin(t*3)*.08, p.z);
