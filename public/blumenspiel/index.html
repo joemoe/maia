@@ -21,6 +21,11 @@
   #mute, #quit { position: fixed; right: 16px; top: 92px; z-index: 6; width: 48px; height: 48px; border-radius: 50%; border: 3px solid #ffffffcc;
     background: #ffffff55; touch-action: none; padding: 0; display: grid; place-items: center; cursor: pointer; }
   #quit { display: none; }
+  #wetter { position: fixed; right: 16px; top: 216px; z-index: 6; width: 48px; height: 48px; border-radius: 50%; border: 3px solid #fff; background: #c77dffcc; font-size: 24px; display: none; cursor: pointer; animation: wglow 1.6s infinite; }
+  @keyframes wglow { 50% { box-shadow: 0 0 14px #fff6a0; } }
+  #wpanel { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 7; background: #fff8fd; border: 4px solid #c77dff; border-radius: 22px; padding: 14px; display: none; text-align: center; font: bold 18px "Comic Sans MS", sans-serif; color: #5a1745; width: min(92vw, 420px); }
+  #wpanel button { font: bold 16px "Comic Sans MS", sans-serif; color: #5a1745; margin: 10px 4px 0; padding: 10px 12px; border-radius: 16px; border: 3px solid #fff; background: #ffe3f1; cursor: pointer; min-width: 74px; }
+  #wpanel button[data-w="x"] { min-width: 44px; background: #eee; }
   body:not(.ingame) #mute { top: 12px; }
   body.ingame #quit { display: grid; }
   body.ingame #quit { top: 104px; }
@@ -41,6 +46,8 @@
 <div class="pad right" id="padR"></div>
 <button id="quit" aria-label="Zurück zum Startmenü"></button>
 <button id="mute" aria-label="Musik an oder aus"></button>
+<button id="wetter" aria-label="Wetter zaubern">🪄</button>
+<div id="wpanel"><div>Welches Wetter möchtest du zaubern?</div><button data-w="sonne">☀️<br>Sonne</button><button data-w="regen">🌧️<br>Regen</button><button data-w="schnee">❄️<br>Schnee</button><button data-w="x">✖</button></div>
 <script>
 "use strict";
 const cv = document.getElementById('c'), cx = cv.getContext('2d');
@@ -191,7 +198,28 @@ function gardenAction(id) {
 // Jahreszeiten: jeden Morgen kommt die nächste
 const SEASONS = ['Frühling', 'Sommer', 'Herbst', 'Winter'];
 st.season = 0; try { st.season = (+localStorage.getItem('blumen-jahreszeit') || 0) % 4; } catch (e) {}
-function nextSeason() { st.season = (st.season + 1) % 4; try { localStorage.setItem('blumen-jahreszeit', String(st.season)); } catch (e) {} }
+function nextSeason() { st.season = (st.season + 1) % 4; if (st.season === 0) st.year++; try { localStorage.setItem('blumen-jahreszeit', String(st.season)); localStorage.setItem('blumen-jahr', String(st.year)); } catch (e) {} }
+// Ein Jahr = 4 Jahreszeiten. Einmal im Jahr: Geburtstag (wenn der Sommer beginnt) und Wetter-Zauber
+st.year = 0; st.wetterUsed = -1; st.bdayYear = -1;
+try { st.year = +localStorage.getItem('blumen-jahr') || 0; const wu = localStorage.getItem('blumen-wetter'); if (wu != null) st.wetterUsed = +wu; const by = localStorage.getItem('blumen-geburtstag'); if (by != null) st.bdayYear = +by; } catch (e) {}
+const canWeather = () => st.wetterUsed !== st.year;
+function castWeather(k) {
+  if (!canWeather() || st.screen !== 'play') return; st.wetterUsed = st.year; try { localStorage.setItem('blumen-wetter', String(st.year)); } catch (e) {}
+  document.getElementById('wpanel').style.display = 'none';
+  if (k === 'sonne') { st.rain = null; st.magicSnow = 0; st.rainT = 120; st.sunT = 30; say('Simsalabim! Die Sonne scheint! ☀️'); }
+  if (k === 'regen') { st.magicSnow = 0; st.rain = { t: 0, dur: 25 }; say('Simsalabim! Es regnet, und die Blumen wachsen!'); }
+  if (k === 'schnee') { st.rain = null; st.magicSnow = 40; st.rainT = 120; say('Simsalabim! Es schneit! ❄️'); }
+  [784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => beep(f, .25, 'triangle', .1), i * 110));
+  setTimeout(() => { if (st.screen === 'play') say('Nächstes Jahr kannst du wieder zaubern!'); }, 3500);
+}
+const BDAY_SONG = [[392, 1], [392, 1], [440, 2], [392, 2], [523, 2], [494, 4], [392, 1], [392, 1], [440, 2], [392, 2], [587, 2], [523, 4]];
+function startBday() { st.bdayYear = st.year; try { localStorage.setItem('blumen-geburtstag', String(st.year)); } catch (e) {} st.homeMode = 'bday'; st.bday = { stage: 0, t: 0 }; say('Überraschung! Heute hast du Geburtstag! 🎂'); }
+function bdayAction(id) {
+  const B = st.bday;
+  if (id === 'blow' && B.stage === 0) { B.stage = 1; B.t = 0; say('Pusteee! Alles Gute zum Geburtstag!'); let t0 = 0; for (const [f, d] of BDAY_SONG) { setTimeout(() => beep(f, .3 * d * 0.6, 'triangle', .12), t0); t0 += d * 220; } }
+  else if (id === 'gift' && B.stage === 1) { B.stage = 2; B.t = 0; st.hearts = 4; st.seeds = seedMax(); sfx.star(); say('Ein Geschenk von Wuffi und Summsi: Herzen und Samen sind ganz voll!'); }
+  else if (id === 'go') { st.bday = null; st.homeMode = 'menu'; st.screen = 'play'; say('Viel Spaß an deinem Geburtstag!'); }
+}
 // Spielzimmer mit Puzzle
 const MOTIFS = ['Blumenhaus', 'Krakenkönig', 'Blumen-City', 'Regenbogen'];
 function newPuzzle(m) {
@@ -405,6 +433,9 @@ function toggleMusic() {
 }
 document.getElementById('mute').innerHTML = svgIcon(music.on ? 'soundOn' : 'soundOff');
 document.getElementById('quit').innerHTML = svgIcon('quit');
+document.getElementById('wetter').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (canWeather() && st.screen === 'play') document.getElementById('wpanel').style.display = 'block'; });
+document.getElementById('wpanel').addEventListener('pointerdown', e => { e.stopPropagation(); const b = e.target.closest('button'); if (!b) return; e.preventDefault(); if (b.dataset.w === 'x') document.getElementById('wpanel').style.display = 'none'; else castWeather(b.dataset.w); });
+setInterval(() => { const on = st.screen === 'play' && canWeather() && !st.ride; const b = document.getElementById('wetter'); if ((b.style.display === 'block') !== on) b.style.display = on ? 'block' : 'none'; if (st.screen !== 'play') document.getElementById('wpanel').style.display = 'none'; }, 300);
 document.getElementById('quit').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); toStart(); });
 // X: zurück zum Startmenü (der Spielstand bleibt gespeichert, man kann weiterspielen)
 function toStart() {
@@ -447,7 +478,7 @@ addEventListener('keydown', e => {
   if (st.screen === 'home' && st.homeMode === 'night') return;
   if (st.screen === 'home') {
     const m = st.homeMode === 'cook' ? ({ '1': 'ing0', '2': 'ing1', '3': 'ing2', '4': 'ing3', '5': 'ing4', '6': 'ing5', Enter: 'cookgo', ' ': 'cookgo', Escape: 'back', Backspace: 'back' }[e.key])
-      : st.homeMode === 'dog' ? ({ '1': 'feed', '2': 'pet', '3': 'ball', '4': 'trick', '5': 'nap', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'music' ? ({ '1': 'key0', '2': 'key1', '3': 'key2', '4': 'key3', '5': 'key4', '6': 'key5', '7': 'key6', '8': 'key7', l: 'demo', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'puzzle' ? ({ n: 'pnew', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'garden' ? ({ '1': 'plot0', '2': 'plot1', '3': 'plot2', '4': 'plot3', '5': 'plot4', '6': 'plot5', g: 'water', w: 'water', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'album' ? ({ Escape: 'back', Backspace: 'back', Enter: 'back' }[e.key]) : st.homeMode === 'doors'
+      : st.homeMode === 'bday' ? ({ Enter: st.bday && ['blow', 'gift', 'go'][st.bday.stage], ' ': st.bday && ['blow', 'gift', 'go'][st.bday.stage] }[e.key]) : st.homeMode === 'dog' ? ({ '1': 'feed', '2': 'pet', '3': 'ball', '4': 'trick', '5': 'nap', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'music' ? ({ '1': 'key0', '2': 'key1', '3': 'key2', '4': 'key3', '5': 'key4', '6': 'key5', '7': 'key6', '8': 'key7', l: 'demo', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'puzzle' ? ({ n: 'pnew', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'garden' ? ({ '1': 'plot0', '2': 'plot1', '3': 'plot2', '4': 'plot3', '5': 'plot4', '6': 'plot5', g: 'water', w: 'water', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'album' ? ({ Escape: 'back', Backspace: 'back', Enter: 'back' }[e.key]) : st.homeMode === 'doors'
       ? ({ '1': 'w0', '2': 'w1', '3': 'w2', '4': 'w3', '5': 'w4', '6': 'w5', '7': 'w6', '8': 'w7', '9': 'w8', '0': 'w9', Escape: 'back', Backspace: 'back' }[e.key])
       : ({ '1': 'sleep', ArrowLeft: 'sleep', '2': 'eat', ArrowRight: 'eat', '3': 'cook', '4': 'travel', '5': 'ward', '6': 'swap', '7': 'album', '8': 'garden', '9': 'puzzle', k: 'music', h: 'dog', '0': 'out', Enter: 'out' }[e.key]);
     if (m) homeAction(m);
@@ -506,7 +537,7 @@ function onTapScreen(e) {
       else { if (st.picker === 0) st.kind = k; else st.kind2 = k; st.picker = 1 - st.picker; beep(700 + st.picker * 200, .08); }
     }
   } else if (st.screen === 'home') {
-    if ((st.homeMode !== 'menu' && st.homeMode !== 'doors' && st.homeMode !== 'ward' && st.homeMode !== 'swap' && st.homeMode !== 'album' && st.homeMode !== 'cook' && st.homeMode !== 'garden' && st.homeMode !== 'puzzle' && st.homeMode !== 'music' && st.homeMode !== 'dog') || !e) return;
+    if ((st.homeMode !== 'menu' && st.homeMode !== 'doors' && st.homeMode !== 'ward' && st.homeMode !== 'swap' && st.homeMode !== 'album' && st.homeMode !== 'cook' && st.homeMode !== 'garden' && st.homeMode !== 'puzzle' && st.homeMode !== 'music' && st.homeMode !== 'dog' && st.homeMode !== 'bday') || !e) return;
     for (const b of st.btns) if (e.clientX > b.x && e.clientX < b.x + b.w && e.clientY > b.y && e.clientY < b.y + b.h) homeAction(b.id);
   } else if (st.screen === 'visit') { if (st.visit.t > 0.6) leaveVisit();
   } else if (st.screen === 'star' && st.screenT > 1) {
@@ -529,6 +560,7 @@ function homeAction(id) {
   if (st.homeMode === 'puzzle') { puzzleAction(id); return; }
   if (st.homeMode === 'music') { musicAction(id); return; }
   if (st.homeMode === 'dog') { dogAction(id); return; }
+  if (st.homeMode === 'bday') { bdayAction(id); return; }
   if (st.homeMode === 'album') { if (id === 'back') { st.homeMode = 'menu'; beep(500, .08); } return; }
   if (st.homeMode === 'swap') {
     if (id === 'back' || id === 'out') { st.homeMode = 'menu'; beep(500, .08); }
@@ -642,7 +674,8 @@ function update(dt) {
       st.nightHeartT += dt; if (st.hearts < 4 && st.nightHeartT > 1.2 && st.sleepT < 5) { st.hearts++; st.nightHeartT = 0; beep(700 + st.hearts * 120, .2, 'triangle'); }
       if (st.sleepT > 5.5 && !st.crowed) { st.crowed = true; crow(); }
       if (st.sleepT > 9 && st.nightBack) { st.homeMode = 'menu'; st.nightBack = false; say('Oink oink! Gut ausgeschlafen!'); }
-      else if (st.sleepT > 9) { st.screen = 'play'; st.homeMode = 'menu'; st.dayT = Math.floor(st.dayT / DAY) * DAY + 147; nextSeason(); say('Oink oink! Guten Morgen! Jetzt ist ' + SEASONS[st.season] + '!'); }
+      else if (st.sleepT > 9) { st.screen = 'play'; st.homeMode = 'menu'; st.dayT = Math.floor(st.dayT / DAY) * DAY + 147; nextSeason(); say('Oink oink! Guten Morgen! Jetzt ist ' + SEASONS[st.season] + '!');
+        if (st.season === 1 && st.bdayYear !== st.year) { st.screen = 'home'; startBday(); } }
     } else if (st.homeMode === 'sleep') {
       if (st.hearts < 4 && st.sleepT > 1.2) { st.hearts++; st.sleepT = 0; beep(700 + st.hearts * 120, .2, 'triangle'); }
       else if (st.hearts >= 4 && st.sleepT > 1.6) { st.homeMode = 'night'; st.sleepT = 4.6; st.nightBack = true; st.crowed = false; st.nightHeartT = 0; } // dann weckt das Schweinchen
@@ -845,6 +878,7 @@ function update(dt) {
   for (const o of st.obst) o.t += dt;
 
   // Regen: ab und zu regnet es, dann wachsen die kleinen Blumen am Boden
+  if (st.magicSnow > 0) st.magicSnow -= dt; if (st.sunT > 0) st.sunT -= dt;
   if (!st.rain && !st.storm && w.deco !== 'wasser' && w.deco !== 'schnee') {
     st.rainT -= dt;
     if (st.rainT <= 0) { st.rain = { t: 0, dur: 16 }; say('Es regnet! Schau mal, die Blumen wachsen!'); }
@@ -1826,7 +1860,7 @@ function drawPig(x, y, s, t, oink) {
 }
 // Jahreszeiten: Blütenblätter, Schmetterlinge, bunte Blätter oder Schnee
 function drawSeason(w, cam) {
-  const now = performance.now() / 1000, se = st.season;
+  const now = performance.now() / 1000, se = st.magicSnow > 0 ? 3 : st.season;
   if (se === 2) { // Herbst: Boden etwas bunter
     cx.fillStyle = 'rgba(230,130,40,0.22)'; cx.beginPath(); cx.moveTo(0, H); for (let x = 0; x <= W + 10; x += 10) cx.lineTo(x, groundY(x + cam)); cx.lineTo(W, H); cx.fill();
   }
@@ -2147,6 +2181,40 @@ function seasonBadge(x, y, s, right) { // runder Jahreszeit-Kreis in der Ecke (x
   cx.restore();
   cx.font = `bold ${11 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'top';
   cx.strokeStyle = '#fff'; cx.lineWidth = 3 * s; cx.strokeText(SEASONS[k], mx, my + r + 5 * s); cx.fillStyle = '#5a1745'; cx.fillText(SEASONS[k], mx, my + r + 5 * s);
+}
+function drawBday(t, s) {
+  const B = st.bday; if (!B) return; B.t += 1 / 60; const fl = H * 0.74;
+  cx.fillStyle = '#ffe6f2'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#d99a6a'; cx.fillRect(0, fl, W, H - fl);
+  // Girlande
+  for (let i = 0; i < 14; i++) { const x = (i + 0.5) * W / 14, y = H * 0.2 + Math.sin(i / 13 * Math.PI) * 30 * s; cx.fillStyle = ['#ff6fae', '#ffd23f', '#6fd3ff', '#9be07a', '#c77dff'][i % 5]; cx.beginPath(); cx.moveTo(x - 16 * s, y); cx.lineTo(x + 16 * s, y); cx.lineTo(x, y + 28 * s); cx.fill(); }
+  // Ballons
+  for (let i = 0; i < 2; i++) { const x = i ? W * 0.9 : W * 0.1, y = H * 0.38 + Math.sin(t * 2 + i) * 8 * s; cx.strokeStyle = '#999'; cx.lineWidth = 1.5; cx.beginPath(); cx.moveTo(x, y + 30 * s); cx.lineTo(x, fl); cx.stroke(); cx.fillStyle = i ? '#6fd3ff' : '#ff6fae'; cx.beginPath(); cx.ellipse(x, y, 24 * s, 30 * s, 0, 0, 7); cx.fill(); circle(x - 8 * s, y - 10 * s, 5 * s, '#ffffff88'); }
+  bigText('Alles Gute zum Geburtstag!', H * 0.12, Math.min(30 * s, W * 0.06));
+  // Tisch + Kuchen
+  const tx = W / 2, ty = fl - 80 * s;
+  cx.fillStyle = '#b5703f'; rr(tx - 120 * s, ty, 240 * s, 14 * s, 5 * s); cx.fill(); rr(tx - 100 * s, ty + 10 * s, 12 * s, 70 * s, 4 * s); cx.fill(); rr(tx + 88 * s, ty + 10 * s, 12 * s, 70 * s, 4 * s); cx.fill();
+  cx.fillStyle = '#fff'; cx.beginPath(); cx.ellipse(tx, ty - 2 * s, 110 * s, 9 * s, 0, 0, 7); cx.fill();
+  cx.fillStyle = '#ff9ec7'; rr(tx - 70 * s, ty - 70 * s, 140 * s, 66 * s, 12 * s); cx.fill();
+  cx.fillStyle = '#fff6ea'; rr(tx - 74 * s, ty - 76 * s, 148 * s, 18 * s, 9 * s); cx.fill();
+  for (let i = 0; i < 6; i++) circle(tx - 55 * s + i * 22 * s, ty - 34 * s, 5 * s, ['#ffd23f', '#6fd3ff', '#9be07a'][i % 3]);
+  for (let i = 0; i < 5; i++) { const x = tx - 48 * s + i * 24 * s; cx.fillStyle = ['#6fd3ff', '#ffd23f', '#c77dff', '#9be07a', '#ff8a5c'][i]; rr(x - 4 * s, ty - 104 * s, 8 * s, 30 * s, 3 * s); cx.fill();
+    if (B.stage === 0) { const f = 1 + Math.sin(t * 15 + i) * 0.15; cx.fillStyle = '#ffb347'; cx.beginPath(); cx.ellipse(x, ty - 112 * s, 5 * s, 9 * s * f, 0, 0, 7); cx.fill(); circle(x, ty - 110 * s, 3 * s, '#fff3a0'); }
+    else if (B.t < 2) { cx.globalAlpha = Math.max(0, 1 - B.t / 2); circle(x + B.t * 10 * s, ty - 115 * s - B.t * 30 * s, 5 * s, '#ccc'); cx.globalAlpha = 1; } }
+  // Blume mit Partyhut, Wuffi, Summsi
+  const fx = W * 0.22; drawFlower(fx, fl, st.kind, s * 1.1, { bob: Math.sin(t * 4) * 4 * s });
+  const hx = fx, hy = fl - 150 * s * 1.1 + Math.sin(t * 4) * 4 * s; cx.fillStyle = '#c77dff'; cx.beginPath(); cx.moveTo(hx - 18 * s, hy); cx.lineTo(hx + 18 * s, hy); cx.lineTo(hx, hy - 42 * s); cx.fill(); circle(hx, hy - 44 * s, 6 * s, '#ffd23f');
+  const dx = W * 0.76; drawDog(dx, fl, s * 1.1, t, B.stage ? 'pet' : 'idle', 0); cx.fillStyle = '#6fd3ff'; cx.beginPath(); cx.moveTo(dx + 26 * s, fl - 82 * s); cx.lineTo(dx + 50 * s, fl - 82 * s); cx.lineTo(dx + 38 * s, fl - 112 * s); cx.fill(); circle(dx + 38 * s, fl - 114 * s, 4 * s, '#ff6fae');
+  drawBee(W * 0.62 + Math.cos(t * 1.5) * 40 * s, H * 0.42 + Math.sin(t * 3) * 15 * s, t, 1, 1.1 * s);
+  // Geschenk
+  const gx = tx + 160 * s, gy = fl; if (B.stage < 2) { cx.fillStyle = '#6fd3ff'; rr(gx - 30 * s, gy - 50 * s, 60 * s, 50 * s, 6 * s); cx.fill(); cx.fillStyle = '#ff6fae'; cx.fillRect(gx - 5 * s, gy - 50 * s, 10 * s, 50 * s); cx.fillRect(gx - 34 * s, gy - 58 * s, 68 * s, 12 * s); circle(gx - 10 * s, gy - 64 * s, 9 * s, '#ff6fae'); circle(gx + 10 * s, gy - 64 * s, 9 * s, '#ff6fae'); }
+  else { for (let i = 0; i < 4; i++) heart(gx - 30 * s + i * 20 * s, gy - 40 * s - Math.min(1, B.t) * 50 * s, 8 * s, true); }
+  // Konfetti
+  if (B.stage > 0) for (let i = 0; i < 60; i++) { const q = (B.t * 0.35 + i * 0.137) % 1; cx.fillStyle = ['#ff6fae', '#ffd23f', '#6fd3ff', '#9be07a', '#c77dff'][i % 5]; cx.save(); cx.translate((i * 97.3) % W + Math.sin(B.t * 2 + i) * 20 * s, q * fl); cx.rotate(B.t * 3 + i); cx.fillRect(-4 * s, -2 * s, 8 * s, 4 * s); cx.restore(); }
+  const it = B.stage === 0 ? [['blow', 'Kerzen auspusten', '#ffd23f']] : B.stage === 1 ? [['gift', 'Geschenk öffnen', '#ff9ec7']] : [['go', 'Weiter spielen', '#9be07a']];
+  const bw = Math.min(260 * s, W - 40), bh = 50 * s, x0 = W / 2 - bw / 2, y0 = H * 0.84; const [id, label, col] = it[0];
+  rr(x0, y0, bw, bh, bh / 2); cx.fillStyle = col; cx.fill(); cx.strokeStyle = '#fff'; cx.lineWidth = 4; cx.stroke();
+  cx.fillStyle = '#5a1745'; cx.font = `bold ${21 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(label, W / 2, y0 + bh / 2, bw - 16);
+  st.gbtns = [{ id, x: x0, y: y0, w: bw, h: bh }];
 }
 function drawJet(t) {
   const J = st.jet; if (!J) return;
@@ -2844,16 +2912,17 @@ function drawHome(t) {
   if (mode === 'puzzle') drawPuzzleRoom(t, s);
   if (mode === 'music') drawMusicRoom(t, s);
   if (mode === 'dog') drawDogRoom(t, s);
+  if (mode === 'bday') drawBday(t, s);
   // Herzen
   for (let i = 0; i < 4; i++) heart(W / 2 - 60 * s + i * 40 * s, H * 0.07, 16 * s, i < st.hearts);
   seasonBadge(14, H * 0.07 - 14 * s, Math.max(s, 0.8), false);
   const txt = mode === 'night' ? (asleep ? 'Gute Nacht! Schlaf schön...' : 'Oink oink! Guten Morgen!') : mode === 'sleep' ? (st.hearts >= 4 ? 'Ausgeschlafen!' : 'Schlaf gut...') : mode === 'eat' ? 'Guten Appetit!'
     : (st.hidCount ? 'Hier drin bist du sicher vor den Blättern!' : 'Willkommen im Blumenhaus!');
-  if (mode !== 'doors' && mode !== 'ward' && mode !== 'swap' && mode !== 'album' && mode !== 'cook' && mode !== 'garden' && mode !== 'puzzle' && mode !== 'music' && mode !== 'dog') bigText(txt, H * 0.14, 26 * s);
+  if (mode !== 'doors' && mode !== 'ward' && mode !== 'swap' && mode !== 'album' && mode !== 'cook' && mode !== 'garden' && mode !== 'puzzle' && mode !== 'music' && mode !== 'dog' && mode !== 'bday') bigText(txt, H * 0.14, 26 * s);
 
   // Knöpfe
   st.btns = [];
-  if (mode === 'garden' || mode === 'puzzle' || mode === 'music' || mode === 'dog') st.btns = st.gbtns || [];
+  if (mode === 'garden' || mode === 'puzzle' || mode === 'music' || mode === 'dog' || mode === 'bday') st.btns = st.gbtns || [];
   if (mode === 'menu') {
     const items = [['sleep', 'Schlafen', '#8fc9ff'], ['eat', 'Essen', '#ffb36b'], ['cook', 'Kochen', '#ff9b8a'], ['travel', 'Reisen', '#d6b3ff'], ['ward', 'Schrank', '#ffd23f'], ['swap', 'Wechseln', '#ff9ec7'], ['album', 'Album', '#7fe0d0'], ['garden', 'Garten', '#b9e86a'], ['puzzle', 'Spielzimmer', '#a8d8ff'], ['music', 'Musikzimmer', '#ffc4e1'], ['dog', 'Wuffi', '#ffe08a'], ['out', 'Rausgehen', '#9be07a']];
     const n = W < 600 ? 3 : 6, gap = 12, bw = Math.min(190 * s, (W - 32 - gap * (n - 1)) / n), bh = 48 * s, total = bw * n + gap * (n - 1);
@@ -2949,7 +3018,7 @@ function drawHome(t) {
   }
   if (mode === 'album') drawAlbum(t, s);
   if (mode === 'cook') drawCook(t, s);
-  if (st.msgT > 0) bubble(st.msg, W / 2, mode === 'dog' ? H * 0.24 : mode === 'music' ? H * 0.2 : mode === 'puzzle' ? H * 0.8 : mode === 'cook' ? H * 0.78 : mode === 'ward' ? H * 0.22 : mode === 'swap' || mode === 'album' ? H * 0.76 : H * 0.48, Math.min(1, st.msgT));
+  if (st.msgT > 0) bubble(st.msg, W / 2, mode === 'bday' ? H * 0.3 : mode === 'dog' ? H * 0.24 : mode === 'music' ? H * 0.2 : mode === 'puzzle' ? H * 0.8 : mode === 'cook' ? H * 0.78 : mode === 'ward' ? H * 0.22 : mode === 'swap' || mode === 'album' ? H * 0.76 : H * 0.48, Math.min(1, st.msgT));
 }
 function drawAlbum(t, s) {
   cx.fillStyle = '#5a1745bb'; cx.fillRect(0, 0, W, H);
