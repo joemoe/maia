@@ -302,7 +302,7 @@ function startWorld(i, fromX) {
   st.obst = []; st.storm = null; st.stormAt = null; st.stormSheltered = false;
   const OB = OBST_KIND[w.deco];
   if (OB) for (let x = 1800 + Math.random() * 400; x < w.len - 800; x += 1700 + Math.random() * 900) {
-    if (Math.abs(x - st.helperX) < 400 || st.secrets.some(q => Math.abs(x - q.x) < 320) || Math.abs(x - base) < 300 || Math.abs(x - st.fairy.x) < 350 || Math.abs(x - st.chest.x) < 350 || Math.abs(x - Math.round(w.len * 0.3)) < 400 || (w.boss === 'krake' && x > w.len - 2000)) continue;
+    if (Math.abs(x - st.helperX) < 400 || st.secrets.some(q => Math.abs(x - q.x) < 320) || Math.abs(x - base) < 300 || Math.abs(x - st.fairy.x) < 350 || Math.abs(x - st.chest.x) < 350 || Math.abs(x - Math.round(w.len * 0.3)) < 400 || Math.abs(x - Math.round(w.len * 0.65)) < 400 || (w.boss === 'krake' && x > w.len - 2000)) continue;
     st.obst.push({ x, kind: OB, w: OBST[OB].w, h: OBST[OB].h, t: Math.random() * 6 });
     // ein Samen liegt immer vor dem Hindernis, damit man drüberhüpfen kann
     st.seedsOnMap.push({ x: x - 330, t: Math.random() * 6, got: false, up: 70 });
@@ -742,6 +742,9 @@ function update(dt) {
     for (const p of ps) { p.x = Rd.x - (p.id ? 30 : 0); p.jumpY = end ? 0 : Math.max(0.01, rideHeight(Rd.t)); p.vy = 0; p.digging = 0; }
     if (end) { st.ride = null; st.balloon.gone = 0.01; st.balloon.x = Rd.x; say('Gelandet! Tschüss, Ballon!'); } }
   if (st.balloon && st.balloon.gone) st.balloon.gone += dt;
+  // zwei Ballons pro Land: wenn einer weg ist oder du schon vorbei bist, wartet der nächste weiter vorne
+  if (st.balloon && !st.ride) { const B = st.balloon, ld = leadX();
+    if ((B.used && B.gone > 6) || (!B.used && ld > B.x + 900)) { const nx = [0.3, 0.65].map(f => Math.round(w.len * f)).find(x => x > ld + 500 && x > B.x); if (nx) st.balloon = { x: nx, used: false, gone: 0 }; } }
   { // Wuffi läuft hinter dir her
     const L = ps[0]; if (!st.pup) st.pup = { x: L.x - 90, jy: 0, vy: 0, face: 1, run: 0 };
     const D = st.pup;
