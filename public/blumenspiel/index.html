@@ -2113,12 +2113,16 @@ function seasonIcon(x, y, r, k) {
   if (k === 2) { cx.save(); cx.translate(x, y); cx.rotate(-0.6); cx.fillStyle = '#f08a2c'; cx.beginPath(); cx.ellipse(0, 0, r * 0.95, r * 0.5, 0, 0, 7); cx.fill(); cx.strokeStyle = '#a0521a'; cx.lineWidth = r * 0.12; cx.beginPath(); cx.moveTo(-r * 1.1, 0); cx.lineTo(r * 0.8, 0); cx.stroke(); cx.restore(); }
   if (k === 3) { cx.strokeStyle = '#6fbfff'; cx.lineWidth = r * 0.2; cx.lineCap = 'round'; for (let i = 0; i < 3; i++) { const a = i * 1.047; cx.beginPath(); cx.moveTo(x - Math.cos(a) * r, y - Math.sin(a) * r); cx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); cx.stroke(); } circle(x, y, r * 0.2, '#6fbfff'); }
 }
-function seasonBadge(x, y, s, right) {
-  const k = st.season || 0, txt = SEASONS[k], col = ['#ffe3f1', '#fff4c2', '#ffe0c2', '#e3f3ff'][k];
-  cx.font = `bold ${16 * s}px "Comic Sans MS", sans-serif`; const tw = cx.measureText(txt).width, bw = tw + 46 * s, bh = 28 * s, x0 = right ? x - bw : x;
-  rr(x0, y, bw, bh, bh / 2); cx.fillStyle = col; cx.fill(); cx.strokeStyle = '#fff'; cx.lineWidth = 2.5 * s; cx.stroke();
-  seasonIcon(x0 + 17 * s, y + bh / 2, 9 * s, k);
-  cx.fillStyle = '#5a1745'; cx.textAlign = 'left'; cx.textBaseline = 'middle'; cx.fillText(txt, x0 + 32 * s, y + bh / 2 + 1);
+function seasonBadge(x, y, s, right) { // runder Jahreszeit-Kreis in der Ecke (x/y = linke obere Ecke)
+  const k = st.season || 0, r = 26 * s, mx = (right ? x - r : x + r), my = y + r;
+  circle(mx, my, r + 3 * s, '#fff');
+  cx.save(); cx.beginPath(); cx.arc(mx, my, r, 0, 7); cx.clip();
+  cx.fillStyle = ['#bfe9ff', '#8fd3ff', '#ffd9a8', '#dcecff'][k]; cx.fillRect(mx - r, my - r, r * 2, r * 2);
+  cx.fillStyle = ['#7ed36b', '#4caf50', '#c9a23a', '#ffffff'][k]; cx.fillRect(mx - r, my + r * 0.35, r * 2, r);
+  seasonIcon(mx, my - r * 0.1, r * 0.55, k);
+  cx.restore();
+  cx.font = `bold ${11 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'top';
+  cx.strokeStyle = '#fff'; cx.lineWidth = 3 * s; cx.strokeText(SEASONS[k], mx, my + r + 5 * s); cx.fillStyle = '#5a1745'; cx.fillText(SEASONS[k], mx, my + r + 5 * s);
 }
 function drawJet(t) {
   const J = st.jet; if (!J) return;
@@ -2201,7 +2205,7 @@ function hud(t) {
   rr(px, py, pw * Math.min(1, leadX() / w.len), 10 * s, 5 * s); cx.fillStyle = '#ff6fae'; cx.fill();
   star5(px + pw + 14 * s, py + 5 * s, 10 * s, '#ffd23f');
   if (st.power && st.power.kind !== 'herz') { // Zauber-Abzeichen mit Zeit
-    const pw = POWER[st.power.kind], bx = 14 * s, by = 112 * s + Math.ceil(seedMax() / 5) * 28 * s - 6 * s, bw = 150 * s, bh = 30 * s;
+    const pw = POWER[st.power.kind], bx = 14 * s, by = 162 * s + Math.ceil(seedMax() / 5) * 28 * s - 6 * s, bw = 150 * s, bh = 30 * s;
     rr(bx, by, bw, bh, bh / 2); cx.fillStyle = '#ffffffcc'; cx.fill(); cx.strokeStyle = pw.c; cx.lineWidth = 3; cx.stroke();
     star4(bx + 16 * s, by + bh / 2, 7 * s, pw.c);
     cx.fillStyle = '#5a1745'; cx.font = `bold ${13 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'left'; cx.textBaseline = 'middle'; cx.fillText(pw.name, bx + 30 * s, by + bh / 2 - 4 * s);
