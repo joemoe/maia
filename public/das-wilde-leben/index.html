@@ -141,7 +141,7 @@ body.two #hud2{max-width:calc(50% - 90px)}
   <div class="card">
     <h1>Das wilde Leben</h1>
     <h2>Dschungel, See und Stadt 🌴💧🏙️</h2>
-    <p>Du bist Tippi 🐭, eine kleine, schnelle Maus. Sammle alle Sterne ⭐ und pass auf die Tierfänger auf! Finde die wilden Tiere 🐿️🐒🦒🐍🐆🦜🐸🐘🐢🐅🦍🦥🦎: Dann kannst du auch sie sein! Deine Mäusehöhle ist im großen Wasserfall 🌊🏠. Da bist du sicher.</p>
+    <p>Du bist Tippi 🐭, eine kleine, schnelle Maus. Sammle alle Sterne ⭐ und pass auf die Tierfänger auf! Finde die wilden Tiere 🐿️🐒🦒🐍🐆🦜🐸🐘🐢🐅🦍🦥🦎🦦🦛🌙: Dann kannst du auch sie sein! Deine Mäusehöhle ist im großen Wasserfall 🌊🏠. Da bist du sicher.</p>
     <div class="keys">
       <span><kbd>Shift</kbd></span><span>gedrückt halten: schnell rennen 💨</span>
       <span>🌳 Dicker Baum</span><span>dagegen laufen: klettern!</span>
@@ -230,14 +230,25 @@ function textPlane(text, w, h, opts = {}){
 }
 
 // world size
-const ZB = -14, ZF = 14, JZ = 34, END_X = 375, CITY0 = 398, CITY1 = 640;
+const ZB = -14, ZF = 14, JZ = 70, END_X = 375, CITY0 = 398, CITY1 = 640;
 const HOME = {x: 505, z: -7.4};
 // the giant lake: the meadow opens towards the front between LZ.x0 and LZ.x1
 const LAKE = {x: 292, z: 29, rx: 19, rz: 9, deep: .5, isle: 2.6};
 const LZ = {x0: 262, x1: 322, z1: 43};
 const lakeE = (x, z) => ((x - LAKE.x)/LAKE.rx)**2 + ((z - LAKE.z)/LAKE.rz)**2;
 const onIsle = (x, z) => Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.isle;
-const isDeep = (x, z) => lakeE(x, z) < LAKE.deep && !onIsle(x, z);
+// THE RIVER: it comes out of the waterfall pool and flows through the whole jungle to the front
+const RIVER = {w: 6, deep: 2.1};
+{ const ctrl = [[204, 0], [206, 8], [201, 16], [197, 24], [203, 32], [210, 40], [206, 50], [199, 58], [202, 66], [204, 78]];
+  RIVER.pts = new T.CatmullRomCurve3(ctrl.map(([x, z]) => new T.Vector3(x, 0, z))).getSpacedPoints(150).map(v => [v.x, v.z]); }
+function riverD(x, z){ if (x < 184 || x > 226 || z < -3 || z > 80) return 99; let best = 99; const P = RIVER.pts;
+  for (let i = 0; i < P.length - 1; i++){ const ax = P[i][0], az = P[i][1], dx = P[i + 1][0] - ax, dz = P[i + 1][1] - az;
+    let t = ((x - ax)*dx + (z - az)*dz)/(dx*dx + dz*dz); t = t < 0 ? 0 : t > 1 ? 1 : t; const d = Math.hypot(x - ax - dx*t, z - az - dz*t); if (d < best) best = d; }
+  return best; }
+const riverX = (z) => RIVER.pts.reduce((a, b) => Math.abs(b[1] - z) < Math.abs(a[1] - z) ? b : a)[0];
+const BRIDGES = [];
+const onBridge = (x, z) => BRIDGES.some(b => x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1);
+const isDeep = (x, z) => (lakeE(x, z) < LAKE.deep && !onIsle(x, z)) || (z > 5 && riverD(x, z) < RIVER.deep && !onBridge(x, z));
 // wild animals: where they live (trees are kept away from these spots)
 const WILD = [
   {kind: 'eich', x: 45, z: -6, r: 3}, {kind: 'eich', x: 228, z: 4, r: 3},
@@ -246,21 +257,27 @@ const WILD = [
   {kind: 'schlange', x: 357, z: 9, r: 2.5}, {kind: 'schlange', x: 268, z: 18, r: 2},
   {kind: 'gepard', x: 314, z: 39, r: 4}, {kind: 'gepard', x: 258, z: -3, r: 3}, {kind: 'tukan', x: 92.8, z: -4.6, perch: 12}, {kind: 'tukan', x: 305.6, z: -11.6, perch: 12},
   {kind: 'frosch', x: 197, z: -3, r: 2.5}, {kind: 'frosch', x: 301, z: 18.6, r: 2}, {kind: 'elefant', x: 274, z: 37, r: 3},
-  {kind: 'affe', x: 66, z: 24, r: 3}, {kind: 'eich', x: 150, z: 27, r: 3}, {kind: 'gepard', x: 206, z: 25, r: 4}, {kind: 'frosch', x: 340, z: 22, r: 2.5},
+  {kind: 'affe', x: 66, z: 24, r: 3}, {kind: 'eich', x: 150, z: 27, r: 3}, {kind: 'gepard', x: 222, z: 27, r: 3}, {kind: 'frosch', x: 340, z: 22, r: 2.5},
   {kind: 'schildkroete', x: 284, z: 27, r: 3.5}, {kind: 'schildkroete', x: 300, z: 32, r: 3.5}, {kind: 'schildkroete', x: 292, z: 29, r: .8}, {kind: 'schildkroete', x: 279, z: 33, r: 2.5},
   {kind: 'tiger', x: 240, z: 30, r: 4}, {kind: 'tiger', x: 335, z: 15, r: 4}, {kind: 'gorilla', x: 165, z: 12, r: 3}, {kind: 'gorilla', x: 95, z: 28, r: 3},
   {kind: 'faultier', x: 61.8, z: 5.6, perch: 11}, {kind: 'faultier', x: 272.8, z: 8.6, perch: 12}, {kind: 'faultier', x: 26, z: 30, r: 1.5}, {kind: 'chamaeleon', x: 175, z: -4, r: 2}, {kind: 'chamaeleon', x: 245, z: 20, r: 2},
+  {kind: 'otter', x: 203.5, z: 34, r: 2.5}, {kind: 'otter', x: 207, z: 53, r: 2.5}, {kind: 'krokodil', x: 209, z: 41, r: 1.5}, {kind: 'krokodil', x: 200, z: 58.5, r: 1.5},
+  {kind: 'schildkroete', x: 198, z: 22, r: 1.5}, {kind: 'frosch', x: 212.5, z: 19, r: 1.5}, {kind: 'frosch', x: 194, z: 50, r: 1.5}, {kind: 'nilpferd', x: 298, z: 31.5, r: 2.5}, {kind: 'nilpferd', x: 285, z: 28, r: 2},
+  {kind: 'nachtaffe', x: 96, z: 52, r: 4, night: true}, {kind: 'nachtaffe', x: 168, z: 46, r: 4, night: true}, {kind: 'nachtaffe', x: 344, z: 60, r: 4, night: true},
+  {kind: 'papagei', x: 142, z: 61, r: 3}, {kind: 'papagei', x: 236, z: 50, r: 3},
+  {kind: 'tiger', x: 62, z: 56, r: 4}, {kind: 'chamaeleon', x: 122, z: 50, r: 2}, {kind: 'gorilla', x: 252, z: 56, r: 3}, {kind: 'affe', x: 332, z: 50, r: 3}, {kind: 'eich', x: 30, z: 45, r: 3},
   {kind: 'tukan', x: 588.6, z: -5.8, captive: [150, 22], cr: 1.1}, {kind: 'gorilla', x: 616, z: -5.6, captive: [160, 14], cr: 1.3},
   {kind: 'loewe', x: 508.6, z: -5.8, captive: [352, 26], cr: 1.25}, {kind: 'zebra', x: 501.4, z: -5.8, captive: [120, 27], cr: 1.25},
   {kind: 'krokodil', x: 456.5, z: 11, captive: [284, 31], cr: 1.25}, {kind: 'affe', x: 424.5, z: -5.8, captive: [60, 28], cr: 1.1}
 ];
 
 // ---------- ground ----------
-{ const tex = canvasTex(128, 128, (g) => { g.fillStyle = '#3f8a3a'; g.fillRect(0, 0, 128, 128);
-    for (let i = 0; i < 500; i++){ g.fillStyle = ['#4a9a44','#367a32','#56a84e','#2f6f2c'][i % 4]; g.fillRect(Math.random()*128, Math.random()*128, 2, 3 + Math.random()*4); } });
-  tex.wrapS = tex.wrapT = T.RepeatWrapping; tex.repeat.set(140, 30);
-  const gnd = new T.Mesh(new T.PlaneGeometry(720, 150), new T.MeshStandardMaterial({map: tex, roughness: 1}));
-  gnd.rotation.x = -Math.PI/2; gnd.position.set(250, 0, -15); gnd.receiveShadow = true; scene.add(gnd);
+{ const tex = canvasTex(128, 128, (g) => { g.fillStyle = '#356f30'; g.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 520; i++){ g.fillStyle = ['#3f8a3a','#2c632a','#4a9a44','#24552a'][i % 4]; g.fillRect(Math.random()*128, Math.random()*128, 2, 3 + Math.random()*4); }
+    for (let i = 0; i < 40; i++){ g.fillStyle = ['#7a5a2e','#8a6a3a','#5f4524'][i % 3]; g.beginPath(); g.ellipse(Math.random()*128, Math.random()*128, 2.5, 1.4, Math.random()*3, 0, 7); g.fill(); } });
+  tex.wrapS = tex.wrapT = T.RepeatWrapping; tex.repeat.set(140, 46);
+  const gnd = new T.Mesh(new T.PlaneGeometry(720, 230), new T.MeshStandardMaterial({map: tex, roughness: 1}));
+  gnd.rotation.x = -Math.PI/2; gnd.position.set(250, 0, 5); gnd.receiveShadow = true; scene.add(gnd);
   const path = new T.Mesh(new T.PlaneGeometry(CITY0 - END_X + 8, 4.5), M(0xcfa86d)); path.rotation.x = -Math.PI/2; path.position.set((END_X + CITY0)/2, .02, 0); path.receiveShadow = true; scene.add(path);
 }
 
@@ -333,13 +350,13 @@ function fern(x, z){ const g = new T.Group(); g.position.set(x, 0, z); scene.add
 
 // branches: monkeys, gorillas and sloths can swing along them (hangeln)
 const HANG = [];
-function addHangBar(ax, az, bx, bz, y, course = false){ const L = Math.hypot(bx - ax, bz - az); HANG.push({ax, az, bx, bz, y, L, dx: (bx - ax)/L, dz: (bz - az)/L, course}); }
+function addHangBar(ax, az, bx, bz, y, course = false){ const L = Math.hypot(bx - ax, bz - az), b = {ax, az, bx, bz, y, L, dx: (bx - ax)/L, dz: (bz - az)/L, course}; HANG.push(b); return b; }
 function treeBranch(x, z, dir, y, L){
   const m = mesh(new T.CylinderGeometry(.13, .24, L, 7), M(0x6b4430), x + dir*L/2, y, z); m.rotation.z = Math.PI/2;
   const tw = mesh(new T.CylinderGeometry(.05, .08, 1, 5), M(0x6b4430), x + dir*L*.6, y + .35, z + .2); tw.rotation.set(.5, 0, -dir*.6);
   for (let i = 0; i < 3; i++) mesh(new T.IcosahedronGeometry(.55 + i*.12, 0), M(leafCols[(i + 1) % 4], {flatShading: true}), x + dir*(L - .2 - i*.5), y + .45 + i*.1, z + (i - 1)*.35);
   addSolid(Math.min(x, x + dir*L), Math.max(x, x + dir*L), z - .32, z + .32, y - .18, y + .18);
-  addHangBar(x + dir*.25, z, x + dir*(L - .2), z, y - .18);
+  return addHangBar(x + dir*.25, z, x + dir*(L - .2), z, y - .18);
 }
 function hangPost(x, z, h){
   mesh(new T.CylinderGeometry(.4, .55, h + .8, 9), M(0x7a4e33), x, (h + .8)/2, z);
@@ -368,8 +385,8 @@ function climbTreeInner(x, z, h, hollowY, starInHollow, starOnTop){
   for (let i = 0; i < 6; i++){ const a = i*1.05; mesh(new T.IcosahedronGeometry(.5, 0), M(leafCols[i % 4], {flatShading: true}), x + Math.cos(a)*1.8, h + .1, z + Math.sin(a)*1.8); }
   addSolid(x - r, x + r, z - r, z + r, 0, h - .4, {trunk: true});
   addSolid(x - 1.7, x + 1.7, z - 1.7, z + 1.7, h - .4, h);
-  treeBranch(x + r*.75, z - .1, 1, 3.9, 2.9); treeBranch(x - r*.75, z - .2, -1, Math.max(5.2, Math.min(h - 2.4, h*.6)), 2.6);
-  const t = {x, z, r, h, hollowY};
+  const brs = [treeBranch(x + r*.75, z - .1, 1, 3.9, 2.9)]; brs.push(treeBranch(x - r*.75, z - .2, -1, Math.max(5.2, Math.min(h - 2.4, h*.6)), 2.6));
+  const t = {x, z, r, h, hollowY}; brs.forEach(b => { b.tree = t; });
   if (hollowY){
     const hole = mesh(new T.CircleGeometry(.55, 20), M(0x24160c), x, hollowY + .5, z + r*.98 + .02); hole.scale.y = 1.4;
     const rim = mesh(new T.TorusGeometry(.6, .1, 6, 20), M(0x5b3a29), x, hollowY + .5, z + r*.98 + .03); rim.scale.y = 1.4;
@@ -494,6 +511,45 @@ for (let i = 0; i < MIST; i++){ mistPos[i*3] = WF.x0 + Math.random()*wfW; mistPo
 mistGeo.setAttribute('position', new T.BufferAttribute(mistPos, 3));
 scene.add(new T.Points(mistGeo, new T.PointsMaterial({map: glowTex, size: 1.4, transparent: true, opacity: .55, depthWrite: false, color: 0xffffff})));
 
+// ---------- the river ----------
+let riverTex = null;
+{ const P = RIVER.pts, n = P.length;
+  function ribbon(half, y, mat, uvLen){ const pos = [], uv = [], idx = []; let acc = 0;
+    for (let i = 0; i < n; i++){ const [x, z] = P[i], [nx, nz] = P[Math.min(n - 1, i + 1)], [px, pz] = P[Math.max(0, i - 1)];
+      let tx = nx - px, tz = nz - pz; const tl = Math.hypot(tx, tz); tx /= tl; tz /= tl; const ox = -tz, oz = tx;
+      if (i) acc += Math.hypot(x - P[i - 1][0], z - P[i - 1][1]);
+      pos.push(x + ox*half, y, z + oz*half, x - ox*half, y, z - oz*half); uv.push(0, acc/uvLen, 1, acc/uvLen);
+      if (i < n - 1){ const a = i*2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); } }
+    const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+    const m = new T.Mesh(g, mat); m.receiveShadow = true; scene.add(m); return m; }
+  ribbon(RIVER.w/2 + 1.4, .018, M(0xcdb27a));
+  riverTex = canvasTex(64, 128, (g) => { g.fillStyle = '#4fb8dc'; g.fillRect(0, 0, 64, 128); g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineWidth = 2;
+    for (let i = 0; i < 14; i++){ const x = (i*23) % 64, y = (i*37) % 128; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 4, y + 6, x, y + 12); g.stroke(); } });
+  riverTex.wrapS = riverTex.wrapT = T.RepeatWrapping;
+  ribbon(RIVER.w/2, .05, new T.MeshStandardMaterial({map: riverTex, roughness: .15, transparent: true, opacity: .88}), 8);
+  ribbon(RIVER.deep, .056, new T.MeshStandardMaterial({color: 0x1f6f9f, roughness: .2, transparent: true, opacity: .35}));
+  // stones and reeds along both banks
+  for (let i = 6; i < n - 2; i += 2){ const [x, z] = P[i], [nx, nz] = P[i + 1]; let tx = nx - x, tz = nz - z; const tl = Math.hypot(tx, tz); tx /= tl; tz /= tl;
+    [-1, 1].forEach(sd => { const off = RIVER.w/2 + .9 + rnd()*.6, bx = x - tz*off*sd, bz = z + tx*off*sd;
+      if (rnd() < .45) mesh(new T.DodecahedronGeometry(.35 + rnd()*.35, 0), M(0x9aa395, {flatShading: true}), bx, .15, bz);
+      else if (rnd() < .6) for (let k = 0; k < 3; k++){ const h = .9 + rnd()*.8; mesh(new T.CylinderGeometry(.03, .04, h, 4), M(0x5a8f3a), bx + (k - 1)*.15, h/2, bz + (rnd() - .5)*.3); } }); }
+  // lily pads
+  for (let i = 20; i < n - 4; i += 7){ const [x, z] = P[i]; const lp = mesh(new T.CircleGeometry(.5, 12, .4, 5.8), M(0x3f9a4a), x + (rnd() - .5)*3.4, .07, z); lp.rotation.x = -Math.PI/2; lp.castShadow = false; }
+}
+// wooden bridges over the river (with railings, so nobody falls in)
+function bridge(zc){
+  const cx = riverX(zc), half = RIVER.w/2 + 2, x0 = cx - half, x1 = cx + half, wood = 0x9a6a3e;
+  box(x1 - x0, .3, 3, wood, cx, .15, zc);
+  for (let x = x0 + .3; x < x1; x += .6) box(.06, .02, 3, 0x6b4430, x, .31, zc);
+  [-1.45, 1.45].forEach(o => { box(x1 - x0, .12, .14, 0x7a4e2d, cx, 1.05, zc + o); for (let x = x0 + .2; x <= x1; x += 1.6) box(.14, .8, .14, 0x7a4e2d, x, .65, zc + o); });
+  addSolid(x0, x1, zc - 1.5, zc + 1.5, 0, .3); addSolid(x0, x1, zc + 1.38, zc + 1.55, .3, 1.15); addSolid(x0, x1, zc - 1.55, zc - 1.38, .3, 1.15);
+  BRIDGES.push({x0: x0 - .2, x1: x1 + .2, z0: zc - 1.6, z1: zc + 1.6});
+}
+bridge(12); bridge(29); bridge(46); bridge(62);
+{ const wood = M(0xc9a26b), tx = canvasTex(256, 96, (g) => { g.fillStyle = '#e8c48a'; g.fillRect(0, 0, 256, 96); g.strokeStyle = '#7a5230'; g.lineWidth = 10; g.strokeRect(0, 0, 256, 96);
+    g.fillStyle = '#1d5a7a'; g.font = '800 38px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.fillText('Dschungel-Fluss', 128, 60); });
+  const sx = riverX(9) - 6; mesh(new T.CylinderGeometry(.15, .15, 3, 6), M(0x7a5230), sx, 1.5, 9); mesh(new T.BoxGeometry(3.2, 1.1, .15), [wood, wood, wood, wood, new T.MeshStandardMaterial({map: tx}), wood], sx, 2.8, 9); }
+
 // sign to the city
 { mesh(new T.CylinderGeometry(.15, .15, 3, 6), M(0x7a5230), END_X - 1, 1.5, 3);
   const wood = M(0xc9a26b), tx = canvasTex(256, 96, (g) => { g.fillStyle = '#e8c48a'; g.fillRect(0, 0, 256, 96); g.strokeStyle = '#7a5230'; g.lineWidth = 10; g.strokeRect(0, 0, 256, 96);
@@ -535,7 +591,6 @@ function acaciaInner(x, z, h, starBelow){
   // border of the lake meadow: trees all around, invisible walls on the sides
   for (let z = JZ + 1; z < LZ.z1 + 2; z += 3.5 + rnd()*2){ tree(LZ.x0 - 1.5 - rnd()*3, z, 9 + rnd()*4, false); tree(LZ.x1 + 1.5 + rnd()*3, z, 9 + rnd()*4, false); }
   for (let x = LZ.x0; x < LZ.x1 + 2; x += 5 + rnd()*3) tree(x, LZ.z1 + 3 + rnd()*3, 9 + rnd()*5, false);
-  addSolid(LZ.x0 - .6, LZ.x0, JZ - .2, LZ.z1 + 1, 0, 60); addSolid(LZ.x1, LZ.x1 + .6, JZ - .2, LZ.z1 + 1, 0, 60);
   addSolid(END_X, END_X + .6, ZF + .2, JZ + 1, 0, 60); for (let z = ZF + 2; z < JZ + 1; z += 3) tree(END_X + 1.5 + rnd()*2, z, 9 + rnd()*3, false);
   for (let z = JZ + 1; z < LZ.z1; z += 4){ fern(LZ.x0 + .8, z); fern(LZ.x1 - .8, z + 2); }
   // acacias for the giraffes, with stars only a tall neck reaches
@@ -552,11 +607,21 @@ function acaciaInner(x, z, h, starBelow){
 // ---------- swinging courses ----------
 hangCourse([[110, 19.5], [118.5, 19.5], [127, 19.5], [135.5, 19.5], [144, 19.5]], 4.1);
 hangCourse([[271.6, 27.5], [290.2, 27.5], [312.4, 27.5]], 4.1);
+hangCourse([[riverX(38) - 8, 38], [riverX(38) + 8, 38]], 4.1);
 { const wood = M(0xc9a26b), tx = canvasTex(256, 96, (g) => { g.fillStyle = '#e8c48a'; g.fillRect(0, 0, 256, 96); g.strokeStyle = '#7a5230'; g.lineWidth = 10; g.strokeRect(0, 0, 256, 96);
     g.fillStyle = '#5a3a1a'; g.font = '800 34px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.fillText('Hangel-Wald 🐒', 128, 60); });
   mesh(new T.CylinderGeometry(.15, .15, 3, 6), M(0x7a5230), 106, 1.5, 16); mesh(new T.BoxGeometry(3, 1.1, .15), [wood, wood, wood, wood, new T.MeshStandardMaterial({map: tx}), wood], 106, 2.8, 16); }
 
-// ---------- THE CITY ----------
+// ---------- mouse holes in the city houses: only a mouse fits through! ----------
+const HOLES = [];
+function mouseHole(x, label){
+  const g = new T.Group(); g.position.set(x, 0, -7.94); scene.add(g);
+  mesh(new T.CircleGeometry(.38, 16, 0, Math.PI), new T.MeshBasicMaterial({color: 0x120c08}), 0, 0, 0, g);
+  const rim = mesh(new T.TorusGeometry(.4, .05, 6, 16, Math.PI), M(0x7a5230), 0, 0, .01, g);
+  HOLES.push({x, z: -7.94, label});
+}
+const FLAT = {x0: 1190, x1: 1212, z0: -6, z1: 4};
+
 {
   const L = CITY1 - CITY0 + 10, cx = (CITY0 + CITY1)/2;
   const side = new T.Mesh(new T.PlaneGeometry(L, 30), M(0xc9c4ba)); side.rotation.x = -Math.PI/2; side.position.set(cx, .015, 0); side.receiveShadow = true; scene.add(side);
@@ -574,6 +639,7 @@ hangCourse([[271.6, 27.5], [290.2, 27.5], [312.4, 27.5]], 4.1);
     g.fillStyle = '#cfe8ff'; g.fillRect(12, 14, 40, 42); g.fillStyle = '#ffffff'; g.fillRect(30, 14, 4, 42); g.fillRect(12, 33, 40, 4);
     g.fillStyle = 'rgba(0,0,0,.15)'; g.fillRect(10, 56, 44, 5); });
   function building(x, w, h, col, label){
+    if (label !== 'Tierfänger 🪤') mouseHole(x - w/2 + 1.2, label);
     const hex = '#' + col.toString(16).padStart(6, '0'), t = winTex(hex); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(Math.round(w/2.4), Math.round(h/3));
     const base = M(col), front = new T.MeshStandardMaterial({map: t, roughness: .9});
     mesh(new T.BoxGeometry(w, h, 6), [base, base, base, base, front, base], x, h/2, -11);
@@ -643,6 +709,61 @@ hangCourse([[271.6, 27.5], [290.2, 27.5], [312.4, 27.5]], 4.1);
   addStar(593.5, 3.9, 9);
   bench(600, 10); bench(560, 10); climbTree(612, 11.5, 9, 4, true); tree(552, 12, 8); tree(628, 12, 8);
   addFood('apfel', 575, 0, 13); addStar(625, 1, -4.5); addStar(637, 1, 9); addStar(545, 1, 10);
+}
+
+// ---------- INSIDE A PEOPLE FLAT (everything is HUGE for a mouse) ----------
+{
+  const {x0, x1, z0, z1} = FLAT, cx = (x0 + x1)/2, W = x1 - x0, D = z1 - z0;
+  mesh(new T.SphereGeometry(30, 16, 12), new T.MeshBasicMaterial({color: 0x2a2430, side: T.BackSide}), cx, 0, 0).castShadow = false;
+  const floorTex = canvasTex(128, 128, (g) => { for (let i = 0; i < 8; i++){ g.fillStyle = i % 2 ? '#d9b07a' : '#c99a63'; g.fillRect(0, i*16, 128, 16); } });
+  floorTex.wrapS = floorTex.wrapT = T.RepeatWrapping; floorTex.repeat.set(4, 2);
+  const fl = new T.Mesh(new T.PlaneGeometry(W, D), new T.MeshStandardMaterial({map: floorTex})); fl.rotation.x = -Math.PI/2; fl.position.set(cx, .01, (z0 + z1)/2); fl.receiveShadow = true; scene.add(fl);
+  const wallTex = canvasTex(64, 64, (g) => { g.fillStyle = '#f3e3c3'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#e8cfa3'; for (let x = 0; x < 64; x += 16) g.fillRect(x, 0, 6, 64); });
+  wallTex.wrapS = wallTex.wrapT = T.RepeatWrapping; wallTex.repeat.set(6, 3);
+  const wm = new T.MeshStandardMaterial({map: wallTex, side: T.DoubleSide});
+  mesh(new T.PlaneGeometry(W, 9), wm, cx, 4.5, z0);
+  [x0, x1].forEach(x => { const sw = mesh(new T.PlaneGeometry(D, 9), wm, x, 4.5, (z0 + z1)/2); sw.rotation.y = Math.PI/2; });
+  box(W, .3, .12, 0xffffff, cx, .15, z0 + .06);
+  // the mouse hole to go back outside
+  { const h = mesh(new T.CircleGeometry(.38, 16, 0, Math.PI), new T.MeshBasicMaterial({color: 0xcff5b0}), x0 + .02, 0, 0); h.rotation.y = Math.PI/2;
+    const out = textPlane('← Raus', 1.3, .5, {bg: '#fff8e7'}); out.rotation.x = -Math.PI/2; out.position.set(x0 + 1.3, .03, 0); scene.add(out); }
+  // a giant window with curtains
+  box(5, 3.4, .1, 0x9fd4ff, cx + 2, 4.6, z0 + .06); box(5.4, .3, .2, 0xffffff, cx + 2, 2.8, z0 + .15);
+  [-1, 1].forEach(s => box(1.2, 4.4, .1, 0xe8455a, cx + 2 + s*3, 4.6, z0 + .2));
+  // kitchen table: books are the stairs up!
+  const tx = x0 + 6, tz = z0 + 2.6;
+  box(4.4, .2, 2.6, 0xb57a43, tx, 2.2, tz); [[-2, -1.1], [2, -1.1], [-2, 1.1], [2, 1.1]].forEach(([a, b]) => box(.2, 2.1, .2, 0x8a5a33, tx + a, 1.05, tz + b));
+  addSolid(tx - 2.2, tx + 2.2, tz - 1.3, tz + 1.3, 2.1, 2.3);
+  [[.32, 0xe8455a], [.64, 0x4fb8dc], [.96, 0xffd23f], [1.28, 0x7ccf6b], [1.6, 0xc78bff], [1.92, 0xff8a3d]].forEach(([h, c], i) => {
+    const bx = tx + 3.2 - i*.02, bz = tz + 2.4 - i*.62; box(1.2, .32, .7, c, bx, h - .16, bz); addSolid(bx - .6, bx + .6, bz - .35, bz + .35, 0, h); });
+  // the last book reaches the table edge
+  box(1.2, .3, .6, 0x5a8fd0, tx + 2.5, 2.05, tz - .9); addSolid(tx + 1.9, tx + 3.1, tz - 1.2, tz - .6, 0, 2.2);
+  { const pl = mesh(new T.CylinderGeometry(.9, .9, .06, 20), M(0xffffff), tx - .6, 2.33, tz); pl.castShadow = false; }
+  addFood('käse', tx - .6, 2.36, tz); addFood('keks', tx + 1, 2.3, tz + .6); addStar(tx - 1.4, 3.3, tz - .5);
+  // chairs
+  [[tx - 3.2, tz], [tx, tz + 2.4]].forEach(([x, z]) => { box(1.4, .15, 1.4, 0x9a6a3e, x, 1.3, z); [[-.6, -.6], [.6, -.6], [-.6, .6], [.6, .6]].forEach(([a, b]) => box(.12, 1.25, .12, 0x7a4e2d, x + a, .62, z + b)); addSolid(x - .7, x + .7, z - .7, z + .7, 1.22, 1.38); });
+  // fridge
+  box(2.2, 5.6, 1.8, 0xf2f2f2, x0 + 1.4, 2.8, z0 + 1); box(.1, 1.4, .1, 0xaaaaaa, x0 + 2.4, 3.6, z0 + 1.95); addSolid(x0 + .3, x0 + 2.5, z0 + .1, z0 + 1.9, 0, 5.6);
+  // sofa with cushions to jump on
+  const sx = x1 - 5, sz = z0 + 1.6;
+  box(6, 1, 2.2, 0x5a8fd0, sx, .5, sz); box(6, 2, .6, 0x4a7fc0, sx, 1.6, sz - 1); [-1, 1].forEach(s => box(.6, 1.6, 2.2, 0x4a7fc0, sx + s*3, .8, sz));
+  addSolid(sx - 3.3, sx + 3.3, sz - 1.1, sz + 1.1, 0, 1); addSolid(sx - 3, sx + 3, sz - 1.3, sz - .7, 1, 2.6);
+  [[sx - 1.5, 0xffd23f], [sx + 1.4, 0xff6fae]].forEach(([x, c]) => { box(1.2, .5, 1, c, x, 1.25, sz - .2); });
+  box(1, .35, 1, 0xc78bff, sx + 4.4, .175, sz + .4); addSolid(sx + 3.9, sx + 4.9, sz - .1, sz + .9, 0, .35);
+  box(1, .7, 1, 0x7ccf6b, sx + 4.4, .35, sz - .8); addSolid(sx + 3.9, sx + 4.9, sz - 1.3, sz - .3, 0, .7);
+  addStar(sx, 3.2, sz - 1);
+  // a big rug and a sleeping cat in its basket (psst!)
+  { const rug = mesh(new T.CircleGeometry(3, 28), M(0xe8a5b4), cx + 1, .02, 1); rug.rotation.x = -Math.PI/2; rug.castShadow = false;
+    const bk = mesh(new T.CylinderGeometry(1.2, 1, .6, 18, 1, true), new T.MeshStandardMaterial({color: 0xc99a63, side: T.DoubleSide}), x1 - 2, .3, z1 - 2.2);
+    const cat = new T.Group(); cat.position.set(x1 - 2, .3, z1 - 2.2); scene.add(cat);
+    mesh(new T.SphereGeometry(.8, 14, 10), M(0xff9a3d), 0, .25, 0, cat).scale.set(1.1, .55, .9);
+    mesh(new T.SphereGeometry(.42, 12, 10), M(0xff9a3d), .7, .4, .25, cat);
+    [-1, 1].forEach(s => { const e = mesh(new T.ConeGeometry(.15, .3, 4), M(0xff9a3d), .7, .8, .25 + s*.22, cat); e.rotation.x = s*.3; mesh(new T.BoxGeometry(.02, .02, .14), M(0x333333), 1.0, .45, .25 + s*.12, cat); });
+    mesh(new T.TorusGeometry(.7, .13, 6, 14, Math.PI), M(0xff9a3d), -.1, .3, -.1, cat).rotation.x = -Math.PI/2;
+    addSolid(x1 - 3.2, x1 - .8, z1 - 3.4, z1 - 1, 0, 1.2); FLAT.cat = cat;
+    const zz = textPlane('Psst! Die Katze schläft 😴', 3.4, .6, {bg: '#fff8e7'}); zz.position.set(x1 - 2, 2.2, z1 - 2.2); scene.add(zz); }
+  const pl = textPlane('Menschen-Wohnung 🏠', 3.4, .7, {bg: '#fff8e7'}); pl.position.set(cx - 3, 7.2, z0 + .1); scene.add(pl);
+  const l = new T.PointLight(0xfff0d0, 1, 26); l.position.set(cx, 7, 0); scene.add(l); houseLights.push(l);
 }
 
 // ---------- THE MOUSE HOUSE (far away: inside it is bigger than outside!) ----------
@@ -846,9 +967,10 @@ buildParent = null; XF = null;
 const HW = {x0: 1000, x1: 1000 + (H.x1 - 1000)*HS, z0: H.z0*HS, z1: H.z1*HS, up: H.up*HS, door: -2*HS, stairX: 1000 + 36*HS};
 const TUBW = {x0: 1000 + (TUB.x0 - 1000)*HS, x1: 1000 + (TUB.x1 - 1000)*HS, z0: TUB.z0*HS, z1: TUB.z1*HS};
 
-// ---------- INSIDE A TREE HOLLOW (one cosy room, shared by all hollows) ----------
+// ---------- INSIDE A TREE HOLLOW (one cosy room with an upper floor, shared by all hollows) ----------
+const HOLLOW_SQ = [];
 {
-  const X = 1100, Z = 0, R = 3, Hh = 3.2;
+  const X = 1100, Z = 0, R = 3, Hh = 6.6;
   mesh(new T.SphereGeometry(14, 16, 12), new T.MeshBasicMaterial({color: 0x2e1d10, side: T.BackSide}), X, 0, Z).castShadow = false;
   const fl = mesh(new T.CircleGeometry(R, 32), M(0xb98a55), X, .01, Z); fl.rotation.x = -Math.PI/2;
   for (let i = 1; i < 4; i++){ const ring = mesh(new T.RingGeometry(i*.7, i*.7 + .05, 32), M(0x9a6a3a), X, .02, Z); ring.rotation.x = -Math.PI/2; }
@@ -861,7 +983,20 @@ const TUBW = {x0: 1000 + (TUB.x0 - 1000)*HS, x1: 1000 + (TUB.x1 - 1000)*HS, z0: 
     BEDS.push({s: addSolid(X - 2.4, X - .4, Z - 2, Z - .6, 0, .45), big: false}); }
   // nut stash and a mushroom lamp
   for (let i = 0; i < 7; i++){ const n = mesh(new T.SphereGeometry(.18, 10, 8), M(0xa86b32), X + 1.3 + (i % 3)*.3, .18 + (i > 4 ? .25 : 0), Z - 1.6 + (i % 2)*.3); n.scale.y = 1.25; }
-  addFood('nuss', X + 1.4, 0, Z - .4);
+  addFood('nuss', X - .3, 0, Z + .4);
+  // wooden steps up to the upper floor (the squirrel floor)
+  for (let i = 0; i < 9; i++){ const h = (i + 1)*.32, zc = Z + 1.2 - i*.25; box(1.2, h, .25, i % 2 ? 0xa8743f : 0x9a6a3e, X + 1.6, h/2, zc); addSolid(X + 1, X + 2.2, zc - .125, zc + .125, 0, h); }
+  { const ledge = mesh(new T.CircleGeometry(R - .02, 28, 0, Math.PI), M(0xa8743f), X, 3.2, Z - .9); ledge.rotation.x = -Math.PI/2; ledge.scale.y = .72;
+    box(5.8, .2, .1, 0x7a4e2d, X, 3.1, Z - .92); addSolid(X - 2.9, X + 2.9, Z - 2.95, Z - .9, 3.0, 3.2);
+    for (let x = -2.4; x <= .8; x += .8) box(.08, .6, .08, 0x7a4e2d, X + x, 3.5, Z - .95); box(3.4, .08, .08, 0x7a4e2d, X - .8, 3.8, Z - .95); addSolid(X - 2.6, X + .9, Z - 1.0, Z - .9, 3.2, 3.85); }
+  // the squirrels' nest up there
+  { const nest = mesh(new T.TorusGeometry(.75, .28, 8, 16), M(0x8a6a3a, {flatShading: true}), X - 1.4, 3.35, Z - 2); nest.rotation.x = -Math.PI/2;
+    for (let i = 0; i < 8; i++){ const lf = mesh(new T.SphereGeometry(.2, 6, 4), M([0xe8a33d, 0xd9662b, 0x8bbf4a][i % 3]), X - 1.4 + Math.cos(i)*.55, 3.42, Z - 2 + Math.sin(i)*.4); lf.scale.y = .3; }
+    for (let i = 0; i < 6; i++) mesh(new T.SphereGeometry(.15, 8, 6), M(0xa86b32), X + .6 + (i % 3)*.28, 3.35 + (i > 2 ? .22 : 0), Z - 2.3);
+    HOLLOW_SQ.push(...[[X - 1.6, Z - 2, .4], [X - 1.0, Z - 1.8, -.6], [X + .1, Z - 1.6, 1.4]].map(([x, z, a]) => { const q = makeSquirrel(); q.position.set(x, 3.2, z); q.rotation.y = a + Math.PI/2; return q; }));
+    addStar(X + 1.4, 4.0, Z - 2);
+    const pl = textPlane('Eichhörnchen-Stock 🐿️', 4.2, .6, {bg: '#fff8e7'}); pl.position.set(X, 5.6, Z - R + .12); scene.add(pl);
+    const l2 = new T.PointLight(0xffd59a, .8, 7); l2.position.set(X, 5.6, Z - 1); scene.add(l2); houseLights.push(l2); }
   mesh(new T.CylinderGeometry(.08, .1, .6, 8), M(0xf3ead6), X + .3, .3, Z - 2.3);
   mesh(new T.SphereGeometry(.3, 14, 8, 0, Math.PI*2, 0, Math.PI/2), new T.MeshStandardMaterial({color: 0xff8a3d, emissive: 0xff8a3d, emissiveIntensity: .6}), X + .3, .55, Z - 2.3);
   { const pl = textPlane('Baumhöhle 🌳', 2.2, .55, {bg: '#fff8e7'}); pl.position.set(X, 2.7, Z - R + .1); scene.add(pl);
@@ -869,16 +1004,39 @@ const TUBW = {x0: 1000 + (TUB.x0 - 1000)*HS, x1: 1000 + (TUB.x1 - 1000)*HS, z0: 
   const l = new T.PointLight(0xffc56b, 1, 9); l.position.set(X, 2.6, Z); scene.add(l); houseLights.push(l);
 }
 
+// ---------- BIG-CAT CAVES: here the big cats crawl in and hide ----------
+const DENS = [];
+function den(dx, dz){
+  const rockM = M(0x8d8a80, {flatShading: true}), roofM = new T.MeshStandardMaterial({color: 0x7f7c72, flatShading: true, transparent: true});
+  const fl = mesh(new T.PlaneGeometry(6, 4.6), M(0x4a3c2c), dx, .02, dz - .5); fl.rotation.x = -Math.PI/2; fl.castShadow = false;
+  const wall = (w, h, d, x, z) => { const m = mesh(new T.BoxGeometry(w, h, d), rockM, x, h/2, z); return m; };
+  wall(7.2, 3.4, .6, dx, dz - 2.8); wall(.6, 3.4, 4.6, dx - 3.3, dz - .5); wall(.6, 3.4, 4.6, dx + 3.3, dz - .5); wall(2, 3.4, .6, dx - 2.6, dz + 1.8); wall(2, 3.4, .6, dx + 2.6, dz + 1.8);
+  addSolid(dx - 3.6, dx + 3.6, dz - 3.1, dz - 2.5, 0, 3.4); addSolid(dx - 3.6, dx - 3, dz - 3.1, dz + 2.1, 0, 3.4); addSolid(dx + 3, dx + 3.6, dz - 3.1, dz + 2.1, 0, 3.4);
+  addSolid(dx - 3.6, dx - 1.6, dz + 1.5, dz + 2.1, 0, 3.4); addSolid(dx + 1.6, dx + 3.6, dz + 1.5, dz + 2.1, 0, 3.4); addSolid(dx - 3.6, dx + 3.6, dz - 3.1, dz + 2.1, 2.9, 3.6);
+  const roof = []; roof.push(mesh(new T.BoxGeometry(7.4, .8, 5.4), roofM, dx, 3.2, dz - .5));
+  [[-2.6, -2], [1.8, -1.4], [-.4, .9], [2.8, 1.2], [-3, .8]].forEach(([a, b], i) => { const r = mesh(new T.DodecahedronGeometry(.9 + (i % 3)*.3, 0), roofM, dx + a, 3.7, dz + b); r.scale.y = .6; roof.push(r); });
+  [[-3.9, 1.6], [3.9, 1.9], [-4, -2.6], [4.1, -2.2]].forEach(([a, b], i) => mesh(new T.DodecahedronGeometry(1 + (i % 2)*.4, 0), rockM, dx + a, .7, dz + b));
+  // straw bed and bones inside
+  const bed = mesh(new T.SphereGeometry(1.4, 12, 8), M(0xd9b45a, {flatShading: true}), dx - 1, .1, dz - 1.4); bed.scale.set(1.2, .18, .8);
+  [[1.6, -1.8], [2.1, -.6]].forEach(([a, b]) => { const bn = mesh(new T.CylinderGeometry(.06, .06, .7, 6), M(0xf3ead6), dx + a, .1, dz + b); bn.rotation.set(Math.PI/2, 0, a);
+    [-.35, .35].forEach(o => mesh(new T.SphereGeometry(.1, 6, 5), M(0xf3ead6), dx + a + Math.sin(a)*o, .1, dz + b + Math.cos(a)*o)); });
+  const sg = textPlane('Raubkatzen-Höhle 🐆', 3.6, .6, {bg: '#fff8e7'}); sg.position.set(dx, 2.6, dz + 2.12); scene.add(sg);
+  addStar(dx, 4.7, dz - .5);
+  DENS.push({x: dx, z: dz, x0: dx - 3, x1: dx + 3, z0: dz - 2.5, z1: dz + 1.6, roofM, roof});
+}
+den(74, 60); den(250, 64);
+const denAt = () => !p.inHouse && p.y < 2 && DENS.find(d => p.x > d.x0 && p.x < d.x1 && p.z > d.z0 && p.z < d.z1);
+
 // ---------- more trees: fill free spots in the jungle ----------
 {
   const free = (x, z, m) => !solids.some(s => x + m > s.x0 && x - m < s.x1 && z + m > s.z0 && z - m < s.z1 && s.y0 < 2) &&
     !stars.some(s => Math.hypot(s.x - x, s.z - z) < 3) && !bushes.some(b => Math.hypot(b.x - x, b.z - z) < 3) &&
     !foods.some(f => Math.hypot(f.x - x, f.z - z) < 2.5) && !climbTrees.some(c => Math.hypot(c.x - x, c.z - z) < 4) &&
-    !WILD.some(w => Math.hypot(w.x - x, w.z - z) < (w.r || 1) + 3);
+    !WILD.some(w => Math.hypot(w.x - x, w.z - z) < (w.r || 1) + 3) && riverD(x, z) > RIVER.w/2 + 3 && !BRIDGES.some(b => x > b.x0 - 4 && x < b.x1 + 4 && z > b.z0 - 4 && z < b.z1 + 4);
   // THE DEEP JUNGLE: the new wide band in front
   let gi = 0;
   for (let x = 14; x < END_X - 8; x += 20 + rnd()*8){
-    const z = 18 + rnd()*12; if (lakeE(x, z) < 1.9 || (x > LZ.x0 - 4 && x < LZ.x1 + 4)) continue;
+    const z = 18 + rnd()*12; if (lakeE(x, z) < 1.9 || (x > LZ.x0 - 4 && x < LZ.x1 + 4) || riverD(x, z) < 8) continue;
     const k = gi++ % 4;
     if (k === 0) climbTree(x, z, 10 + rnd()*3, 4.5 + rnd(), true);
     else if (k === 1) rock(x, z, 3, 1.5, 3, true);
@@ -889,10 +1047,24 @@ const TUBW = {x0: 1000 + (TUB.x0 - 1000)*HS, x1: 1000 + (TUB.x1 - 1000)*HS, z0: 
     if (gi % 2) addStar(x + 12, 1, 16 + rnd()*15);
     if (gi % 3 === 0) mushroom(x - 5, 16.5 + rnd()*14, 1.4 + rnd()*1.5, 1.3, [0xe8455a, 0xff8a3d, 0xc78bff, 0xffd23f][gi % 4]);
   }
+  // THE NEW BIG JUNGLE behind the river meadow (z 36..68)
+  for (let x = 10; x < END_X - 8; x += 15 + rnd()*7){
+    const z = 38 + rnd()*28; if (riverD(x, z) < 8 || lakeE(x, z) < 2.4 || DENS.some(d => Math.hypot(x - d.x, z - d.z) < 10)) continue;
+    const k = gi++ % 5;
+    if (k === 0) climbTree(x, z, 10 + rnd()*3, 4.5 + rnd(), true);
+    else if (k === 1) rock(x, z, 3, 1.5, 3, true);
+    else if (k === 2){ bush(x, z); bush(x + 2.4, z + 1); addStar(x + 1.2, 1, z - 2.4); }
+    else if (k === 3){ log(x, 2.6, z, 4.5); addStar(x, 3.7, z); }
+    else mushroom(x, z, 2 + rnd()*2.5, 1.5, [0xe8455a, 0xff8a3d, 0xc78bff, 0xffd23f][gi % 4]);
+    if (rnd() < .5 && riverD(x + 5, z - 3) > 6) addFood(['apfel', 'nuss', 'beeren'][gi % 3], x + 5, 0, z - 3);
+    const bz = z + (rnd() - .5)*8; if (rnd() < .8 && riverD(x + 8, bz) > 6 && lakeE(x + 8, bz) > 1.6) bush(x + 8, bz);
+  }
   for (let x = 6; x < END_X - 4; x += 3.2){
-    if (x > LZ.x0 - 3 && x < LZ.x1 + 3) continue;
-    const z = 16 + rnd()*16;
-    if (free(x, z, 2.3)) (gi++ % 3 === 1 ? crookedTree : tree)(x, z, 8 + rnd()*5);
+    for (const [z0, dz] of [[16, 16], [36, 16], [52, 17]]){
+      if (z0 < 36 && x > LZ.x0 - 3 && x < LZ.x1 + 3) continue;
+      const z = z0 + rnd()*dz; if (lakeE(x, z) < 1.6) continue;
+      if (free(x, z, z0 < 36 ? 2.3 : 2.6)) (gi++ % 3 === 1 ? crookedTree : tree)(x, z, 8 + rnd()*5);
+    }
   }
   let added = 0;
   for (let x = 6; x < END_X - 4; x += 3.5){
@@ -1105,6 +1277,53 @@ function makeTurtle(){
   g.userData = {body, legs, legPhase: [0, Math.PI, Math.PI, 0], legRate: 2.5, eyes, tail, bob: .02, tuck: [head, ...legs, tail]};
   scene.add(g); return g;
 }
+function makeOtter(){
+  const g = new T.Group(), fur = M(0x7a5232), belly = M(0xd9b98a), black = M(0x111111);
+  const body = new T.Group(); g.add(body);
+  mesh(new T.SphereGeometry(.3, 14, 10), fur, 0, .32, 0, body).scale.set(1.9, .85, .85);
+  mesh(new T.SphereGeometry(.22, 12, 8), belly, .12, .24, 0, body).scale.set(1.5, .6, .8);
+  mesh(new T.SphereGeometry(.2, 12, 10), fur, .62, .42, 0, body);
+  mesh(new T.SphereGeometry(.12, 10, 8), belly, .76, .36, 0, body).scale.set(1, .7, 1.1);
+  mesh(new T.SphereGeometry(.04, 6, 5), black, .87, .4, 0, body);
+  const eyes = [-1, 1].map(s => mesh(new T.SphereGeometry(.032, 6, 5), black, .75, .5, s*.09, body));
+  [-1, 1].forEach(s => mesh(new T.SphereGeometry(.05, 6, 5), fur, .55, .58, s*.13, body));
+  [-1, 1].forEach(s => [0, 1].forEach(k => { const w = mesh(new T.BoxGeometry(.2, .01, .01), M(0xffffff), .9, .36 + k*.03, s*.07, body); w.rotation.y = s*.4; }));
+  const tail = new T.Group(); tail.position.set(-.55, .3, 0); body.add(tail); mesh(new T.ConeGeometry(.1, .6, 8), fur, -.3, 0, 0, tail).rotation.z = Math.PI/2;
+  const legs = [[.3, .18], [.3, -.18], [-.3, .18], [-.3, -.18]].map(([x, z]) => { const pv = new T.Group(); pv.position.set(x, .2, z); body.add(pv); mesh(new T.CylinderGeometry(.06, .05, .2, 6), fur, 0, -.1, 0, pv); return pv; });
+  g.userData = {body, legs, legPhase: [0, Math.PI, Math.PI, 0], legRate: 4, eyes, tail, bob: .05};
+  scene.add(g); return g;
+}
+function makeHippo(){
+  const g = new T.Group(), skin = M(0x8e7f9a), pink = M(0xe8a5b4), white = M(0xffffff), black = M(0x161616);
+  const body = new T.Group(); g.add(body);
+  mesh(new T.SphereGeometry(.9, 18, 12), skin, 0, 1.05, 0, body).scale.set(1.5, 1, 1.05);
+  mesh(new T.SphereGeometry(.62, 16, 12), skin, 1.25, 1.2, 0, body).scale.set(1.05, .9, 1);
+  mesh(new T.SphereGeometry(.55, 16, 12), skin, 1.7, 1.0, 0, body).scale.set(.85, .75, 1.15);
+  mesh(new T.SphereGeometry(.45, 14, 10), pink, 1.8, .82, 0, body).scale.set(.8, .4, 1.1);
+  [-1, 1].forEach(s => { mesh(new T.SphereGeometry(.07, 6, 5), black, 2.12, 1.15, s*.18, body); mesh(new T.ConeGeometry(.06, .18, 6), white, 2.0, .7, s*.28, body).rotation.x = Math.PI;
+    mesh(new T.SphereGeometry(.1, 8, 6), skin, 1.15, 1.75, s*.32, body); });
+  const eyes = [-1, 1].map(s => { mesh(new T.SphereGeometry(.12, 8, 6), white, 1.42, 1.6, s*.26, body); return mesh(new T.SphereGeometry(.06, 6, 5), black, 1.5, 1.62, s*.28, body); });
+  const legs = [[.8, .55], [.8, -.55], [-.8, .55], [-.8, -.55]].map(([x, z]) => { const pv = new T.Group(); pv.position.set(x, .6, z); body.add(pv); mesh(new T.CylinderGeometry(.28, .3, .6, 10), skin, 0, -.3, 0, pv); return pv; });
+  const tail = new T.Group(); tail.position.set(-1.35, 1.1, 0); body.add(tail); mesh(new T.CylinderGeometry(.04, .06, .35, 5), skin, 0, -.15, 0, tail);
+  g.userData = {body, legs, legPhase: [0, Math.PI, Math.PI, 0], legRate: 2.2, eyes, tail, bob: .04};
+  scene.add(g); return g;
+}
+function makeNightMonkey(){
+  const g = makeMonkey({fur: 0x8a7a66, skin: 0xcdb898, s: .66, legRate: 5, bob: .12}), body = g.userData.body;
+  g.userData.eyes.forEach((e, i) => { const s = i ? 1 : -1; e.scale.setScalar(1.5); e.position.set(.37, 1.37, s*.1);
+    mesh(new T.SphereGeometry(.09, 10, 8), new T.MeshStandardMaterial({color: 0xffb43a, emissive: 0xff9a1f, emissiveIntensity: .5}), .33, 1.37, s*.1, body);
+    mesh(new T.SphereGeometry(.07, 8, 6), M(0xfff4d6), .3, 1.47, s*.1, body).scale.set(.6, .5, 1.3); });
+  return g;
+}
+function makeParrot(){
+  const g = makeToucan(), red = M(0xe8333a), yel = M(0xffd23f), blue = M(0x2f7fe0);
+  g.traverse(m => { if (!m.isMesh) return; const c = m.material.color.getHex();
+    if (c === 0x1d1d22) m.material = red; else if (c === 0xfff4d6) m.material = yel;
+    else if (c === 0xff8a1f){ m.material = M(0xeeeeee); m.scale.set(1, .45, 1); m.position.x = .3; m.rotation.z = -Math.PI/2 - .6; }
+    else if (c === 0xe8455a) m.visible = false; });
+  g.userData.wings.forEach(w => w.children.forEach(m => { m.material = blue; }));
+  return g;
+}
 function makeElephant(){
   const g = new T.Group(), grey = M(0x9a9aa6), dark = M(0x7c7c88), pink = M(0xe8b4c0), white = M(0xfffaf0), black = M(0x161616);
   const body = new T.Group(); g.add(body);
@@ -1134,7 +1353,7 @@ const ANIMALS = {
     can: 'Du bist riesig! Du kommst an hohe Sterne und läufst durch tiefes Wasser.', make: makeGiraffe, iih: 'Huch, eine Giraffe!'},
   schlange: {emoji: '🐍', nom: 'eine Schlange', acc: 'eine Schlange', walk: 4.8, run: 8, jump: 6.6, climb: 3.5, PR: .3, PH: .35, hide: true, camo: true, deep: true, swim: true,
     can: 'Bleib still liegen: Dann bist du getarnt! Und du kannst schwimmen.', make: makeSnake, iih: 'Iiih, eine Schlange!'},
-  gepard: {emoji: '🐆', nom: 'ein Gepard', acc: 'einen Geparden', walk: 8, run: 16, jump: 11.5, climb: 4.5, PR: .45, PH: 1.25, hide: true,
+  gepard: {emoji: '🐆', nom: 'ein Gepard', acc: 'einen Geparden', walk: 8, run: 16, jump: 11.5, climb: 4.5, PR: .45, PH: 1.25, hide: true, cat: true,
     can: 'Du bist extra schnell! Halte Shift oder 💨: Dann flitzt du wie der Blitz! ⚡', make: makeCheetah, iih: 'Hilfe, ein Gepard!'},
   tukan: {emoji: '🦜', nom: 'ein Tukan', acc: 'einen Tukan', walk: 4.5, run: 7.5, jump: 9, climb: 0, PR: .32, PH: 1, hide: true, fly: true,
     can: 'Drück in der Luft immer wieder Springen: Du fliegst! 🪽', make: makeToucan, iih: 'Oh, ein bunter Vogel!'},
@@ -1142,24 +1361,32 @@ const ANIMALS = {
     can: 'Du machst Riesensprünge und kannst schwimmen! Quak! 🐸', make: makeFrog, iih: 'Iiih, ein Frosch!'},
   elefant: {emoji: '🐘', nom: 'ein Elefant', acc: 'einen Elefanten', walk: 4.5, run: 7.5, jump: 6.5, climb: 0, PR: .95, PH: 3.1, hide: false, deep: true, big: true, strong: true, drinks: true,
     can: 'Du bist so stark, dass dich kein Tierfänger fangen kann! Törööö! 🎺', make: makeElephant, iih: 'Hilfe, ein Elefant!'},
-  loewe: {emoji: '🦁', nom: 'ein Löwe', acc: 'den Löwen', walk: 6, run: 11, jump: 12, climb: 3, PR: .5, PH: 1.4, hide: true, roar: true,
+  loewe: {emoji: '🦁', nom: 'ein Löwe', acc: 'den Löwen', walk: 6, run: 11, jump: 12, climb: 3, PR: .5, PH: 1.4, hide: true, roar: true, cat: true,
     can: 'Kommt ein Tierfänger zu nah, brüllst du: ROAAAR! Dann rennt er weg.', make: makeLion, iih: 'Hilfe, ein Löwe!'},
   zebra: {emoji: '🦓', nom: 'ein Zebra', acc: 'das Zebra', walk: 6, run: 13, jump: 13.5, climb: 0, PR: .55, PH: 2.3, hide: false, big: true, drinks: true,
     can: 'Du rennst schnell und springst ganz weit!', make: makeZebra, iih: 'Oh, ein Zebra!'},
   schildkroete: {emoji: '🐢', nom: 'eine Schildkröte', acc: 'eine Schildkröte', walk: 3.2, run: 5, jump: 7, climb: 0, PR: .45, PH: .6, hide: true, deep: true, swim: true, shell: true, drinks: true,
     can: 'Bleib still: Dann versteckst du dich in deinem Panzer, und kein Tierfänger kann dich fangen! Im Wasser schwimmst du gut. 🌊', make: makeTurtle, iih: 'Oh, eine Schildkröte!'},
-  tiger: {emoji: '🐅', nom: 'ein Tiger', acc: 'einen Tiger', walk: 7, run: 13, jump: 12, climb: 3, PR: .55, PH: 1.5, hide: true, deep: true, swim: true, swimFast: true, drinks: true,
+  tiger: {emoji: '🐅', nom: 'ein Tiger', acc: 'einen Tiger', walk: 7, run: 13, jump: 12, climb: 3, PR: .55, PH: 1.5, hide: true, deep: true, swim: true, swimFast: true, drinks: true, cat: true,
     can: 'Du bist schnell und stark, und Tiger lieben Wasser: Du schwimmst super! 🌊', make: () => makeCheetah(false, true), iih: 'Hilfe, ein Tiger!'},
   gorilla: {emoji: '🦍', nom: 'ein Gorilla', acc: 'einen Gorilla', walk: 5.5, run: 9, jump: 11, climb: 6, PR: .6, PH: 1.9, hide: false, big: true, strong: true, hang: true, hangOff: 2.65, hangSpeed: 4,
     can: 'Du bist so stark, dass dich kein Tierfänger fangen kann! Und du kletterst! 💪', make: () => makeMonkey({fur: 0x2d2a2e, skin: 0x5a5258, noTail: true, s: 1.5, arm: .75, bob: .12}), iih: 'Hilfe, ein Gorilla!'},
   faultier: {emoji: '🦥', nom: 'ein Faultier', acc: 'ein Faultier', walk: 1.8, run: 2.8, jump: 10, climb: 3, PR: .38, PH: 1.1, hide: true, treeHide: true, hang: true, hangOff: 1.82, hangSpeed: 1.6,
     can: 'Du bist ganz, ganz langsam. 😴 Aber wenn du im Baum hängst, sieht dich keiner!', make: () => makeMonkey({fur: 0x9a7a55, skin: 0xd8c3a0, mask: 0x4a3524, noTail: true, arm: .8, legRate: 1.2, bob: .03}), iih: 'Oh, ein Faultier!'},
-  chamaeleon: {emoji: '🦎', nom: 'ein Chamäleon', acc: 'ein Chamäleon', walk: 4, run: 6.5, jump: 8, climb: 4, PR: .3, PH: .7, hide: true, camo: true, quickCamo: true,
-    can: 'Du wechselst die Farbe! Bleib kurz still: Dann wirst du grün wie ein Blatt, und keiner sieht dich. 🌈', make: makeChameleon, iih: 'Oh, ein Chamäleon!'},
+  chamaeleon: {emoji: '🦎', nom: 'ein Chamäleon', acc: 'ein Chamäleon', walk: 4, run: 6.5, jump: 8, climb: 4, PR: .3, PH: .7, hide: true, camo: true, quickCamo: true, hang: true, hangOff: -.36, hangSpeed: 3,
+    can: 'Du wechselst die Farbe! Bleib kurz still: Dann wirst du grün wie ein Blatt. Und du kletterst auf Äste! 🌈', make: makeChameleon, iih: 'Oh, ein Chamäleon!'},
+  nachtaffe: {emoji: '🐒', nom: 'ein Nachtaffe', acc: 'einen Nachtaffen', walk: 5.5, run: 8.5, jump: 11, climb: 6.5, PR: .28, PH: .8, hide: true, hang: true, hangOff: .55, hangSpeed: 4.2, nightEyes: true,
+    can: 'Deine großen Augen sehen im Dunkeln! In der Nacht ist es für dich hell. Und du kannst hangeln. 🌙', make: makeNightMonkey, iih: 'Oh, ein Nachtaffe!'},
+  papagei: {emoji: '🦜', nom: 'ein Papagei', acc: 'einen Papagei', walk: 4.5, run: 7.5, jump: 9, climb: 0, PR: .32, PH: 1, hide: true, fly: true,
+    can: 'Du kannst fliegen! Drück immer wieder die Sprungtaste. Und du bist so bunt! 🌈', make: makeParrot, iih: 'Ein Papagei! Hallo, hallo!'},
+  otter: {emoji: '🦦', nom: 'ein Otter', acc: 'einen Otter', walk: 5, run: 8.5, jump: 10, climb: 0, PR: .35, PH: .6, hide: true, deep: true, swim: true, swimFast: true, drinks: true,
+    can: 'Du bist ein super Schwimmer! Im Wasser flitzt du ganz schnell. 🌊', make: makeOtter, iih: 'Oh, ein Otter!'},
+  nilpferd: {emoji: '🦛', nom: 'ein Nilpferd', acc: 'ein Nilpferd', walk: 4, run: 7, jump: 6, climb: 0, PR: .95, PH: 1.9, hide: false, deep: true, swim: true, big: true, strong: true, waterCamo: true, drinks: true,
+    can: 'Du bist riesig und stark! Und im Wasser tauchst du ab: Dann sieht dich keiner. 🌊', make: makeHippo, iih: 'Hilfe, ein Nilpferd!'},
   krokodil: {emoji: '🐊', nom: 'ein Krokodil', acc: 'das Krokodil', walk: 4, run: 7, jump: 7, climb: 0, PR: .45, PH: .55, hide: true, deep: true, swim: true, swimFast: true, waterCamo: true,
     can: 'Im Wasser bist du super schnell, und keiner sieht dich! 🌊', make: makeCroc, iih: 'Hilfe, ein Krokodil!'}
 };
-const ORDER = ['maus', 'eich', 'affe', 'giraffe', 'schlange', 'gepard', 'tukan', 'frosch', 'elefant', 'loewe', 'zebra', 'krokodil', 'schildkroete', 'tiger', 'gorilla', 'faultier', 'chamaeleon'];
+const ORDER = ['maus', 'eich', 'affe', 'giraffe', 'schlange', 'gepard', 'tukan', 'frosch', 'elefant', 'loewe', 'zebra', 'krokodil', 'schildkroete', 'tiger', 'gorilla', 'faultier', 'chamaeleon', 'otter', 'nilpferd', 'nachtaffe', 'papagei'];
 const CHAMO_LEAF = new T.Color(0x3f9a3a);
 function animateAnimal(g, o){
   const u = g.userData;
@@ -1237,13 +1464,45 @@ function burst(x, y, z, colors, n = 14, sp = 5, g = 9, geo = pGeo){
     parts.push({m, vx: Math.cos(a)*Math.cos(b)*s, vy: Math.abs(Math.sin(b))*s + 2, vz: Math.sin(a)*Math.cos(b)*s, life: .7 + Math.random()*.5, g}); }
 }
 
+// ---------- jungle plants: lots of big leaves, ferns, lianas and flowers (instanced, so it stays fast) ----------
+{
+  const ok = (x, z, m) => riverD(x, z) > RIVER.w/2 + 1.3 && lakeE(x, z) > 1.3 && Math.hypot(x - POOL.x, z - POOL.z) > POOL.r + 1 && !(x > 176 && x < 234 && z < -1) &&
+    !solids.some(s => s.y0 < 1.5 && x + m > s.x0 && x - m < s.x1 && z + m > s.z0 && z - m < s.z1) && !BRIDGES.some(b => x > b.x0 - 1 && x < b.x1 + 1 && z > b.z0 - 1 && z < b.z1 + 1);
+  const N = 7000, leaves = new T.InstancedMesh(new T.SphereGeometry(1, 7, 4), new T.MeshStandardMaterial({color: 0xffffff, roughness: .8, flatShading: true}), N);
+  const m4 = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), v = new T.Vector3(), sc = new T.Vector3(), col = new T.Color();
+  const LCOL = [0x2f7a34, 0x3c8f3f, 0x24692c, 0x4fa04a, 0x1f5a2a, 0x5cae52];
+  let li = 0;
+  function leaf(x, y, z, yaw, pitch, len, wid, c){ if (li >= N) return;
+    v.set(x + Math.cos(yaw)*Math.cos(pitch)*len, y + Math.sin(pitch)*len, z - Math.sin(yaw)*Math.cos(pitch)*len);
+    q.setFromEuler(e.set(0, yaw, pitch, 'YZX')); sc.set(len, .05, wid); m4.compose(v, q, sc); leaves.setMatrixAt(li, m4); leaves.setColorAt(li, col.set(c)); li++; }
+  const flowers = new T.InstancedMesh(new T.SphereGeometry(.13, 6, 4), new T.MeshStandardMaterial({color: 0xffffff, roughness: .6, emissive: 0x220000}), 700); let fi = 0;
+  const FCOL = [0xff4f6d, 0xff9a3d, 0xffd23f, 0xff6fd0, 0xffffff, 0xc78bff];
+  const lianas = new T.InstancedMesh(new T.CylinderGeometry(.04, .05, 1, 5), new T.MeshStandardMaterial({color: 0x3d7a34, roughness: .9}), 900); let vi = 0;
+  for (let tries = 0; tries < 5200 && li < N - 12; tries++){
+    const x = 1 + rnd()*373, z = -13.4 + rnd()*82.8; if (!ok(x, z, .35)) continue;
+    const kind = rnd(), c = LCOL[(rnd()*LCOL.length) | 0];
+    if (kind < .45){ const k = 5 + (rnd()*3 | 0), big = .65 + rnd()*.5; for (let i = 0; i < k; i++) leaf(x, .05, z, i/k*6.28 + rnd()*.4, .25 + rnd()*.55, big*(.8 + rnd()*.4), big*.34, c); }
+    else if (kind < .8){ const k = 7 + (rnd()*3 | 0); for (let i = 0; i < k; i++) leaf(x, .05, z, i/k*6.28 + rnd()*.3, .45 + rnd()*.35, .55 + rnd()*.35, .1, 0x3d9a5b); }
+    else { for (let i = 0; i < 4; i++) leaf(x, .05, z, i*1.57 + rnd(), .7 + rnd()*.3, .35, .12, 0x4fa04a);
+      if (fi < 700){ const n = 2 + (rnd()*3 | 0), fc = FCOL[(rnd()*FCOL.length) | 0]; for (let i = 0; i < n && fi < 700; i++){ m4.makeTranslation(x + (rnd() - .5)*.6, .35 + rnd()*.3, z + (rnd() - .5)*.6); flowers.setMatrixAt(fi, m4); flowers.setColorAt(fi, col.set(fc)); fi++; } } }
+  }
+  // lianas hang from the tree crowns (high up, so they never hide you)
+  for (const tr of treeObjs){ if (tr.x > END_X || rnd() < .35) continue;
+    const n = 1 + (rnd()*2.4 | 0);
+    for (let i = 0; i < n && vi < 900; i++){ const lx = tr.x + (rnd() - .5)*3.4, lz = tr.z + (rnd() - .5)*3, top = 8.5 + rnd()*2, len = 2 + rnd()*2.6;
+      m4.compose(v.set(lx, top - len/2, lz), q.setFromEuler(e.set((rnd() - .5)*.12, 0, (rnd() - .5)*.12)), sc.set(1, len, 1)); lianas.setMatrixAt(vi++, m4);
+      for (let k = 0; k < 3; k++) leaf(lx, top - len*(.3 + k*.25), lz, rnd()*6.28, -.3, .22, .1, 0x4fa04a); } }
+  leaves.count = li; flowers.count = fi; lianas.count = vi;
+  [leaves, flowers, lianas].forEach(im => { im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; im.receiveShadow = true; im.castShadow = false; im.frustumCulled = false; scene.add(im); });
+}
+
 // ---------- game state ----------
 let cage = makeCage();
 let avatars = {}; for (const k of ORDER){ avatars[k] = ANIMALS[k].make(); avatars[k].visible = k === 'maus'; }
 const buddyMouse = makeMouse(true); buddyMouse.visible = false;
 let kind = 'maus', A = ANIMALS.maus, buddy = null;
 const unlocked = new Set(['maus']);
-const WSPEED = {tiger: 2.5, gorilla: 1.6, faultier: .4, chamaeleon: 1, schildkroete: .8, loewe: 2, zebra: 2.2, krokodil: 1, eich: 3.4, affe: 2.4, giraffe: 1.3, schlange: 1.3, maus: 3, gepard: 4.5, tukan: 1.5, frosch: 2, elefant: 1};
+const WSPEED = {otter: 2.2, nilpferd: .7, nachtaffe: 1.6, papagei: 1.2, tiger: 2.5, gorilla: 1.6, faultier: .4, chamaeleon: 1, schildkroete: .8, loewe: 2, zebra: 2.2, krokodil: 1, eich: 3.4, affe: 2.4, giraffe: 1.3, schlange: 1.3, maus: 3, gepard: 4.5, tukan: 1.5, frosch: 2, elefant: 1};
 const wilds = WILD.map(w => { const g = ANIMALS[w.kind].make();
   const bub = new T.Sprite(new T.SpriteMaterial({map: BUB.hallo, transparent: true, depthTest: false})); bub.position.y = ANIMALS[w.kind].PH + 1; bub.scale.set(3.4, 1.05, 1); bub.visible = false; bub.renderOrder = 10; g.add(bub);
   const o = Object.assign({}, w, {g, bub, hx: w.x, hz: w.z, y: w.perch || 0, ang: rnd()*6, tx: w.x, tz: w.z, wait: rnd()*2, moving: false, walk: 0, drink: false, say: -10});
@@ -1278,11 +1537,11 @@ function makeRescueCage(w){
   addStar(w.x - r*.55, 1.6, w.z - r*.4); w.star = stars[stars.length - 1];
 }
 let zzz = new T.Sprite(new T.SpriteMaterial({map: BUB.zz, transparent: true, depthTest: false})); zzz.scale.set(1.5, 1, 1); zzz.visible = false; zzz.renderOrder = 11; scene.add(zzz);
-const CATCHER_PATHS = [[[50,20],[95,30]], [[185,18],[235,30]], [[330,30],[368,18]], [[78,-6],[100,6]], [[117,-8],[141,9]], [[158,7],[184,-6]], [[275,-8],[315,8]], [[345,8],[368,-8]], [[410,4.5],[495,-4.5]], [[535,4.5],[630,-4.5]], [[628,9],[548,4.5]]];
+const CATCHER_PATHS = [[[40,48],[95,62]], [[232,44],[262,62]], [[318,54],[368,44]], [[120,40],[170,58]], [[50,20],[95,30]], [[185,18],[235,30]], [[330,30],[368,18]], [[78,-6],[100,6]], [[117,-8],[141,9]], [[158,7],[184,-6]], [[275,-8],[315,8]], [[345,8],[368,-8]], [[410,4.5],[495,-4.5]], [[535,4.5],[630,-4.5]], [[628,9],[548,4.5]]];
 const catchers = CATCHER_PATHS.map(([a, b]) => ({a, b, g: makeCatcher(), x: 0, z: 0, ang: 0, state: 'patrol', t: 0, cool: 0, walk: 0, tgt: 1, patrolT: 0}));
 const PEOPLE = [[[402, 4.6], [519, 4.6], 0x4fb8dc, 0x3b2a1a], [[519, -6.6], [402, -6.6], 0xe8455a, 0xe0b04a], [[405, 12.5], [510, 12.5], 0x7ccf6b, 0x222222], [[500, -4.6], [415, -4.6], 0xc78bff, 0x8a4b2a], [[528, 4.6], [636, 4.6], 0xff8a3d, 0x5a3a1a], [[636, -6.6], [528, -6.6], 0x7fd0ff, 0xd9a64e], [[556, 12.5], [632, 12.5], 0xffd23f, 0x222222]];
 const people = PEOPLE.map(([a, b, shirt, hair]) => ({a, b, g: makePerson({shirt, hair, pants: 0x34495e}), x: a[0], z: a[1], ang: 0, walk: 0, tgt: 1, scared: 0, say: 0}));
-let p = {x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, ang: 0, onGround: true, hidden: false, still: 0, run: 0, inHouse: false, inTree: null, holeLock: false, climb: null, inHollow: false, boost: 0, sleepT: 0, drinkT: 0, drinkCD: 0, bathT: 0, bathing: false, clean: false, gliding: false};
+let p = {x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, ang: 0, onGround: true, hidden: false, still: 0, run: 0, inHouse: false, inTree: null, inFlat: null, holeLock: false, climb: null, inHollow: false, boost: 0, sleepT: 0, drinkT: 0, drinkCD: 0, bathT: 0, bathing: false, clean: false, gliding: false};
 let cageT = 0, carried = false;
 let state = 'title', flags = {}, cageHits = 0, holder = null, startTime = 0, endTime = 0, shake = 0, fading = false, sleepTime = 0, wakeQ = false;
 let camPos = new T.Vector3(), camLook = new T.Vector3(), want = new T.Vector3(), look = new T.Vector3();
@@ -1299,7 +1558,7 @@ function reset(){
   use(C); updateStars();
 }
 function resetPl(i){
-  Object.assign(p, {x: 4 + i*1.6, y: 0, z: i*1.6, vx: 0, vy: 0, vz: 0, ang: 0, onGround: true, hidden: false, still: 0, inHouse: false, inTree: null, holeLock: false, climb: null, hang: null, hangLock: 0, inHollow: false, boost: 0, sleepT: 0, drinkT: 0, drinkCD: 0, bathT: 0, bathing: false, clean: false, gliding: false});
+  Object.assign(p, {x: 4 + i*1.6, y: 0, z: i*1.6, vx: 0, vy: 0, vz: 0, ang: 0, onGround: true, hidden: false, still: 0, inHouse: false, inTree: null, inFlat: null, holeLock: false, climb: null, hang: null, hangLock: 0, inHollow: false, boost: 0, sleepT: 0, drinkT: 0, drinkCD: 0, bathT: 0, bathing: false, clean: false, gliding: false});
   buddy = null; kind = 'maus'; A = ANIMALS.maus; PR = A.PR; PH = A.PH; p.ang = 0;
   cageHits = 0; holder = null; cage.visible = false; fading = false; carried = false; cageBox.hidden = true; sleepTime = 0;
   nightEl.classList.remove('on'); fadeEl.classList.remove('on'); zzz.visible = false;
@@ -1400,6 +1659,9 @@ const sfx = {
   tv(){ [523, 659, 523, 784].forEach((f, i) => tone(f, f, .12, 'square', .05, i*.14)); },
   flush(){ tone(900, 120, .9, 'sawtooth', .04); tone(400, 90, .7, 'sine', .08, .1); },
   blub(){ tone(700 + Math.random()*500, 1500, .06, 'sine', .03); },
+  bird(){ const b = 1800 + Math.random()*900; tone(b, b*1.3, .07, 'sine', .035); tone(b*1.2, b*.9, .09, 'sine', .035, .1); tone(b, b*1.4, .07, 'sine', .03, .22); },
+  parrot(){ tone(900, 1400, .12, 'square', .025); tone(1300, 800, .14, 'square', .025, .15); },
+  owl(){ tone(420, 380, .35, 'sine', .06); tone(400, 360, .5, 'sine', .06, .45); },
   thunder(){ tone(90, 30, 1.4, 'sawtooth', .12); tone(140, 40, 1.1, 'square', .05, .08); tone(60, 25, 1.8, 'sawtooth', .08, .25); },
   win(){ [523, 659, 784, 659, 784, 1046].forEach((f, i) => tone(f, f*1.01, .2, 'triangle', .14, i*.12)); }
 };
@@ -1433,7 +1695,7 @@ function markSprite(n, col){ const c = document.createElement('canvas'); c.width
   const s = new T.Sprite(new T.SpriteMaterial({map: new T.CanvasTexture(c), transparent: true, depthTest: false})); s.scale.set(.8, .8, 1); s.renderOrder = 12; s.visible = false; scene.add(s); return s; }
 P1.pickEl = document.getElementById('pick1'); P2.pickEl = document.getElementById('pick2');
 // the animal menu: pick any animal you have found, right in the middle of the game
-const SHORT = {maus: 'Maus', eich: 'Eichhörnchen', affe: 'Affe', giraffe: 'Giraffe', schlange: 'Schlange', gepard: 'Gepard', tukan: 'Tukan', frosch: 'Frosch', elefant: 'Elefant', loewe: 'Löwe', zebra: 'Zebra', krokodil: 'Krokodil', schildkroete: 'Schildkröte', tiger: 'Tiger', gorilla: 'Gorilla', faultier: 'Faultier', chamaeleon: 'Chamäleon'};
+const SHORT = {maus: 'Maus', eich: 'Eichhörnchen', affe: 'Affe', giraffe: 'Giraffe', schlange: 'Schlange', gepard: 'Gepard', tukan: 'Tukan', frosch: 'Frosch', elefant: 'Elefant', loewe: 'Löwe', zebra: 'Zebra', krokodil: 'Krokodil', schildkroete: 'Schildkröte', tiger: 'Tiger', gorilla: 'Gorilla', faultier: 'Faultier', chamaeleon: 'Chamäleon', otter: 'Otter', nilpferd: 'Nilpferd', nachtaffe: 'Nachtaffe', papagei: 'Papagei'};
 const PCOLS = 5;
 function openPick(P){ if (titleOn || stOf(P) === 'title') return; P.pick.open = true; P.pick.idx = ORDER.indexOf(P === cur ? kind : P.kind); for (const k in P.keys) P.keys[k] = false; sfx.poof(); drawPick(P); }
 function closePick(P){ P.pick.open = false; P.pickEl.hidden = true; }
@@ -1517,11 +1779,18 @@ function fadeTo(fn){
 const HOL = {x: 1100, z: 0, r: 3};
 function enterTree(c){
   fadeTo(() => { Object.assign(p, {x: HOL.x, y: 0, z: HOL.z + 1.4, ang: Math.PI/2, inHouse: true, inTree: c, climb: null, inHollow: false});
-    toast('🌳 Du bist in der Baumhöhle! Gemütlich und sicher. Hier kannst du Nüsse essen und schlafen.', 4.5); });
+    toast(flags.hollowOnce ? '🌳 Baumhöhle! Oben im Eichhörnchen-Stock wohnen die Eichhörnchen. 🐿️' : '🌳 Du bist in der Baumhöhle! Gemütlich und sicher. Die Treppe geht hoch zu den Eichhörnchen! 🐿️', 4.5); flags.hollowOnce = true; });
 }
 function exitTree(){
   const c = p.inTree;
   fadeTo(() => { Object.assign(p, {inHouse: false, inTree: null, climb: c, x: c.x, z: c.z + c.r + PR + .05, y: c.hollowY, inHollow: true, holeLock: true, holeT: 0, ang: -Math.PI/2}); });
+}
+function enterFlat(h){
+  fadeTo(() => { Object.assign(p, {x: FLAT.x0 + 1, y: 0, z: 0, ang: 0, inHouse: true, inFlat: h, climb: null});
+    toast(flags.flatOnce ? '🏠 Durch das Mäuseloch in die Wohnung!' : '🐭 Du bist durchs Mäuseloch geschlüpft! Für eine Maus ist hier alles riesig. Klettere über die Bücher auf den Tisch! 🧀', 5); flags.flatOnce = true; });
+}
+function exitFlat(){
+  const h = p.inFlat; fadeTo(() => { Object.assign(p, {x: h.x, y: 0, z: h.z + .9, ang: -Math.PI/2, inHouse: false, inFlat: null}); });
 }
 function teleport(toHouse){
   if (fading) return; fading = true; sfx.door(); fadeEl.classList.add('on'); const P = cur;
@@ -1601,7 +1870,8 @@ const hitXZ = (s, x, z) => x + PR > s.x0 && x - PR < s.x1 && z + PR > s.z0 && z 
 const bushAt = () => !p.inHouse && bushes.find(b => Math.hypot(p.x - b.x, p.z - b.z) < 1.4 && p.y < .3);
 const inPool = () => !p.inHouse && Math.hypot(p.x - POOL.x, p.z - POOL.z) < POOL.r && p.y < .2;
 const inLake = () => !p.inHouse && p.y < .3 && lakeE(p.x, p.z) < 1 && !onIsle(p.x, p.z);
-const inWater = () => inPool() || inLake();
+const inRiver = () => !p.inHouse && p.y < .25 && riverD(p.x, p.z) < RIVER.w/2 && !onBridge(p.x, p.z);
+const inWater = () => inPool() || inLake() || inRiver();
 const inTub = () => p.inHouse && p.x > TUBW.x0 && p.x < TUBW.x1 && p.z > TUBW.z0 && p.z < TUBW.z1 && p.y < HW.up + .3;
 function moveAxis(axis, d){
   if (!d) return;
@@ -1644,14 +1914,16 @@ function updatePlayer(dt, t){
     if (hs < 0 || hs > b.L){ const ex = hs < 0 ? b.ax : b.bx, ez = hs < 0 ? b.az : b.bz;
       const nb = HANG.find(o => o !== b && Math.abs(o.y - b.y) < .9 && (Math.hypot(o.ax - ex, o.az - ez) < 1.2 || Math.hypot(o.bx - ex, o.bz - ez) < 1.2));
       if (nb){ const atA = Math.hypot(nb.ax - ex, nb.az - ez) < 1.2; b = nb; hs = atA ? .05 : nb.L - .05; sfx.climb(); }
+      else if (hs < 0 && b.tree && A.hangOff < 0 && A.climb){ p.hang = null; p.climb = b.tree; p.y = b.y + .4; hs = 0; }
       else hs = Math.max(0, Math.min(b.L, hs)); }
-    p.hang.b = b; p.hang.s = hs;
+    if (p.hang){ p.hang.b = b; p.hang.s = hs;
     p.x = b.ax + b.dx*hs; p.z = b.az + b.dz*hs; p.y = b.y - A.hangOff; p.vx = p.vz = p.vy = 0; p.onGround = false;
     p.hangMv = Math.abs(along) > .15;
     if (p.hangMv){ const sg = Math.sign(along); p.ang = Math.atan2(-b.dz*sg, b.dx*sg); p.run += A.hangSpeed*dt*Math.abs(along); if (Math.random() < dt*3) sfx.climb(); }
-    p.hidden = !!A.treeHide;
-    if (jumpQ && !A.deep && !p.inHouse && isDeep(p.x, p.z)){ jumpQ = false; if (!(flags.deepHangT > t)){ flags.deepHangT = t + 4; toast('🌊 Nicht loslassen! Hier ist das Wasser zu tief. Hangel weiter!', 3); } }
-    if (jumpQ){ p.hang = null; p.hangLock = .45; p.vy = 5; p.vx = Math.cos(p.ang)*3; p.vz = -Math.sin(p.ang)*3; sfx.jump(); jumpQ = false; }
+    p.hidden = !!A.treeHide || (!!A.quickCamo && !p.hangMv);
+    }
+    if (p.hang && jumpQ && !A.deep && !p.inHouse && isDeep(p.x, p.z)){ jumpQ = false; if (!(flags.deepHangT > t)){ flags.deepHangT = t + 4; toast('🌊 Nicht loslassen! Hier ist das Wasser zu tief. Hangel weiter!', 3); } }
+    if (p.hang && jumpQ){ p.hang = null; p.hangLock = .45; p.vy = 5; p.vx = Math.cos(p.ang)*3; p.vz = -Math.sin(p.ang)*3; sfx.jump(); jumpQ = false; }
   }
   p.hangLock = Math.max(0, (p.hangLock || 0) - dt);
 
@@ -1671,6 +1943,10 @@ function updatePlayer(dt, t){
     if (p.y <= 0){ p.y = 0; if (climbV < 0){ p.climb = null; p.onGround = true; } }
     if (p.y >= c.h - .9){ p.climb = null; p.inHollow = false; p.x = c.x; p.z = c.z + .5; p.y = c.h; p.onGround = true;
       if (!flags.topMsg){ flags.topMsg = true; toast('🌳 Ganz oben im Baum! Was für eine Aussicht!', 3); } }
+    if (A.hang && p.climb){ const tb = HANG.find(b => b.tree === c && Math.abs(p.y + A.hangOff - b.y) < .55);
+      if (tb && A.hangOff < 0 && !flags.branchHint){ flags.branchHint = true; toast('🦎 Ein Ast! Drück zur Seite, dann läufst du auf den Ast.', 4); }
+      if (tb && ix*tb.dx + iz*tb.dz > .5){ p.climb = null; p.inHollow = false; p.hang = {b: tb, s: .05}; sfx.climb();
+        if (A.hangOff < 0 && !flags.branchMsg){ flags.branchMsg = true; toast('🦎 Du läufst auf dem Ast! Springen = runter.', 3.5); } } }
     if (jumpQ && p.climb){ p.climb = null; p.inHollow = false; p.vy = 8; p.vx = ox*5; p.vz = oz*5; sfx.jump(); }
   }
 
@@ -1705,6 +1981,8 @@ function updatePlayer(dt, t){
         else if (A.quickCamo){ if (!flags.chamoMsg){ flags.chamoMsg = true; toast('🦎 Zack, grün wie ein Blatt! Jetzt sieht dich keiner.', 3); } }
         else if (!flags.camoMsg){ flags.camoMsg = true; toast('🐍 Getarnt! Eine stille Schlange sieht keiner.', 3); } } }
     else { p.still = 0; p.hidden = false; }
+    { const dn = denAt(); if (dn && A.cat){ if (!p.hidden) sfx.hide(); p.hidden = true; if (!flags.denMsg){ flags.denMsg = true; toast(`${A.emoji} Du verkriechst dich in der Raubkatzen-Höhle! Hier findet dich kein Tierfänger.`, 4); } }
+      else if (dn && !flags.denNo){ flags.denNo = true; toast('🐆 Das ist die Höhle der Raubkatzen! Nur Gepard, Löwe und Tiger können sich hier verstecken.', 4.5); } }
     if (A.waterCamo && inWater()){ p.hidden = true; if (!flags.crocMsg){ flags.crocMsg = true; toast('🐊 Pssst! Im Wasser sieht dich keiner.', 3); } }
     if (b && !A.hide && !flags.bigBush){ flags.bigBush = true; toast('😄 Eine Giraffe ist viel zu groß für den Busch!', 3); }
     // drink in the lake or the pool
@@ -1743,7 +2021,7 @@ function updatePlayer(dt, t){
   if (p.climb && A.treeHide && p.hidden && !flags.slothMsg){ flags.slothMsg = true; toast('🦥 Psst! Ein Faultier im Baum sieht keiner.', 3); }
   jumpQ = false;
   hiddenTag.hidden = !(p.hidden || p.inHouse);
-  hiddenTag.textContent = p.inTree ? '🌳 Baumhöhle: sicher!' : p.inHouse ? '🏠 Zuhause: sicher!' : p.inHollow ? '🌳 Baumhöhle: sicher!' : '🙈 Versteckt!';
+  hiddenTag.textContent = p.inTree ? '🌳 Baumhöhle: sicher!' : p.inFlat ? '🏠 Wohnung: sicher!' : p.inHouse ? '🏠 Zuhause: sicher!' : p.inHollow ? '🌳 Baumhöhle: sicher!' : denAt() ? '🐆 Höhle: versteckt!' : '🙈 Versteckt!';
   boostTag.hidden = !(p.boost > 0);
 
   if ((state === 'play' || state === 'win') && !p.climb && !p.hang){
@@ -1754,10 +2032,11 @@ function updatePlayer(dt, t){
     const ox = p.x, oz = p.z;
     moveAxis('x', p.vx*dt); moveAxis('z', p.vz*dt);
     if (p.inTree){ const dx = p.x - HOL.x, dz = p.z - HOL.z, d = Math.hypot(dx, dz), mx = HOL.r - PR - .1; if (d > mx && !(dz > 0 && Math.abs(dx) < 1.1)){ p.x = HOL.x + dx/d*mx; p.z = HOL.z + dz/d*mx; } p.z = Math.min(HOL.z + HOL.r + .2, p.z); }
+    else if (p.inFlat){ p.x = Math.max(FLAT.x0 + PR, Math.min(FLAT.x1 - PR, p.x)); p.z = Math.max(FLAT.z0 + PR, Math.min(FLAT.z1 - PR, p.z)); }
     else if (p.inHouse){ p.x = Math.max(HW.x0 + PR, Math.min(HW.x1 - PR, p.x)); p.z = Math.max(HW.z0 + PR, Math.min(HW.z1 - .25, p.z)); }
     else {
       const caveZone = p.x > CAVE0 + PR && p.x < CAVE1 - PR, lakeZone = p.x > LZ.x0 && p.x < LZ.x1;
-      p.x = Math.max(1, Math.min(CITY1, p.x)); p.z = Math.max(caveZone ? TUN + .5 : ZB + .8, Math.min(lakeZone ? LZ.z1 : p.x < END_X ? JZ - .5 : ZF - .5, p.z));
+      p.x = Math.max(1, Math.min(CITY1, p.x)); p.z = Math.max(caveZone ? TUN + .5 : ZB + .8, Math.min(p.x < END_X ? JZ - .5 : ZF - .5, p.z));
       if (!A.deep && isDeep(p.x, p.z)){
         if (!isDeep(ox, p.z)) p.x = ox; else if (!isDeep(p.x, oz)) p.z = oz; else { p.x = ox; p.z = oz; }
         if (!(flags.deepT > t)){ flags.deepT = t + 8; toast(`🌊 Zu tief für ${A.acc}! Eine Giraffe 🦒 oder Schlange 🐍 kommt da durch.`, 3.5); }
@@ -1799,6 +2078,9 @@ function updatePlayer(dt, t){
         else teleport(true); }
       if (p.inHouse && !p.inTree && p.x < HW.x0 + .6 && Math.abs(p.z - HW.door) < .7 && p.y < .5) teleport(false);
       if (p.inTree && p.z > HOL.z + HOL.r - .1) exitTree();
+      if (p.inFlat && p.x < FLAT.x0 + .55 && Math.abs(p.z) < .6 && p.y < .4) exitFlat();
+      if (!p.inHouse && p.x > CITY0 && p.z < -7.2 && p.y < .5){ const h = HOLES.find(h => Math.abs(p.x - h.x) < .45);
+        if (h){ if (kind === 'maus') enterFlat(h); else if (!(flags.holeT > t)){ flags.holeT = t + 5; toast(`🕳️ Ein Mäuseloch! Da passt nur eine Maus durch. Werde zu 🐭.`, 3.5); } } }
     }
     if (!flags.bush && bushAt()){ flags.bush = true; toast('Ein Busch! Bleib still stehen, dann bist du versteckt. 🙈', 4); }
     if (!flags.catcher && p.x > 68 && !p.inHouse){ flags.catcher = true; toast(isTouch ? '👀 Achtung, Tierfänger! Halte 💨 zum schnell Rennen.' : '👀 Achtung, Tierfänger! Halte Shift zum schnell Rennen.', 4.5); }
@@ -1833,7 +2115,7 @@ function updateWorld(dt, t){
     let fa = Math.atan2(-dz, dx) - c.ang; fa = Math.atan2(Math.sin(fa), Math.cos(fa));
     const sees = !world.off && state === 'play' && !p.inHouse && !p.hidden && c.cool <= 0 && c.g.visible && p.y < 3.5 && dist < 11 && Math.abs(fa) < 1.15;
     const walkTo = (tx, tz, sp) => { const ddx = tx - c.x, ddz = tz - c.z, d = Math.hypot(ddx, ddz); if (d < .05) return 0;
-      const st = Math.min(d, sp*dt); c.x += ddx/d*st; c.z += ddz/d*st; c.ang = Math.atan2(-ddz, ddx); c.walk += dt*sp*1.6; return d; };
+      const st = Math.min(d, sp*dt), nx = c.x + ddx/d*st, nz = c.z + ddz/d*st; c.ang = Math.atan2(-ddz, ddx); if (isDeep(nx, nz)) return d; c.x = nx; c.z = nz; c.walk += dt*sp*1.6; return d; };
     const spot = () => { if (sees){ c.state = 'alert'; c.t = .6; sfx.alert(); } };
     if (c.state === 'patrol'){
       const tp = c.tgt ? c.b : c.a; if (walkTo(tp[0], tp[1], 2.2) < .3) c.tgt ^= 1;
@@ -1886,6 +2168,22 @@ function updateWorld(dt, t){
       if (d < .5){ w.runHome = false; w.hx = w.captive[0]; w.hz = w.captive[1]; w.r = 3; w.wait = 1; w.bub.material.map = BUB.hallo; }
       else { const st = Math.min(d, 8*dt); w.x += dx/d*st; w.z += dz/d*st; w.ang = Math.atan2(-dz, dx); w.walk += st*1.4; w.moving = true; }
       continue; }
+    if ((w.kind === 'eich' || ANIMALS[w.kind].cat) && !w.captive){ const isCat = !!ANIMALS[w.kind].cat;
+      if (w.hideT > 0){ w.hideT -= dt; w.moving = false; if (w.hideT > 0 || catchers.some(c => c.state !== 'away' && Math.hypot(c.x - w.x, c.z - w.z) < (isCat ? 16 : 12))){ w.hideT = Math.max(w.hideT, .5); if (isCat) w.ang = Math.PI/2*-1 + Math.sin(t*.4)*.3; continue; } w.g.visible = true; w.wait = 1; if (isCat){ w.hx = w.src.x; w.hz = w.src.z; w.tx = w.hx; w.tz = w.hz; } }
+      else if (!w.hideTo && catchers.some(c => c.state !== 'away' && Math.hypot(c.x - w.x, c.z - w.z) < 9)){
+        let best = null, bd = isCat ? 60 : 30;
+        if (isCat){ for (const d of DENS){ const dd = Math.hypot(d.x - w.x, d.z - w.z); if (dd < bd){ bd = dd; best = {x: d.x - .8, z: d.z - 1.3, r: 0, den: true}; } } }
+        else for (const c of climbTrees){ if (c.hollowY == null) continue; const d = Math.hypot(c.x - w.x, c.z - w.z); if (d < bd){ bd = d; best = c; } }
+        if (best) w.hideTo = best; }
+      if (w.hideTo){ const tx = w.hideTo.x, tz = w.hideTo.den ? w.hideTo.z : w.hideTo.z + w.hideTo.r + .4, dx = tx - w.x, dz = tz - w.z, d = Math.hypot(dx, dz);
+        if (d < .3 && isCat){ w.hideTo = null; w.hideT = 12; w.say = -10;
+          if (!flags.catHide && active().some(P => !P.p.inHouse && Math.hypot(P.p.x - w.x, P.p.z - w.z) < 25)){ flags.catHide = true; toast(`${ANIMALS[w.kind].emoji} Schau! Die Raubkatze verkriecht sich in ihrer Höhle!`, 4); } }
+        else if (d < .3){ w.hideTo = null; w.hideT = 10; w.g.visible = false; w.say = -10; w.x = tx; w.z = tz;
+          if (!flags.sqHide && active().some(P => !P.p.inHouse && Math.hypot(P.p.x - w.x, P.p.z - w.z) < 22)){ flags.sqHide = true; toast('🐿️ Schau! Das Eichhörnchen versteckt sich in der Baumhöhle vor dem Tierfänger!', 4); } }
+        else { const st = Math.min(d, (isCat ? 11 : 9)*dt); w.x += dx/d*st; w.z += dz/d*st; w.ang = Math.atan2(-dz, dx); w.walk += st*1.8; w.moving = true; }
+        continue; }
+    }
+    if (w.night){ const on = world.L < .4; w.g.visible = on; if (!on){ w.say = -10; continue; } }
     if (w.perch){ w.moving = false; w.y = w.perch + Math.abs(Math.sin(t*2.5))*.25; }
     else if (w.wait > 0){ w.wait -= dt; w.moving = false;
       if (w.wait <= 0){ const a = Math.random()*6.28, r = Math.random()*w.r; w.tx = w.hx + Math.cos(a)*r; w.tz = w.hz + Math.sin(a)*r; w.drink = false; } }
@@ -1932,7 +2230,7 @@ function caught(c){
 function carryToCity(){
   const c = holder, nm = cur.name;
   fadeTo(() => {
-    Object.assign(p, {x: 507, y: 0, z: -5.9, ang: Math.PI/2, inHouse: false, climb: null, inTree: null});
+    Object.assign(p, {x: 507, y: 0, z: -5.9, ang: Math.PI/2, inHouse: false, climb: null, inTree: null, inFlat: null});
     c.x = 505.2; c.z = -5.6; c.ang = 0; c.g.visible = true;
     cage.position.set(p.x, p.y, p.z); cage.userData.bars.forEach(b => b.rotation.set(0, 0, 0));
     carried = true; cageHits = 0; cageFill.style.width = '0%';
@@ -1974,7 +2272,7 @@ function updateSky(dt){
   if (now !== world.said){
     const was = world.said; world.said = now;
     if (was && !titleOn){
-      if (now === 'night') toast('🌙 Es wird Nacht! Die Tierfänger gehen nach Hause und schlafen. 😴', 4.5);
+      if (now === 'night') toast('🌙 Es wird Nacht! Die Tierfänger gehen nach Hause und schlafen. 😴' + (unlocked.has('nachtaffe') ? '' : ' Psst: Jetzt kommen die Nachtaffen raus! 🐒'), 5);
       else if (now === 'rain') toast('🌧️ Es regnet! Die Tierfänger mögen keinen Regen und gehen nach Hause. ☔', 4.5);
       else if (now === 'storm') toast('⛈️ Ein Gewitter! Die Tierfänger rennen schnell nach Hause!', 4.5);
       else if (was === 'night') toast('☀️ Guten Morgen! Pass auf, die Tierfänger kommen wieder.', 4.5);
@@ -1994,14 +2292,16 @@ function drawSky(L, R){
   g.fillStyle = gr; g.fillRect(0, 0, 2, 256); skyTex.needsUpdate = true; scene.background = skyTex;
 }
 const HEMI_DAY = new T.Color(0xfff6d5), HEMI_NIGHT = new T.Color(0x8ea6ff), SUN_DAY = new T.Color(0xfff2d0), SUN_NIGHT = new T.Color(0xa9b8ff);
-function applySky(inHouse){
-  const L = world.L, R = world.R, F = world.flash;
+const FOG_JUNGLE = new T.Color(0x8fc48a);
+function applySky(inHouse, jungle, nv){
+  const L = nv ? Math.max(world.L, .72) : world.L, R = world.R, F = world.flash;
   if (inHouse){ sun.intensity = .35; hemi.intensity = .55; hemi.color.copy(HEMI_DAY); sun.color.copy(SUN_DAY); scene.fog.near = 80; scene.fog.far = 200; return; }
   drawSky(L, R);
   sun.intensity = (.85*L + .18*(1 - L))*(1 - .55*R) + F*.6; sun.color.copy(SUN_NIGHT).lerp(SUN_DAY, L);
   hemi.intensity = (.62*(.35 + .65*L))*(1 - .3*R) + F*1.4; hemi.color.copy(HEMI_NIGHT).lerp(HEMI_DAY, L);
   scene.fog.color.copy(FOG.night).lerp(FOG.day, L).lerp(FOG.rain, R*(.35 + .65*L));
-  scene.fog.near = 45 - 20*R; scene.fog.far = 120 - 45*R - 25*(1 - L);
+  if (jungle) scene.fog.color.lerp(FOG_JUNGLE, .45*L*(1 - R));
+  scene.fog.near = (jungle ? 32 : 45) - 15*R; scene.fog.far = (jungle ? 100 : 120) - 40*R - 25*(1 - L);
 }
 // rain drops fall around whoever is looking
 const RAIN_N = 900, rainPos = new Float32Array(RAIN_N*6), rainGeo = new T.BufferGeometry();
@@ -2017,6 +2317,42 @@ const skyDots = (() => { const n = 260, a = new Float32Array(n*3);
   pts.frustumCulled = false; pts.visible = false; scene.add(pts); return pts; })();
 const moon = new T.Mesh(new T.SphereGeometry(7, 20, 14), new T.MeshBasicMaterial({color: 0xfff6c8, fog: false, transparent: true, opacity: 0}));
 moon.visible = false; scene.add(moon);
+// fish jump out of the water now and then; ducks paddle around
+function waterSpot(){
+  if (Math.random() < .55){ const P = RIVER.pts[10 + (Math.random()*(RIVER.pts.length - 14) | 0)]; return [P[0] + (Math.random() - .5)*2, P[1]]; }
+  const a = Math.random()*6.28, r = .35 + Math.random()*.45, x = LAKE.x + Math.cos(a)*LAKE.rx*r, z = LAKE.z + Math.sin(a)*LAKE.rz*r; return onIsle(x, z) ? [LAKE.x + 9, LAKE.z] : [x, z]; }
+const FISH = [0xff8a3d, 0xc9d6e0, 0xffd23f, 0xff6fae, 0x7fd0ff, 0xff8a3d, 0xc9d6e0, 0x9be36a].map(c => { const g = new T.Group();
+  const b = mesh(new T.SphereGeometry(.22, 10, 8), M(c), 0, 0, 0, g); b.scale.set(1.5, .7, .45);
+  mesh(new T.ConeGeometry(.16, .26, 4), M(c), -.4, 0, 0, g).rotation.z = Math.PI/2; mesh(new T.SphereGeometry(.035, 6, 5), M(0x111111), .2, .05, .08, g);
+  g.visible = false; scene.add(g); return {g, t: Math.random()*6, jump: 0, x: 0, z: 0, dir: 0}; });
+function makeDuck(){ const g = new T.Group(), body = M(0x9a7a55), white = M(0xfff8e7);
+  const b = mesh(new T.SphereGeometry(.3, 12, 8), body, 0, .12, 0, g); b.scale.set(1.4, .7, .9); mesh(new T.SphereGeometry(.18, 10, 8), white, .05, .22, 0, g).scale.set(1.2, .5, .8);
+  mesh(new T.SphereGeometry(.16, 10, 8), M(0x2e8a4a), .38, .42, 0, g); mesh(new T.ConeGeometry(.06, .2, 6), M(0xff9a1f), .58, .4, 0, g).rotation.z = -Math.PI/2;
+  [-1, 1].forEach(s => mesh(new T.SphereGeometry(.03, 6, 5), M(0x111111), .46, .48, s*.1, g)); mesh(new T.ConeGeometry(.08, .2, 4), body, -.45, .22, 0, g).rotation.z = Math.PI/2 + .5;
+  scene.add(g); return g; }
+const DUCKS = [{river: true, s: 30, dir: 1}, {river: true, s: 70, dir: -1}, {river: true, s: 110, dir: 1}, {lake: true, a: 0, r: 6}, {lake: true, a: 3, r: 10}].map(d => Object.assign(d, {g: makeDuck()}));
+function syncCritters(dt, t){
+  for (const f of FISH){
+    if (!f.jump){ f.t -= dt; if (f.t <= 0){ [f.x, f.z] = waterSpot(); f.dir = Math.random()*6.28; f.jump = .001; f.g.visible = true;
+      if (active().some(P => Math.hypot(P.p.x - f.x, P.p.z - f.z) < 30)) burst(f.x, .1, f.z, [0x9be3ff, 0xffffff], 5, 2.2); } continue; }
+    f.jump += dt; const k = f.jump/.9;
+    if (k >= 1){ f.jump = 0; f.g.visible = false; f.t = 1.5 + Math.random()*5; if (active().some(P => Math.hypot(P.p.x - f.x, P.p.z - f.z) < 30)){ burst(f.x + Math.cos(f.dir), .1, f.z - Math.sin(f.dir), [0x9be3ff, 0xffffff], 6, 2.5); } continue; }
+    f.g.position.set(f.x + Math.cos(f.dir)*(k - .5)*2, Math.sin(k*Math.PI)*1.4, f.z - Math.sin(f.dir)*(k - .5)*2); f.g.rotation.set(0, f.dir, Math.cos(k*Math.PI)*1.1);
+  }
+  for (const d of DUCKS){ let x, z, ang;
+    if (d.river){ const P = RIVER.pts; d.s += d.dir*dt*1.2; if (d.s < 12 || d.s > P.length - 3){ d.dir *= -1; d.s = Math.max(12, Math.min(P.length - 3, d.s)); }
+      const i = d.s | 0, f = d.s - i, a = P[i], b = P[i + 1]; x = a[0] + (b[0] - a[0])*f + Math.sin(t*.3 + d.s)*.8; z = a[1] + (b[1] - a[1])*f; ang = Math.atan2(-(b[1] - a[1])*d.dir, (b[0] - a[0])*d.dir); }
+    else { d.a += dt*.12*(12/d.r); x = LAKE.x + Math.cos(d.a)*d.r*1.6; z = LAKE.z + Math.sin(d.a)*d.r*.6; ang = -d.a - Math.PI/2; }
+    d.g.position.set(x, .05 + Math.sin(t*3 + d.r)*.03, z); d.g.rotation.y = ang; }
+  if (riverTex) riverTex.offset.y -= dt*.35;
+  for (const d of DENS){ const inside = active().some(P => !P.p.inHouse && P.p.x > d.x0 - 1 && P.p.x < d.x1 + 1 && P.p.z > d.z0 - 1 && P.p.z < d.z1 + 1.5); d.roofM.opacity += ((inside ? .25 : 1) - d.roofM.opacity)*Math.min(1, dt*6); d.roofM.depthWrite = d.roofM.opacity > .9; }
+  HOLLOW_SQ.forEach((q, i) => { q.position.y = 3.2 + Math.max(0, Math.sin(t*2.2 + i*2))*.12; q.rotation.y += Math.sin(t*.7 + i)*.004; });
+  if (FLAT.cat) FLAT.cat.scale.y = 1 + Math.sin(t*1.6)*.05;
+  // jungle sounds: birds by day, an owl at night
+  world.birdT = (world.birdT ?? 3) - dt;
+  if (world.birdT <= 0){ world.birdT = 2.5 + Math.random()*5;
+    if (!titleOn && world.wx !== 'storm' && active().some(P => !P.p.inHouse && P.p.x < END_X)) (world.L > .5 ? (Math.random() < .3 ? sfx.parrot : sfx.bird) : sfx.owl)(); }
+}
 function syncWeather(dt){
   const R = world.R; rain.visible = R > .03;
   if (rain.visible){ const fall = dt*(world.wx === 'storm' ? 30 : 22);
@@ -2063,7 +2399,7 @@ function syncPlayer(dt, t, on){
   av.position.set(p.x, p.y, p.z);
   let da = p.ang - av.rotation.y; da = Math.atan2(Math.sin(da), Math.cos(da)); av.rotation.y += da*Math.min(1, dt*14);
   const sp = Math.hypot(p.vx, p.vz), moving = (p.onGround && sp > .5) || (!!p.hang && p.hangMv);
-  animateAnimal(av, {hang: !!p.hang, mv: moving, run: p.run, t, air: !p.onGround, vy: p.vy, climb: !!p.climb, sleep: state === 'sleep', drink: p.drinkT > .3 && p.drinkCD <= 0, hidden: p.hidden, glide: p.gliding, fly: !p.onGround && A.fly});
+  animateAnimal(av, {hang: !!p.hang && A.hangOff > 0, mv: moving, run: p.run, t, air: !p.onGround, vy: p.vy, climb: !!p.climb, sleep: state === 'sleep', drink: p.drinkT > .3 && p.drinkCD <= 0, hidden: p.hidden, glide: p.gliding, fly: !p.onGround && A.fly});
   if (buddy) animateAnimal(buddy, {sleep: true, t});
   zzz.visible = state === 'sleep'; if (zzz.visible){ zzz.position.set(p.x + .4, p.y + Math.min(PH, 1.5) + .6 + (t % 2)*.4, p.z); zzz.material.opacity = 1 - (t % 2)/2; }
   if (cur.mark.visible) cur.mark.position.set(p.x, p.y + PH + .75 + Math.sin(t*3)*.08, p.z);
@@ -2099,7 +2435,7 @@ function syncWorld(dt, t){
   for (let i = 0; i < MIST; i++){ mistPos[i*3+1] += mistV[i]*dt; if (mistPos[i*3+1] > 4){ mistPos[i*3+1] = 0; mistPos[i*3] = WF.x0 + Math.random()*wfW; } }
   mistGeo.attributes.position.needsUpdate = true;
   wfTex.offset.y = (t*1.6) % 1; wfTex2.offset.y = (t*2.3) % 1;
-  syncWeather(dt);
+  syncWeather(dt); syncCritters(dt, t);
   if (wfGain && ac){ const d = Math.min(...active().map(P => P.p.inHouse ? 99 : Math.hypot(P.p.x - 204, P.p.z - WF.z))); wfGain.gain.value = muted ? 0 : Math.max(0, 1 - d/45)*.25; }
 }
 // everything that depends on who is looking: one call per screen half
@@ -2120,7 +2456,7 @@ function syncView(dt, t, camera){
   camera.position.copy(camPos); if (shake) camera.position.x += (Math.random() - .5)*.15;
   camera.lookAt(camLook);
   sun.position.set(p.x + 18, 30 + p.y, p.z + 14); sun.target.position.set(p.x, p.y, p.z);
-  applySky(p.inHouse); viewWeather();
+  applySky(p.inHouse, p.x < END_X + 8, !!A.nightEyes && world.L < .72); viewWeather();
 }
 
 // ---------- loop ----------
@@ -2141,7 +2477,7 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__game = {step(n){ let tt = performance.now()/1000; for (let i = 0; i < n; i++){ tt += .033; update(.033, tt); } sync(.033, tt); render(.033, tt); }, get keys(){ return P1.keys; }, jump(){ P1.inp.jump = true; }, get p(){ return P1.p; }, P1, P2, PL, use, start, openPick, closePick, world, DAY, get twoP(){ return twoP; }, stars, catchers, people, foods, climbTrees, teleport, snapCam, wilds, unlocked, setKind, isDeep, LAKE, BEDS, get kind(){ return P1 === cur ? kind : P1.kind; }, get state(){ return stOf(P1); }, get buddy(){ const b = P1 === cur ? buddy : P1.buddy; return b && b.visible; }};
+window.__game = {step(n){ let tt = performance.now()/1000; for (let i = 0; i < n; i++){ tt += .033; update(.033, tt); } sync(.033, tt); render(.033, tt); }, get keys(){ return P1.keys; }, jump(){ P1.inp.jump = true; }, get p(){ return P1.p; }, P1, P2, PL, use, start, openPick, closePick, world, DAY, get twoP(){ return twoP; }, stars, catchers, people, foods, climbTrees, teleport, snapCam, wilds, unlocked, setKind, isDeep, LAKE, BEDS, solids, riverD, HANG, get kind(){ return P1 === cur ? kind : P1.kind; }, get state(){ return stOf(P1); }, get buddy(){ const b = P1 === cur ? buddy : P1.buddy; return b && b.visible; }};
 })();
 </script>
 
