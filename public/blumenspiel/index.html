@@ -311,7 +311,7 @@ function startWorld(i, fromX) {
   if (w.deco === 'schnee' && st.secrets[1]) st.stormAt = st.secrets[1].x - 900; // Schneesturm, kurz vor dem 2. Geheimgang
   st.shots = [];
   st.snow = (w.deco !== 'wasser' && (st.season === 3 || w.deco === 'schnee')) ? [0.15, 0.48].map(f => ({ x: Math.round(w.len * f), stage: 0 })) : [];
-  st.balloon = w.deco === 'wasser' ? null : { x: Math.round(w.len * 0.3), used: false, gone: 0 }; st.ride = null; st.pup = null;
+  st.balloon = w.name !== 'Wiese' ? null : { x: Math.round(w.len * 0.3), used: false, gone: 0 }; st.ride = null; st.pup = null;
   st.rain = null; st.rainT = 30 + Math.random() * 30; st.grow = 1; st.rainbowT = 0; st.visited = {};
   { const kr = w.boss === 'krake', hp = kr ? (st.two ? 7 : 10) : (st.two ? 6 : 8);
     st.boss = w.boss ? { kind: w.boss, x: kr ? w.len - 1100 : 1700, hp, max: hp, t: 0, atk: 4, hitT: 0, gone: 0, defeated: false, seedT: 0, intro: false } : null; }
