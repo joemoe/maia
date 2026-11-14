@@ -283,7 +283,7 @@ function startWorld(i, fromX) {
   if (w.deco === 'schnee' && st.secrets[1]) st.stormAt = st.secrets[1].x - 900; // Schneesturm, kurz vor dem 2. Geheimgang
   st.shots = [];
   st.snow = (w.deco !== 'wasser' && (st.season === 3 || w.deco === 'schnee')) ? [0.15, 0.48].map(f => ({ x: Math.round(w.len * f), stage: 0 })) : [];
-  st.balloon = w.deco === 'wasser' ? null : { x: Math.round(w.len * 0.3), used: false, gone: 0 }; st.ride = null;
+  st.balloon = w.deco === 'wasser' ? null : { x: Math.round(w.len * 0.3), used: false, gone: 0 }; st.ride = null; st.pup = null;
   st.rain = null; st.rainT = 30 + Math.random() * 30; st.grow = 1; st.rainbowT = 0; st.visited = {};
   { const kr = w.boss === 'krake', hp = kr ? (st.two ? 7 : 10) : (st.two ? 6 : 8);
     st.boss = w.boss ? { kind: w.boss, x: kr ? w.len - 1100 : 1700, hp, max: hp, t: 0, atk: 4, hitT: 0, gone: 0, defeated: false, seedT: 0, intro: false } : null; }
@@ -709,6 +709,15 @@ function update(dt) {
     for (const p of ps) { p.x = Rd.x - (p.id ? 30 : 0); p.jumpY = end ? 0 : Math.max(0.01, rideHeight(Rd.t)); p.vy = 0; p.digging = 0; }
     if (end) { st.ride = null; st.balloon.gone = 0.01; st.balloon.x = Rd.x; say('Gelandet! Tschüss, Ballon!'); } }
   if (st.balloon && st.balloon.gone) st.balloon.gone += dt;
+  { // Wuffi läuft hinter dir her
+    const L = ps[0]; if (!st.pup) st.pup = { x: L.x - 90, jy: 0, vy: 0, face: 1, run: 0 };
+    const D = st.pup;
+    if (st.ride) { D.x = L.x + 22; D.jy = L.jumpY; D.vy = 0; D.face = 1; D.run = 0; }
+    else { const tx = L.x - (L.face < 0 ? -90 : 90), dx = tx - D.x;
+      if (Math.abs(dx) > 1000) D.x = tx; else if (Math.abs(dx) > 12) { const v = Math.sign(dx) * Math.min(Math.abs(dx) * 5, 620); D.x += v * dt; D.face = Math.sign(dx); D.run += dt; } else D.run = 0;
+      if (D.jy <= 0 && L.jumpY > 30 && L.vy > 0) D.vy = 520 * S;
+      if (D.jy > 0 || D.vy > 0) { D.jy += D.vy * dt; D.vy -= 1500 * S * dt; if (D.jy <= 0) { D.jy = 0; D.vy = 0; } } }
+  }
   // zu zweit: nicht weiter auseinander als der Bildschirm breit ist
   if (st.two) {
     const gap = W - 140;
@@ -2483,6 +2492,8 @@ function drawPlay(t) {
       cx.fillStyle = '#fff'; cx.fillText(nameOf(p), px, ty);
     }
   }
+  if (st.pup) { const D = st.pup, dxp = D.x - cam; if (dxp > -80 && dxp < W + 80) { const bob = D.run ? Math.abs(Math.sin(D.run * 14)) * 5 * S : 0;
+    cx.save(); cx.translate(dxp, 0); cx.scale(D.face, 1); drawDog(0, groundY(D.x) + 2 * S - D.jy - bob, 0.75 * S, t, D.jy > 0 ? 'trick' : D.run ? 'pet' : 'idle', 0.4); cx.restore(); } }
   if (st.ride) { const lead = players()[0]; drawBalloon(lead.x - cam - (st.two ? 15 : 0), groundY(lead.x) - lead.jumpY + 4 * S, t, false, true); }
   // Geschenke vom Jet
   for (const g of st.gifts) drawGift(g, cam, t);
