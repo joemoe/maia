@@ -188,6 +188,27 @@ function gardenAction(id) {
     else { g.wiggle = Date.now(); beep(988, .1, 'triangle'); say(['Hihi, das kitzelt!', 'Danke, dass du mich gepflanzt hast!', 'Ich bin so gern in deinem Garten!'][i % 3]); }
   }
 }
+// Jahreszeiten: jeden Morgen kommt die nächste
+const SEASONS = ['Frühling', 'Sommer', 'Herbst', 'Winter'];
+st.season = 0; try { st.season = (+localStorage.getItem('blumen-jahreszeit') || 0) % 4; } catch (e) {}
+function nextSeason() { st.season = (st.season + 1) % 4; try { localStorage.setItem('blumen-jahreszeit', String(st.season)); } catch (e) {} }
+// Spielzimmer mit Puzzle
+const MOTIFS = ['Blumenhaus', 'Krakenkönig', 'Blumen-City', 'Regenbogen'];
+function newPuzzle(m) {
+  const order = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  do { for (let i = 8; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; } } while (order.every((v, i) => v === i));
+  st.puz = { m: m == null ? ((st.puz ? st.puz.m : -1) + 1) % MOTIFS.length : m, order, sel: -1, solved: false, t: 0 };
+}
+function puzzleAction(id) {
+  if (id === 'back') { st.homeMode = 'menu'; beep(500, .08); return; }
+  if (id === 'pnew') { newPuzzle(); beep(700, .08); say('Ein neues Puzzle: ' + MOTIFS[st.puz.m] + '!'); return; }
+  const P2 = st.puz; if (!P2 || P2.solved || !id || !id.startsWith('pc')) return;
+  const i = +id.slice(2);
+  if (P2.sel < 0) { P2.sel = i; beep(800, .06); return; }
+  if (P2.sel === i) { P2.sel = -1; return; }
+  [P2.order[P2.sel], P2.order[i]] = [P2.order[i], P2.order[P2.sel]]; P2.sel = -1; beep(600, .08, 'triangle');
+  if (P2.order.every((v, k) => v === k)) { P2.solved = true; P2.t = 0; st.seeds = Math.min(seedMax(), st.seeds + 2); sfx.star(); say('Super! Das Puzzle ist fertig! Du bekommst 2 Samen.'); }
+}
 const hasPower = k => st.power && st.power.kind === k;
 const RAINBOW = ['#ff6b6b', '#ffb347', '#ffe66b', '#7ee081', '#6fc3ff', '#b58cff'];
 const FLY = new Set(['leaf', 'wolke', 'fleder', 'hai', 'qualle']); // diese Gegner fliegen/schwimmen
@@ -385,9 +406,9 @@ addEventListener('keydown', e => {
   if (st.screen === 'home' && st.homeMode === 'night') return;
   if (st.screen === 'home') {
     const m = st.homeMode === 'cook' ? ({ '1': 'ing0', '2': 'ing1', '3': 'ing2', '4': 'ing3', '5': 'ing4', '6': 'ing5', Enter: 'cookgo', ' ': 'cookgo', Escape: 'back', Backspace: 'back' }[e.key])
-      : st.homeMode === 'garden' ? ({ '1': 'plot0', '2': 'plot1', '3': 'plot2', '4': 'plot3', '5': 'plot4', '6': 'plot5', g: 'water', w: 'water', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'album' ? ({ Escape: 'back', Backspace: 'back', Enter: 'back' }[e.key]) : st.homeMode === 'doors'
+      : st.homeMode === 'puzzle' ? ({ n: 'pnew', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'garden' ? ({ '1': 'plot0', '2': 'plot1', '3': 'plot2', '4': 'plot3', '5': 'plot4', '6': 'plot5', g: 'water', w: 'water', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'album' ? ({ Escape: 'back', Backspace: 'back', Enter: 'back' }[e.key]) : st.homeMode === 'doors'
       ? ({ '1': 'w0', '2': 'w1', '3': 'w2', '4': 'w3', '5': 'w4', '6': 'w5', '7': 'w6', '8': 'w7', '9': 'w8', '0': 'w9', Escape: 'back', Backspace: 'back' }[e.key])
-      : ({ '1': 'sleep', ArrowLeft: 'sleep', '2': 'eat', ArrowRight: 'eat', '3': 'cook', '4': 'travel', '5': 'ward', '6': 'swap', '7': 'album', '8': 'garden', '9': 'out', Enter: 'out' }[e.key]);
+      : ({ '1': 'sleep', ArrowLeft: 'sleep', '2': 'eat', ArrowRight: 'eat', '3': 'cook', '4': 'travel', '5': 'ward', '6': 'swap', '7': 'album', '8': 'garden', '9': 'puzzle', '0': 'out', Enter: 'out' }[e.key]);
     if (m) homeAction(m);
     return;
   }
@@ -444,7 +465,7 @@ function onTapScreen(e) {
       else { if (st.picker === 0) st.kind = k; else st.kind2 = k; st.picker = 1 - st.picker; beep(700 + st.picker * 200, .08); }
     }
   } else if (st.screen === 'home') {
-    if ((st.homeMode !== 'menu' && st.homeMode !== 'doors' && st.homeMode !== 'ward' && st.homeMode !== 'swap' && st.homeMode !== 'album' && st.homeMode !== 'cook' && st.homeMode !== 'garden') || !e) return;
+    if ((st.homeMode !== 'menu' && st.homeMode !== 'doors' && st.homeMode !== 'ward' && st.homeMode !== 'swap' && st.homeMode !== 'album' && st.homeMode !== 'cook' && st.homeMode !== 'garden' && st.homeMode !== 'puzzle') || !e) return;
     for (const b of st.btns) if (e.clientX > b.x && e.clientX < b.x + b.w && e.clientY > b.y && e.clientY < b.y + b.h) homeAction(b.id);
   } else if (st.screen === 'visit') { if (st.visit.t > 0.6) leaveVisit();
   } else if (st.screen === 'star' && st.screenT > 1) {
@@ -464,6 +485,7 @@ function goHome(why) {
 function homeAction(id) {
   if (st.homeMode === 'cook') { cookAction(id); return; }
   if (st.homeMode === 'garden') { gardenAction(id); return; }
+  if (st.homeMode === 'puzzle') { puzzleAction(id); return; }
   if (st.homeMode === 'album') { if (id === 'back') { st.homeMode = 'menu'; beep(500, .08); } return; }
   if (st.homeMode === 'swap') {
     if (id === 'back' || id === 'out') { st.homeMode = 'menu'; beep(500, .08); }
@@ -495,6 +517,7 @@ function homeAction(id) {
   if (id === 'ward') { st.homeMode = 'ward'; st.wardFor = 0; return; }
   if (id === 'swap') { st.homeMode = 'swap'; st.wardFor = 0; return; }
   if (id === 'album') { st.homeMode = 'album'; return; }
+  if (id === 'puzzle') { st.homeMode = 'puzzle'; if (!st.puz) newPuzzle(0); say('Das Spielzimmer! Hier kannst du Puzzles legen.'); return; }
   if (id === 'garden') { st.homeMode = 'garden'; say('Dein eigener Garten! Tippe auf ein leeres Beet, um einen Samen zu pflanzen.'); return; }
   if (id === 'cook') { st.homeMode = 'cook'; st.cook = { picked: [], stir: 0, phase: 'pick', spin: 0 }; say('Wähle 3 Zutaten für den Kochtopf!'); return; }
   if (id === 'sleep') { st.homeMode = 'sleep'; st.sleepT = 0; st.screenT = 0; }
@@ -567,7 +590,7 @@ function update(dt) {
       st.nightHeartT += dt; if (st.hearts < 4 && st.nightHeartT > 1.2 && st.sleepT < 5) { st.hearts++; st.nightHeartT = 0; beep(700 + st.hearts * 120, .2, 'triangle'); }
       if (st.sleepT > 5.5 && !st.crowed) { st.crowed = true; crow(); }
       if (st.sleepT > 9 && st.nightBack) { st.homeMode = 'menu'; st.nightBack = false; say('Oink oink! Gut ausgeschlafen!'); }
-      else if (st.sleepT > 9) { st.screen = 'play'; st.homeMode = 'menu'; st.dayT = Math.floor(st.dayT / DAY) * DAY + 147; say('Oink oink! Guten Morgen! Ein neuer Tag beginnt.'); }
+      else if (st.sleepT > 9) { st.screen = 'play'; st.homeMode = 'menu'; st.dayT = Math.floor(st.dayT / DAY) * DAY + 147; nextSeason(); say('Oink oink! Guten Morgen! Jetzt ist ' + SEASONS[st.season] + '!'); }
     } else if (st.homeMode === 'sleep') {
       if (st.hearts < 4 && st.sleepT > 1.2) { st.hearts++; st.sleepT = 0; beep(700 + st.hearts * 120, .2, 'triangle'); }
       else if (st.hearts >= 4 && st.sleepT > 1.6) { st.homeMode = 'night'; st.sleepT = 4.6; st.nightBack = true; st.crowed = false; st.nightHeartT = 0; } // dann weckt das Schweinchen
@@ -1733,6 +1756,80 @@ function drawPig(x, y, s, t, oink) {
   circle(hx - 2 * s, hy + 8 * s, 2.2 * s, '#a0506a'); circle(hx + 6 * s, hy + 8 * s, 2.2 * s, '#a0506a');
   if (oink) for (let i = 0; i < 3; i++) { const q = (t * 1.2 + i / 3) % 1; cx.globalAlpha = 1 - q; cx.fillStyle = '#7a1f5c'; cx.font = `bold ${(14 + i * 4) * s}px sans-serif`; cx.textAlign = 'center'; cx.fillText('♪', hx + 30 * s + q * 40 * s, hy - 20 * s - q * 40 * s + i * 8 * s); } cx.globalAlpha = 1;
 }
+// Jahreszeiten: Blütenblätter, Schmetterlinge, bunte Blätter oder Schnee
+function drawSeason(w, cam) {
+  const now = performance.now() / 1000, se = st.season;
+  if (se === 2) { // Herbst: Boden etwas bunter
+    cx.fillStyle = 'rgba(230,130,40,0.22)'; cx.beginPath(); cx.moveTo(0, H); for (let x = 0; x <= W + 10; x += 10) cx.lineTo(x, groundY(x + cam)); cx.lineTo(W, H); cx.fill();
+  }
+  if (se === 3 && w.deco !== 'schnee') { // Winter: Schnee auf dem Boden
+    cx.fillStyle = '#ffffffdd'; cx.beginPath(); for (let x = 0; x <= W + 10; x += 10) cx.lineTo(x, groundY(x + cam) - 3 * S);
+    for (let x = W + 10; x >= 0; x -= 10) cx.lineTo(x, groundY(x + cam) + 9 * S + Math.sin((x + cam) * 0.05) * 3 * S); cx.fill();
+  }
+  const n = se === 1 ? 6 : 28;
+  for (let i = 0; i < n; i++) {
+    const sp = 0.4 + (i % 5) * 0.12, x = ((i * 137.7 - cam * 0.7 + Math.sin(now * 0.8 + i) * 50 * S) % (W + 60) + W + 60) % (W + 60) - 30;
+    if (se === 1) { // Sommer: Schmetterlinge
+      const y = H * (0.45 + (i % 3) * 0.08) + Math.sin(now * 2 + i * 2) * 20 * S, f = Math.abs(Math.sin(now * 12 + i)), c = ['#ffb347', '#6fc3ff', '#ff8ad8'][i % 3];
+      cx.fillStyle = c; cx.beginPath(); cx.ellipse(x - 6 * S, y, 7 * S * f + 1, 6 * S, 0, 0, 7); cx.ellipse(x + 6 * S, y, 7 * S * f + 1, 6 * S, 0, 0, 7); cx.fill(); continue; }
+    const y = ((i * 71.3 + now * (40 + (i % 4) * 15) * S * sp * 2) % (H + 40)) - 20, r = now * (1 + i % 3) + i;
+    if (se === 0) { cx.save(); cx.translate(x, y); cx.rotate(r); cx.fillStyle = i % 2 ? '#ffc4dd' : '#ffffffcc'; cx.beginPath(); cx.ellipse(0, 0, 5 * S, 3 * S, 0, 0, 7); cx.fill(); cx.restore(); }
+    else if (se === 2) { cx.save(); cx.translate(x, y); cx.rotate(Math.sin(r) * 1.2); cx.fillStyle = ['#e8603a', '#ffb000', '#c0392b', '#e0a020'][i % 4];
+      cx.beginPath(); cx.moveTo(-9 * S, 0); cx.quadraticCurveTo(0, -7 * S, 9 * S, 0); cx.quadraticCurveTo(0, 7 * S, -9 * S, 0); cx.fill(); cx.restore(); }
+    else if (w.deco !== 'schnee') circle(x, y, (1.5 + (i % 3)) * S, '#ffffff');
+  }
+}
+// Puzzle-Bilder (werden in Teile geschnitten)
+function drawMotif(m, x0, y0, size) {
+  const k = size / 400, V = S; cx.save(); cx.beginPath(); cx.rect(x0, y0, size, size); cx.clip(); cx.translate(x0, y0); cx.scale(k / S, k / S);
+  const grad = (a, b) => { const g = cx.createLinearGradient(0, 0, 0, 400 * V); g.addColorStop(0, a); g.addColorStop(1, b); cx.fillStyle = g; cx.fillRect(0, 0, 400 * V, 400 * V); };
+  if (m === 0) { grad('#8fd3ff', '#d9f4ff'); circle(330 * V, 70 * V, 40 * V, '#fff7b0'); cx.fillStyle = '#4f9a4a'; cx.beginPath(); cx.ellipse(120 * V, 320 * V, 260 * V, 90 * V, 0, 0, 7); cx.fill();
+    cx.fillStyle = '#5cb85c'; cx.fillRect(0, 310 * V, 400 * V, 90 * V); drawHouse(270 * V, 316 * V, V * 1.2, true, true); drawFlower(100 * V, 318 * V, st.kind, V * 1.1, {}); drawBee(180 * V, 110 * V, 0, 1, 1.6 * V); }
+  else if (m === 1) { grad('#5fd0ff', '#1a6fb0'); cx.fillStyle = '#f2dca0'; cx.fillRect(0, 340 * V, 400 * V, 60 * V);
+    for (let i = 0; i < 4; i++) { const fx = 50 * V + i * 95 * V, fy = 60 * V + (i % 2) * 50 * V; cx.fillStyle = ['#ffb347', '#ff6fae', '#ffe66b', '#7ee081'][i]; cx.beginPath(); cx.ellipse(fx, fy, 16 * V, 9 * V, 0, 0, 7); cx.fill(); cx.beginPath(); cx.moveTo(fx - 14 * V, fy); cx.lineTo(fx - 26 * V, fy - 8 * V); cx.lineTo(fx - 26 * V, fy + 8 * V); cx.fill(); }
+    drawKraken({ defeated: true, gone: 0, hitT: 0 }, 200 * V, 210 * V, 0); }
+  else if (m === 2) { grad('#9fdcff', '#fff4fb'); for (let i = 0; i < 5; i++) { const bx = 20 * V + i * 80 * V, bh = (150 + (i * 53) % 120) * V; rr(bx, 330 * V - bh, 60 * V, bh, 8 * V); cx.fillStyle = ['#ffd6ec', '#e3d4ff', '#d4f0ff', '#fff0c4', '#ffd6ec'][i]; cx.fill();
+      for (let q = 0; q < 6; q++) circle(bx + 30 * V + Math.cos(q * 1.05) * 12 * V, 330 * V - bh - 14 * V + Math.sin(q * 1.05) * 12 * V, 9 * V, ['#ff6fae', '#ffd23f', '#c77dff'][i % 3]); }
+    cx.fillStyle = '#9be07a'; cx.fillRect(0, 330 * V, 400 * V, 70 * V); drawHelper(90 * V, 345 * V, 'hibiskus', 0, V * 0.9); drawHelper(300 * V, 345 * V, 'zuckerblume', 0, V * 0.9); drawFlower(200 * V, 345 * V, st.kind, V, {}); }
+  else { grad('#9fe3ff', '#fff0fb'); for (let k2 = 0; k2 < 6; k2++) { cx.strokeStyle = RAINBOW[k2]; cx.lineWidth = 18 * V; cx.beginPath(); cx.arc(200 * V, 330 * V, (190 - k2 * 18) * V, Math.PI, 0); cx.stroke(); }
+    cx.fillStyle = '#a8f0a0'; cx.fillRect(0, 320 * V, 400 * V, 80 * V); drawHelper(80 * V, 335 * V, 'regenbogenblume', 0, V); drawHelper(320 * V, 335 * V, 'gaensebluemchen', 0, V); drawBee(200 * V, 200 * V, 0, -1, 1.8 * V); }
+  cx.restore();
+}
+// Das zweite Zimmer: Spielzimmer mit Puzzle
+function drawPuzzleRoom(t, s) {
+  if (!st.puz) newPuzzle(0);
+  const P2 = st.puz, fl = H * 0.8;
+  cx.fillStyle = '#d9eeff'; cx.fillRect(0, 0, W, H); for (let x = 20 * s; x < W; x += 70 * s) for (let y = 20 * s; y < fl; y += 70 * s) star4(x + ((y / (70 * s)) % 2) * 35 * s, y, 6 * s, '#b8dcff');
+  cx.fillStyle = '#e8b27a'; cx.fillRect(0, fl, W, H - fl); cx.fillStyle = '#d49a62'; for (let x = 0; x < W; x += 80 * s) cx.fillRect(x, fl, 3 * s, H - fl);
+  // Regal mit Spielsachen
+  const rx = Math.max(16 * s, W * 0.04); cx.fillStyle = '#a0623a'; cx.fillRect(rx, H * 0.3, 120 * s, 8 * s); cx.fillRect(rx, H * 0.48, 120 * s, 8 * s);
+  circle(rx + 30 * s, H * 0.3 - 16 * s, 16 * s, '#ff6fae'); cx.strokeStyle = '#fff'; cx.lineWidth = 3 * s; cx.beginPath(); cx.arc(rx + 30 * s, H * 0.3 - 16 * s, 16 * s, -0.6, 0.6); cx.stroke(); // Ball
+  rr(rx + 62 * s, H * 0.3 - 40 * s, 40 * s, 40 * s, 6 * s); cx.fillStyle = '#ffd23f'; cx.fill(); cx.fillStyle = '#7a1f5c'; cx.font = `bold ${22 * s}px sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('A', rx + 82 * s, H * 0.3 - 19 * s);
+  for (let i = 0; i < 4; i++) { rr(rx + 10 * s + i * 26 * s, H * 0.48 - 44 * s, 20 * s, 44 * s, 3 * s); cx.fillStyle = ['#8fc9ff', '#ff9b8a', '#9be07a', '#d6b3ff'][i]; cx.fill(); } // Bücher
+  // Puzzlebrett
+  const size = Math.min(W * 0.62, H * 0.56), bx = W / 2 - size / 2, by = H * 0.16, c = size / 3;
+  rr(bx - 10 * s, by - 10 * s, size + 20 * s, size + 20 * s, 14 * s); cx.fillStyle = '#a0623a'; cx.fill();
+  const btns = [];
+  for (let i = 0; i < 9; i++) {
+    const src = P2.order[i], dx = bx + (i % 3) * c, dy = by + Math.floor(i / 3) * c, sx = (src % 3) * c, sy = Math.floor(src / 3) * c;
+    cx.save(); cx.beginPath(); cx.rect(dx, dy, c, c); cx.clip(); drawMotif(P2.m, dx - sx, dy - sy, size); cx.restore();
+    if (!P2.solved) { cx.strokeStyle = '#ffffffaa'; cx.lineWidth = 2; cx.strokeRect(dx + 1, dy + 1, c - 2, c - 2); }
+    if (P2.sel === i) { cx.strokeStyle = '#ff6fae'; cx.lineWidth = 6 * s; cx.strokeRect(dx + 3 * s, dy + 3 * s, c - 6 * s, c - 6 * s); }
+    btns.push({ id: 'pc' + i, x: dx, y: dy, w: c, h: c });
+  }
+  if (P2.solved) { P2.t += 1 / 60; for (let i = 0; i < 24; i++) { const a = P2.t * 2 + i; star4(W / 2 + Math.cos(a * 1.3) * size * 0.6, by + size / 2 + Math.sin(a) * size * 0.55, 6 * s, ['#ff6fae', '#ffd23f', '#6fd3ff'][i % 3]); } }
+  // Vorlage klein daneben
+  const pv = Math.min(110 * s, (W - size) / 2 - 30 * s);
+  if (pv > 50 * s) { const px = bx + size + 26 * s; rr(px - 5 * s, by - 5 * s, pv + 10 * s, pv + 10 * s, 8 * s); cx.fillStyle = '#fff'; cx.fill(); drawMotif(P2.m, px, by, pv);
+    cx.fillStyle = '#5a1745'; cx.font = `bold ${13 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'top'; cx.fillText('So soll es aussehen', px + pv / 2, by + pv + 10 * s, pv + 40 * s); }
+  cx.fillStyle = '#5a1745'; cx.font = `bold ${Math.min(16 * s, W * 0.038)}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+  cx.fillText(P2.solved ? 'Geschafft! Super gemacht!' : 'Tippe zwei Teile an, dann tauschen sie den Platz.', W / 2, by + size + 26 * s, W - 32);
+  const bh = 50 * s, bw = Math.min(200 * s, (W - 48) / 2), y0 = H * 0.87;
+  const btn = (id, label, col, x0) => { rr(x0, y0, bw, bh, bh / 2); cx.fillStyle = col; cx.fill(); cx.strokeStyle = '#fff'; cx.lineWidth = 4; cx.stroke();
+    cx.fillStyle = '#5a1745'; cx.font = `bold ${20 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(label, x0 + bw / 2, y0 + bh / 2, bw - 16); btns.push({ id, x: x0, y: y0, w: bw, h: bh }); };
+  btn('pnew', 'Neues Puzzle', '#ffd23f', W / 2 - bw - 8); btn('back', 'Zurück', '#ffd6e8', W / 2 + 8);
+  st.gbtns = btns;
+}
 function drawJet(t) {
   const J = st.jet; if (!J) return;
   const s = S, cols = ['#ff4f6d', '#ff9a3c', '#ffd23f', '#5cc85c', '#36b6f0', '#a66bff'];
@@ -1805,7 +1902,7 @@ function hud(t) {
   cx.textAlign = 'right'; cx.font = `bold ${22 * s}px "Comic Sans MS", sans-serif`;
   for (let i = 0; i < WORLDS.length - 1; i++) star5(W - 26 * s - (i % 5) * 30 * s - Math.floor(i / 5) * 15 * s, 24 * s + Math.floor(i / 5) * 26 * s, 11 * s, i < st.stars ? '#ffd23f' : '#ffffff44', i < st.stars ? '#fff' : null);
   cx.fillStyle = '#fff'; cx.strokeStyle = '#0005'; cx.lineWidth = 4;
-  const nm = WORLDS[st.world].name;
+  const nm = WORLDS[st.world].name + (WORLDS[st.world].deco === 'wasser' ? '' : ' · ' + SEASONS[st.season]);
   cx.strokeText(nm, W - 26 * s, 84 * s); cx.fillText(nm, W - 26 * s, 84 * s);
   // Fortschritt
   const w = WORLDS[st.world], narrow = W < 640, pw = narrow ? W * 0.6 : Math.min(260 * s, W * 0.35), px = W / 2 - pw / 2, py = narrow ? 104 * s : 26 * s;
@@ -2103,6 +2200,7 @@ function drawPlay(t) {
     }
     if (p.jumpY > 12 * S && p.digging < 0.1) drawFeet(p.x - cam, groundY(p.x) - p.jumpY + 4 * S, kindOf(p), t, Math.min(1, (p.jumpY - 12 * S) / (20 * S)), false); // beim Springen
   }
+  if (w.deco !== 'wasser') drawSeason(w, cam);
   if (st.rain) { const R2 = st.rain, a = Math.max(0, Math.min(1, R2.t / 2, (R2.dur - R2.t) / 2)), now = performance.now() / 1000;
     cx.fillStyle = `rgba(70,80,110,${0.22 * a})`; cx.fillRect(0, 0, W, H);
     for (let i = 0; i < 9; i++) { const x = ((i * 170 - cam * 0.15) % (W + 200) + W + 200) % (W + 200) - 100, y = 10 * S + (i % 2) * 18 * S; cx.globalAlpha = a; // Regenwolken
@@ -2410,17 +2508,18 @@ function drawHome(t) {
       if (st.sleepT > 5.8 && st.sleepT < 8.2) bubble('Oink oink!', W * 0.5, floor - 150 * s); }
   }
   if (mode === 'garden') drawGarden(t, s);
+  if (mode === 'puzzle') drawPuzzleRoom(t, s);
   // Herzen
   for (let i = 0; i < 4; i++) heart(W / 2 - 60 * s + i * 40 * s, H * 0.07, 16 * s, i < st.hearts);
   const txt = mode === 'night' ? (asleep ? 'Gute Nacht! Schlaf schön...' : 'Oink oink! Guten Morgen!') : mode === 'sleep' ? (st.hearts >= 4 ? 'Ausgeschlafen!' : 'Schlaf gut...') : mode === 'eat' ? 'Guten Appetit!'
     : (st.hidCount ? 'Hier drin bist du sicher vor den Blättern!' : 'Willkommen im Blumenhaus!');
-  if (mode !== 'doors' && mode !== 'ward' && mode !== 'swap' && mode !== 'album' && mode !== 'cook' && mode !== 'garden') bigText(txt, H * 0.14, 26 * s);
+  if (mode !== 'doors' && mode !== 'ward' && mode !== 'swap' && mode !== 'album' && mode !== 'cook' && mode !== 'garden' && mode !== 'puzzle') bigText(txt, H * 0.14, 26 * s);
 
   // Knöpfe
   st.btns = [];
-  if (mode === 'garden') st.btns = st.gbtns || [];
+  if (mode === 'garden' || mode === 'puzzle') st.btns = st.gbtns || [];
   if (mode === 'menu') {
-    const items = [['sleep', 'Schlafen', '#8fc9ff'], ['eat', 'Essen', '#ffb36b'], ['cook', 'Kochen', '#ff9b8a'], ['travel', 'Reisen', '#d6b3ff'], ['ward', 'Schrank', '#ffd23f'], ['swap', 'Wechseln', '#ff9ec7'], ['album', 'Album', '#7fe0d0'], ['garden', 'Garten', '#b9e86a'], ['out', 'Rausgehen', '#9be07a']];
+    const items = [['sleep', 'Schlafen', '#8fc9ff'], ['eat', 'Essen', '#ffb36b'], ['cook', 'Kochen', '#ff9b8a'], ['travel', 'Reisen', '#d6b3ff'], ['ward', 'Schrank', '#ffd23f'], ['swap', 'Wechseln', '#ff9ec7'], ['album', 'Album', '#7fe0d0'], ['garden', 'Garten', '#b9e86a'], ['puzzle', 'Spielzimmer', '#a8d8ff'], ['out', 'Rausgehen', '#9be07a']];
     const n = W < 600 ? 3 : 5, gap = 12, bw = Math.min(190 * s, (W - 32 - gap * (n - 1)) / n), bh = 48 * s, total = bw * n + gap * (n - 1);
     items.forEach(([id, label, col], i) => {
       const x0 = W / 2 - total / 2 + (i % n) * (bw + gap), y0 = (n === 3 ? H * 0.7 : H * 0.76) + Math.floor(i / n) * (bh + 10 * s);
@@ -2505,7 +2604,7 @@ function drawHome(t) {
   }
   if (mode === 'album') drawAlbum(t, s);
   if (mode === 'cook') drawCook(t, s);
-  if (st.msgT > 0) bubble(st.msg, W / 2, mode === 'cook' ? H * 0.78 : mode === 'swap' || mode === 'ward' || mode === 'album' ? H * 0.76 : H * 0.48, Math.min(1, st.msgT));
+  if (st.msgT > 0) bubble(st.msg, W / 2, mode === 'puzzle' ? H * 0.8 : mode === 'cook' ? H * 0.78 : mode === 'swap' || mode === 'ward' || mode === 'album' ? H * 0.76 : H * 0.48, Math.min(1, st.msgT));
 }
 function drawAlbum(t, s) {
   cx.fillStyle = '#5a1745bb'; cx.fillRect(0, 0, W, H);
