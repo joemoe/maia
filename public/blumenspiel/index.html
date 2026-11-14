@@ -209,6 +209,24 @@ function puzzleAction(id) {
   [P2.order[P2.sel], P2.order[i]] = [P2.order[i], P2.order[P2.sel]]; P2.sel = -1; beep(600, .08, 'triangle');
   if (P2.order.every((v, k) => v === k)) { P2.solved = true; P2.t = 0; st.seeds = Math.min(seedMax(), st.seeds + 2); sfx.star(); say('Super! Das Puzzle ist fertig! Du bekommst 2 Samen.'); }
 }
+// Musikzimmer: Klavier mit 8 bunten Tasten
+const PIANO = [['C', 262, '#ff6b6b'], ['D', 294, '#ffb347'], ['E', 330, '#ffe66b'], ['F', 349, '#7ee081'], ['G', 392, '#6fc3ff'], ['A', 440, '#b58cff'], ['H', 494, '#ff8ad8'], ['C', 523, '#ff6b6b']];
+const SONG_ENTCHEN = [0, 1, 2, 3, 4, 4, 5, 5, 5, 5, 4, 5, 5, 5, 5, 4, 3, 3, 3, 3, 2, 2, 1, 1, 1, 1, 0];
+function playKey(i) { beep(PIANO[i][1], .45, 'triangle', .14); beep(PIANO[i][1] * 2, .25, 'sine', .04); st.piano = st.piano || { hit: [], notes: [] }; st.piano.hit[i] = performance.now(); st.piano.notes.push({ i, t: 0 });
+  if (st.follow != null && !st.demo && i === SONG_ENTCHEN[st.follow]) { st.follow++; if (st.follow >= SONG_ENTCHEN.length) { st.follow = null; setTimeout(() => sfx.star(), 400); say('Bravo! Du hast Alle meine Entchen gespielt!'); } }
+}
+function musicAction(id) {
+  if (id === 'back') { st.homeMode = 'menu'; st.demo = null; beep(500, .08); return; }
+  if (id === 'demo') { st.demo = { k: 0, t: 0.4 }; say('Hör gut zu: Alle meine Entchen! Danach kannst du es nachspielen.'); return; }
+  if (id && id.startsWith('key')) playKey(+id.slice(3));
+}
+// Schneemann bauen: im Winter (und am Schneeberg) liegen Schneehaufen herum
+function buildSnow(i) {
+  const sn = st.snow[i]; if (!sn || sn.stage >= 3) return;
+  sn.stage++; beep(500 + sn.stage * 150, .12, 'triangle'); for (let k = 0; k < 10; k++) st.sparkles.push(spark(sn.x, groundY(sn.x) - 20 * S * sn.stage, '#ffffff'));
+  if (sn.stage === 3) { st.seeds = Math.min(seedMax(), st.seeds + 1); sfx.star(); say('Fertig! Ein Schneemann! Er schenkt dir einen Samen.'); }
+  else say(sn.stage === 1 ? 'Eine dicke Schneekugel! Drück nochmal ⬆.' : 'Noch der Kopf! Drück nochmal ⬆.');
+}
 const hasPower = k => st.power && st.power.kind === k;
 const RAINBOW = ['#ff6b6b', '#ffb347', '#ffe66b', '#7ee081', '#6fc3ff', '#b58cff'];
 const FLY = new Set(['leaf', 'wolke', 'fleder', 'hai', 'qualle']); // diese Gegner fliegen/schwimmen
@@ -243,6 +261,7 @@ function startWorld(i, fromX) {
   }
   if (w.deco === 'schnee' && st.secrets[1]) st.stormAt = st.secrets[1].x - 900; // Schneesturm, kurz vor dem 2. Geheimgang
   st.shots = [];
+  st.snow = (w.deco !== 'wasser' && (st.season === 3 || w.deco === 'schnee')) ? [0.15, 0.48].map(f => ({ x: Math.round(w.len * f), stage: 0 })) : [];
   st.rain = null; st.rainT = 30 + Math.random() * 30; st.grow = 1; st.rainbowT = 0; st.visited = {};
   { const kr = w.boss === 'krake', hp = kr ? (st.two ? 7 : 10) : (st.two ? 6 : 8);
     st.boss = w.boss ? { kind: w.boss, x: kr ? w.len - 1100 : 1700, hp, max: hp, t: 0, atk: 4, hitT: 0, gone: 0, defeated: false, seedT: 0, intro: false } : null; }
@@ -406,9 +425,9 @@ addEventListener('keydown', e => {
   if (st.screen === 'home' && st.homeMode === 'night') return;
   if (st.screen === 'home') {
     const m = st.homeMode === 'cook' ? ({ '1': 'ing0', '2': 'ing1', '3': 'ing2', '4': 'ing3', '5': 'ing4', '6': 'ing5', Enter: 'cookgo', ' ': 'cookgo', Escape: 'back', Backspace: 'back' }[e.key])
-      : st.homeMode === 'puzzle' ? ({ n: 'pnew', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'garden' ? ({ '1': 'plot0', '2': 'plot1', '3': 'plot2', '4': 'plot3', '5': 'plot4', '6': 'plot5', g: 'water', w: 'water', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'album' ? ({ Escape: 'back', Backspace: 'back', Enter: 'back' }[e.key]) : st.homeMode === 'doors'
+      : st.homeMode === 'music' ? ({ '1': 'key0', '2': 'key1', '3': 'key2', '4': 'key3', '5': 'key4', '6': 'key5', '7': 'key6', '8': 'key7', l: 'demo', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'puzzle' ? ({ n: 'pnew', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'garden' ? ({ '1': 'plot0', '2': 'plot1', '3': 'plot2', '4': 'plot3', '5': 'plot4', '6': 'plot5', g: 'water', w: 'water', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'album' ? ({ Escape: 'back', Backspace: 'back', Enter: 'back' }[e.key]) : st.homeMode === 'doors'
       ? ({ '1': 'w0', '2': 'w1', '3': 'w2', '4': 'w3', '5': 'w4', '6': 'w5', '7': 'w6', '8': 'w7', '9': 'w8', '0': 'w9', Escape: 'back', Backspace: 'back' }[e.key])
-      : ({ '1': 'sleep', ArrowLeft: 'sleep', '2': 'eat', ArrowRight: 'eat', '3': 'cook', '4': 'travel', '5': 'ward', '6': 'swap', '7': 'album', '8': 'garden', '9': 'puzzle', '0': 'out', Enter: 'out' }[e.key]);
+      : ({ '1': 'sleep', ArrowLeft: 'sleep', '2': 'eat', ArrowRight: 'eat', '3': 'cook', '4': 'travel', '5': 'ward', '6': 'swap', '7': 'album', '8': 'garden', '9': 'puzzle', k: 'music', '0': 'out', Enter: 'out' }[e.key]);
     if (m) homeAction(m);
     return;
   }
@@ -465,7 +484,7 @@ function onTapScreen(e) {
       else { if (st.picker === 0) st.kind = k; else st.kind2 = k; st.picker = 1 - st.picker; beep(700 + st.picker * 200, .08); }
     }
   } else if (st.screen === 'home') {
-    if ((st.homeMode !== 'menu' && st.homeMode !== 'doors' && st.homeMode !== 'ward' && st.homeMode !== 'swap' && st.homeMode !== 'album' && st.homeMode !== 'cook' && st.homeMode !== 'garden' && st.homeMode !== 'puzzle') || !e) return;
+    if ((st.homeMode !== 'menu' && st.homeMode !== 'doors' && st.homeMode !== 'ward' && st.homeMode !== 'swap' && st.homeMode !== 'album' && st.homeMode !== 'cook' && st.homeMode !== 'garden' && st.homeMode !== 'puzzle' && st.homeMode !== 'music') || !e) return;
     for (const b of st.btns) if (e.clientX > b.x && e.clientX < b.x + b.w && e.clientY > b.y && e.clientY < b.y + b.h) homeAction(b.id);
   } else if (st.screen === 'visit') { if (st.visit.t > 0.6) leaveVisit();
   } else if (st.screen === 'star' && st.screenT > 1) {
@@ -486,6 +505,7 @@ function homeAction(id) {
   if (st.homeMode === 'cook') { cookAction(id); return; }
   if (st.homeMode === 'garden') { gardenAction(id); return; }
   if (st.homeMode === 'puzzle') { puzzleAction(id); return; }
+  if (st.homeMode === 'music') { musicAction(id); return; }
   if (st.homeMode === 'album') { if (id === 'back') { st.homeMode = 'menu'; beep(500, .08); } return; }
   if (st.homeMode === 'swap') {
     if (id === 'back' || id === 'out') { st.homeMode = 'menu'; beep(500, .08); }
@@ -517,6 +537,7 @@ function homeAction(id) {
   if (id === 'ward') { st.homeMode = 'ward'; st.wardFor = 0; return; }
   if (id === 'swap') { st.homeMode = 'swap'; st.wardFor = 0; return; }
   if (id === 'album') { st.homeMode = 'album'; return; }
+  if (id === 'music') { st.homeMode = 'music'; st.piano = { hit: [], notes: [] }; say('Das Musikzimmer! Tippe auf die Tasten oder drück 1 bis 8.'); return; }
   if (id === 'puzzle') { st.homeMode = 'puzzle'; if (!st.puz) newPuzzle(0); say('Das Spielzimmer! Hier kannst du Puzzles legen.'); return; }
   if (id === 'garden') { st.homeMode = 'garden'; say('Dein eigener Garten! Tippe auf ein leeres Beet, um einen Samen zu pflanzen.'); return; }
   if (id === 'cook') { st.homeMode = 'cook'; st.cook = { picked: [], stir: 0, phase: 'pick', spin: 0 }; say('Wähle 3 Zutaten für den Kochtopf!'); return; }
@@ -566,6 +587,7 @@ function tryHop(p) {
   if (st.screen !== 'play' || (p.jumpY > 0 && !onObstacle(p)) || p.digging > 0.2) return;
   if (p.nearDoor) { st.returnX = p.nearDoor; goHome('visit'); return; }
   if (p.nearHouse != null) { enterVisit(p.nearHouse); return; }
+  if (p.nearSnow != null) { buildSnow(p.nearSnow); return; }
   if (st.seeds > 0 || hasPower('huepf')) {
     if (!hasPower('huepf')) st.seeds--; p.vy = 640 * S; p.jumpY = Math.max(0.01, p.jumpY); sfx.hop();
     for (let i = 0; i < 12; i++) st.sparkles.push(spark(p.x, groundY(p.x) - 10 * S, '#c77dff'));
@@ -638,7 +660,8 @@ function update(dt) {
     if (p.jumpY > 0) { p.jumpY += p.vy * dt; p.vy -= 1500 * S * dt;
       for (const o of st.obst) if (Math.abs(p.x - o.x) < obHalf(o) && p.vy < 0 && p.jumpY < o.h * S && oldJ >= o.h * S - 3) { p.jumpY = o.h * S; p.vy = 0; } // oben drauf landen
       if (p.jumpY <= 0) { p.jumpY = 0; p.vy = 0; } }
-    p.nearDoor = 0; p.nearHouse = null;
+    p.nearDoor = 0; p.nearHouse = null; p.nearSnow = null;
+    if (p.digging < .3 && p.jumpY <= 0) (st.snow || []).forEach((sn, k) => { if (sn.stage < 3 && Math.abs(p.x - sn.x) < 60) p.nearSnow = k; });
     if (w.deco === 'city' && p.digging < .3 && p.jumpY <= 0) { const hi = Math.round((p.x - 90) / 260); if (cityHouse(hi) && Math.abs(p.x - (hi * 260 + 90)) < 60) p.nearHouse = hi; }
     if (p.digging < .3 && p.jumpY <= 0) {
       if (st.world === 0 && Math.abs(p.x - HOUSE_X) < 110) p.nearDoor = HOUSE_X;
@@ -1939,6 +1962,54 @@ function drawHelp(t) {
   btn('hskip', 'Überspringen', '#ffffffcc', '#7a1f5c', cxm - bw / 2);
   btn('hnext', pg === HELP.length - 1 ? 'Los geht\'s!' : 'Weiter', '#ff6fae', '#fff', cxm + bw / 2 + 12);
 }
+// Schneehaufen und Schneemann (0 = Haufen, 1-3 = fertig gebaut)
+function drawSnowman(x, y, stage, t) {
+  const s = S;
+  if (stage === 0) { cx.fillStyle = '#ffffff'; cx.beginPath(); cx.ellipse(x, y, 40 * s, 22 * s, 0, Math.PI, 0); cx.fill(); circle(x - 14 * s, y - 14 * s, 12 * s, '#ffffff'); circle(x + 12 * s, y - 12 * s, 14 * s, '#f2f6ff'); return; }
+  circle(x, y - 26 * s, 28 * s, '#ffffff'); cx.strokeStyle = '#dfe8f7'; cx.lineWidth = 2; cx.beginPath(); cx.arc(x, y - 26 * s, 28 * s, 0.2, 1.4); cx.stroke();
+  if (stage >= 2) { circle(x, y - 70 * s, 20 * s, '#ffffff'); for (const d of [-8, 0, 8]) circle(x, y - 76 * s + (d + 8) * s, 2.5 * s, '#333');
+    const wave = stage === 3 ? Math.sin(t * 4) * 0.4 : 0; cx.strokeStyle = '#7b4a26'; cx.lineWidth = 3 * s; cx.lineCap = 'round';
+    cx.beginPath(); cx.moveTo(x - 18 * s, y - 72 * s); cx.lineTo(x - 42 * s, y - 92 * s); cx.moveTo(x + 18 * s, y - 72 * s); cx.lineTo(x + 40 * s, y - 92 * s - wave * 20 * s); cx.stroke(); }
+  if (stage >= 3) { const hy = y - 104 * s; circle(x, hy, 15 * s, '#ffffff'); circle(x - 5 * s, hy - 3 * s, 2.2 * s, '#222'); circle(x + 5 * s, hy - 3 * s, 2.2 * s, '#222');
+    cx.fillStyle = '#ff8a2a'; cx.beginPath(); cx.moveTo(x, hy + 1 * s); cx.lineTo(x + 16 * s, hy + 4 * s); cx.lineTo(x, hy + 6 * s); cx.fill();
+    cx.strokeStyle = '#333'; cx.lineWidth = 1.5 * s; cx.beginPath(); cx.arc(x, hy + 4 * s, 6 * s, 0.3, Math.PI - 0.3); cx.stroke();
+    cx.fillStyle = '#e74c3c'; cx.fillRect(x - 16 * s, hy + 12 * s, 32 * s, 5 * s); // Schal
+    cx.fillStyle = '#5a1745'; cx.fillRect(x - 14 * s, hy - 16 * s, 28 * s, 4 * s); cx.fillRect(x - 9 * s, hy - 32 * s, 18 * s, 17 * s); circle(x + 8 * s, hy - 26 * s, 3 * s, '#ff6fae'); } // Hut mit Blume
+}
+// Musikzimmer
+function drawMusicRoom(t, s) {
+  const fl = H * 0.8, P3 = st.piano || (st.piano = { hit: [], notes: [] }), now = performance.now();
+  cx.fillStyle = '#fff0d9'; cx.fillRect(0, 0, W, H); for (let x = 30 * s; x < W; x += 80 * s) for (let y = 30 * s; y < fl; y += 80 * s) { cx.fillStyle = '#ffd9a8'; cx.font = `${18 * s}px sans-serif`; cx.textAlign = 'center'; cx.fillText((x + y) % 160 < 80 ? '♪' : '♫', x + ((y / (80 * s)) % 2) * 40 * s, y); }
+  cx.fillStyle = '#c98f5a'; cx.fillRect(0, fl, W, H - fl);
+  // Demo-Lied abspielen
+  if (st.demo) { st.demo.t -= 1 / 60; if (st.demo.t <= 0) { if (st.demo.k >= SONG_ENTCHEN.length) { st.demo = null; say('Jetzt du! Die leuchtenden Tasten zeigen, wie es geht.'); st.follow = 0; } else { playKey(SONG_ENTCHEN[st.demo.k]); st.demo.k++; st.demo.t = [5, 6, 7, 8, 9, 10, 15, 16].includes(st.demo.k) ? 0.55 : 0.32; } } }
+  // Klavier
+  const kw = Math.min(80 * s, (W - 40) / 8), kh = Math.min(200 * s, H * 0.36), px = W / 2 - kw * 4, py = H * 0.36, btns = [];
+  rr(px - 20 * s, py - 50 * s, kw * 8 + 40 * s, kh + 70 * s, 16 * s); cx.fillStyle = '#5a3a6a'; cx.fill();
+  cx.fillStyle = '#ffd23f'; cx.font = `bold ${16 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('Blumen-Klavier', W / 2, py - 25 * s);
+  const next = st.follow != null && !st.demo ? SONG_ENTCHEN[st.follow] : -1;
+  for (let i = 0; i < 8; i++) {
+    const x = px + i * kw, down = now - (P3.hit[i] || 0) < 180, [nm, , col] = PIANO[i];
+    rr(x + 3 * s, py + (down ? 6 * s : 0), kw - 6 * s, kh, 10 * s); cx.fillStyle = down ? col : '#ffffff'; cx.fill();
+    cx.strokeStyle = i === next ? '#ffd23f' : col; cx.lineWidth = i === next ? 6 * s : 4 * s; cx.stroke();
+    for (let q = 0; q < 5; q++) { const a = q * 1.2566; circle(x + kw / 2 + Math.cos(a) * 9 * s, py + kh - 40 * s + Math.sin(a) * 9 * s + (down ? 6 * s : 0), 7 * s, col); }
+    circle(x + kw / 2, py + kh - 40 * s + (down ? 6 * s : 0), 5 * s, '#fff3a0');
+    cx.fillStyle = '#5a1745'; cx.font = `bold ${18 * s}px "Comic Sans MS", sans-serif`; cx.fillText(nm, x + kw / 2, py + 26 * s + (down ? 6 * s : 0));
+    cx.font = `${12 * s}px sans-serif`; cx.fillStyle = '#a0507f'; if (matchMedia('(hover: hover)').matches) cx.fillText(String(i + 1), x + kw / 2, py + 50 * s + (down ? 6 * s : 0));
+    btns.push({ id: 'key' + i, x, y: py, w: kw, h: kh });
+  }
+  // fliegende Noten
+  for (const n of P3.notes) { n.t += 1 / 60; const x = px + n.i * kw + kw / 2 + Math.sin(n.t * 5) * 10 * s, y = py - 40 * s - n.t * 120 * s; cx.globalAlpha = Math.max(0, 1 - n.t / 1.5); cx.fillStyle = PIANO[n.i][2]; cx.font = `bold ${26 * s}px sans-serif`; cx.fillText('♪', x, y); }
+  cx.globalAlpha = 1; P3.notes = P3.notes.filter(n => n.t < 1.5);
+  // tanzende Blume
+  const danc = now - Math.max(0, ...P3.hit.filter(Boolean)) < 600;
+  if (px > 110 * s) drawFlower(px - 70 * s, fl, st.kind, s * 0.9, { bob: danc ? Math.abs(Math.sin(t * 10)) * -10 * s : 0, lean: danc ? Math.sin(t * 8) * 0.6 : 0 });
+  const bh = 50 * s, bw = Math.min(220 * s, (W - 48) / 2), y0 = H * 0.87;
+  const btn = (id, label, col, x0) => { rr(x0, y0, bw, bh, bh / 2); cx.fillStyle = col; cx.fill(); cx.strokeStyle = '#fff'; cx.lineWidth = 4; cx.stroke();
+    cx.fillStyle = '#5a1745'; cx.font = `bold ${20 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(label, x0 + bw / 2, y0 + bh / 2, bw - 16); btns.push({ id, x: x0, y: y0, w: bw, h: bh }); };
+  btn('demo', 'Lied vorspielen', '#ffd23f', W / 2 - bw - 8); btn('back', 'Zurück', '#ffd6e8', W / 2 + 8);
+  st.gbtns = btns;
+}
 function drawJet(t) {
   const J = st.jet; if (!J) return;
   const s = S, cols = ['#ff4f6d', '#ff9a3c', '#ffd23f', '#5cc85c', '#36b6f0', '#a66bff'];
@@ -2238,6 +2309,8 @@ function drawPlay(t) {
       const h = w.helper; drawHelper(hx, groundY(st.helperX) + 4, h.kind, t, S);
       if (st.helperTalk > 0) speech(h.name + ': ' + h.tip, hx, groundY(st.helperX) - 160 * S, st.helperTalk);
   } }
+  for (const sn of st.snow || []) { const sx = sn.x - cam; if (sx > -80 && sx < W + 80) drawSnowman(sx, groundY(sn.x) + 6 * S, sn.stage, t); }
+  { const q = players().find(p => p.nearSnow != null && !p.nearDoor); if (q) { const sn = st.snow[q.nearSnow]; bubble('⬆ Schneemann bauen (' + sn.stage + '/3)', sn.x - cam, groundY(sn.x) - 170 * S); } }
   { const h = players().find(p => p.nearHouse != null && !p.nearDoor); if (h) bubble('⬆ Klopf klopf! Besuch machen', h.nearHouse * 260 + 90 - cam, groundY(h.nearHouse * 260 + 90) - 170 * S); }
   { const d = players().find(p => p.nearDoor); if (d) bubble(d.nearDoor === HOUSE_X ? '⬆ Ins Blumenhaus gehen' : '⬆ Geheimgang ins Blumenhaus', d.nearDoor - cam, groundY(d.nearDoor) - 200 * S); }
   if (st.chest) { const cx0 = st.chest.x - cam; if (cx0 > -80 && cx0 < W + 80) drawChest(cx0, groundY(st.chest.x) + 6 * S, S * 1.2, st.chest.open, st.chest.t, TREASURES[st.world] || TREASURES[0], w); }
@@ -2618,20 +2691,21 @@ function drawHome(t) {
   }
   if (mode === 'garden') drawGarden(t, s);
   if (mode === 'puzzle') drawPuzzleRoom(t, s);
+  if (mode === 'music') drawMusicRoom(t, s);
   // Herzen
   for (let i = 0; i < 4; i++) heart(W / 2 - 60 * s + i * 40 * s, H * 0.07, 16 * s, i < st.hearts);
   const txt = mode === 'night' ? (asleep ? 'Gute Nacht! Schlaf schön...' : 'Oink oink! Guten Morgen!') : mode === 'sleep' ? (st.hearts >= 4 ? 'Ausgeschlafen!' : 'Schlaf gut...') : mode === 'eat' ? 'Guten Appetit!'
     : (st.hidCount ? 'Hier drin bist du sicher vor den Blättern!' : 'Willkommen im Blumenhaus!');
-  if (mode !== 'doors' && mode !== 'ward' && mode !== 'swap' && mode !== 'album' && mode !== 'cook' && mode !== 'garden' && mode !== 'puzzle') bigText(txt, H * 0.14, 26 * s);
+  if (mode !== 'doors' && mode !== 'ward' && mode !== 'swap' && mode !== 'album' && mode !== 'cook' && mode !== 'garden' && mode !== 'puzzle' && mode !== 'music') bigText(txt, H * 0.14, 26 * s);
 
   // Knöpfe
   st.btns = [];
-  if (mode === 'garden' || mode === 'puzzle') st.btns = st.gbtns || [];
+  if (mode === 'garden' || mode === 'puzzle' || mode === 'music') st.btns = st.gbtns || [];
   if (mode === 'menu') {
-    const items = [['sleep', 'Schlafen', '#8fc9ff'], ['eat', 'Essen', '#ffb36b'], ['cook', 'Kochen', '#ff9b8a'], ['travel', 'Reisen', '#d6b3ff'], ['ward', 'Schrank', '#ffd23f'], ['swap', 'Wechseln', '#ff9ec7'], ['album', 'Album', '#7fe0d0'], ['garden', 'Garten', '#b9e86a'], ['puzzle', 'Spielzimmer', '#a8d8ff'], ['out', 'Rausgehen', '#9be07a']];
-    const n = W < 600 ? 3 : 5, gap = 12, bw = Math.min(190 * s, (W - 32 - gap * (n - 1)) / n), bh = 48 * s, total = bw * n + gap * (n - 1);
+    const items = [['sleep', 'Schlafen', '#8fc9ff'], ['eat', 'Essen', '#ffb36b'], ['cook', 'Kochen', '#ff9b8a'], ['travel', 'Reisen', '#d6b3ff'], ['ward', 'Schrank', '#ffd23f'], ['swap', 'Wechseln', '#ff9ec7'], ['album', 'Album', '#7fe0d0'], ['garden', 'Garten', '#b9e86a'], ['puzzle', 'Spielzimmer', '#a8d8ff'], ['music', 'Musikzimmer', '#ffc4e1'], ['out', 'Rausgehen', '#9be07a']];
+    const n = W < 600 ? 3 : 6, gap = 12, bw = Math.min(190 * s, (W - 32 - gap * (n - 1)) / n), bh = 48 * s, total = bw * n + gap * (n - 1);
     items.forEach(([id, label, col], i) => {
-      const x0 = W / 2 - total / 2 + (i % n) * (bw + gap), y0 = (n === 3 ? H * 0.7 : H * 0.76) + Math.floor(i / n) * (bh + 10 * s);
+      const x0 = W / 2 - total / 2 + (i % n) * (bw + gap), y0 = (n === 3 ? H * 0.64 : H * 0.76) + Math.floor(i / n) * (bh + 10 * s);
       rr(x0, y0, bw, bh, bh / 2); cx.fillStyle = col; cx.fill(); cx.strokeStyle = '#fff'; cx.lineWidth = 4; cx.stroke();
       cx.fillStyle = '#5a1745'; cx.font = `bold ${20 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
       cx.fillText(label, x0 + bw / 2, y0 + bh / 2, bw - 16);
@@ -2713,7 +2787,7 @@ function drawHome(t) {
   }
   if (mode === 'album') drawAlbum(t, s);
   if (mode === 'cook') drawCook(t, s);
-  if (st.msgT > 0) bubble(st.msg, W / 2, mode === 'puzzle' ? H * 0.8 : mode === 'cook' ? H * 0.78 : mode === 'swap' || mode === 'ward' || mode === 'album' ? H * 0.76 : H * 0.48, Math.min(1, st.msgT));
+  if (st.msgT > 0) bubble(st.msg, W / 2, mode === 'music' ? H * 0.2 : mode === 'puzzle' ? H * 0.8 : mode === 'cook' ? H * 0.78 : mode === 'swap' || mode === 'ward' || mode === 'album' ? H * 0.76 : H * 0.48, Math.min(1, st.msgT));
 }
 function drawAlbum(t, s) {
   cx.fillStyle = '#5a1745bb'; cx.fillRect(0, 0, W, H);
