@@ -232,6 +232,21 @@ const COLORS = [['Rosa', '#ff6fae', '#ff9ec7', '#e03b7d'], ['Lila', '#b06bff', '
   ['Gelb', '#ffc233', '#ffe08a', '#d99a00'], ['Orange', '#ff8a3a', '#ffb37a', '#d9601a'], ['Rot', '#ff3b3b', '#ff7a7a', '#c4141f'], ['Weiß', '#ffffff', '#f4f0ff', '#c9c0dd']];
 st.colors = {}; try { st.colors = JSON.parse(localStorage.getItem('blumen-farbe') || '{}') || {}; } catch (e) {}
 function saveColors() { try { localStorage.setItem('blumen-farbe', JSON.stringify(st.colors)); } catch (e) {} }
+// Luftballon-Fahrt: in jedem Land wartet ein Ballon, mit dem man ein Stück fliegt
+const RIDE = 7;
+function rideHeight(t) { return (t < 1.2 ? t / 1.2 : t > RIDE - 1.2 ? (RIDE - t) / 1.2 : 1) * 210 * S; }
+function startRide() { const b = st.balloon; if (!b || b.used) return; b.used = true; st.ride = { t: 0, x: leadX() }; for (const p of players()) p.x = st.ride.x - (p.id ? 30 : 0);
+  say('Los geht\'s! Der Ballon fliegt dich ein Stück über das Land.'); [523, 659, 784].forEach((f, k) => setTimeout(() => beep(f, .2, 'triangle', .1), k * 120)); }
+// Hündchen im Blumenhaus
+st.dog = { mode: 'idle', t: 0, ballX: 0 };
+function dogAction(id) {
+  if (id === 'back') { st.homeMode = 'menu'; beep(500, .08); return; }
+  const D = st.dog; D.t = 0;
+  if (id === 'feed') { D.mode = 'eat'; say('Mampf, mampf! Wuffi frisst seinen Knochen.'); beep(300, .1, 'square', .05); setTimeout(() => beep(360, .1, 'square', .05), 150); }
+  if (id === 'pet') { D.mode = 'pet'; say('Wuffi freut sich und wedelt mit dem Schwanz!'); }
+  if (id === 'ball') { D.mode = 'ball'; say('Hol den Ball, Wuffi!'); beep(700, .1, 'triangle'); }
+  if (id === 'trick') { D.mode = 'trick'; say('Wuffi macht Männchen! Wau wau!'); setTimeout(() => { beep(420, .08, 'square', .07, -80); setTimeout(() => beep(420, .08, 'square', .07, -80), 160); }, 300); }
+}
 const hasPower = k => st.power && st.power.kind === k;
 const RAINBOW = ['#ff6b6b', '#ffb347', '#ffe66b', '#7ee081', '#6fc3ff', '#b58cff'];
 const FLY = new Set(['leaf', 'wolke', 'fleder', 'hai', 'qualle']); // diese Gegner fliegen/schwimmen
@@ -258,7 +273,7 @@ function startWorld(i, fromX) {
   st.obst = []; st.storm = null; st.stormAt = null; st.stormSheltered = false;
   const OB = OBST_KIND[w.deco];
   if (OB) for (let x = 1800 + Math.random() * 400; x < w.len - 800; x += 1700 + Math.random() * 900) {
-    if (Math.abs(x - st.helperX) < 400 || st.secrets.some(q => Math.abs(x - q.x) < 320) || Math.abs(x - base) < 300 || Math.abs(x - st.fairy.x) < 350 || Math.abs(x - st.chest.x) < 350 || (w.boss === 'krake' && x > w.len - 2000)) continue;
+    if (Math.abs(x - st.helperX) < 400 || st.secrets.some(q => Math.abs(x - q.x) < 320) || Math.abs(x - base) < 300 || Math.abs(x - st.fairy.x) < 350 || Math.abs(x - st.chest.x) < 350 || Math.abs(x - Math.round(w.len * 0.3)) < 400 || (w.boss === 'krake' && x > w.len - 2000)) continue;
     st.obst.push({ x, kind: OB, w: OBST[OB].w, h: OBST[OB].h, t: Math.random() * 6 });
     // ein Samen liegt immer vor dem Hindernis, damit man drüberhüpfen kann
     st.seedsOnMap.push({ x: x - 330, t: Math.random() * 6, got: false, up: 70 });
@@ -267,6 +282,7 @@ function startWorld(i, fromX) {
   if (w.deco === 'schnee' && st.secrets[1]) st.stormAt = st.secrets[1].x - 900; // Schneesturm, kurz vor dem 2. Geheimgang
   st.shots = [];
   st.snow = (w.deco !== 'wasser' && (st.season === 3 || w.deco === 'schnee')) ? [0.15, 0.48].map(f => ({ x: Math.round(w.len * f), stage: 0 })) : [];
+  st.balloon = w.deco === 'wasser' ? null : { x: Math.round(w.len * 0.3), used: false, gone: 0 }; st.ride = null;
   st.rain = null; st.rainT = 30 + Math.random() * 30; st.grow = 1; st.rainbowT = 0; st.visited = {};
   { const kr = w.boss === 'krake', hp = kr ? (st.two ? 7 : 10) : (st.two ? 6 : 8);
     st.boss = w.boss ? { kind: w.boss, x: kr ? w.len - 1100 : 1700, hp, max: hp, t: 0, atk: 4, hitT: 0, gone: 0, defeated: false, seedT: 0, intro: false } : null; }
@@ -430,9 +446,9 @@ addEventListener('keydown', e => {
   if (st.screen === 'home' && st.homeMode === 'night') return;
   if (st.screen === 'home') {
     const m = st.homeMode === 'cook' ? ({ '1': 'ing0', '2': 'ing1', '3': 'ing2', '4': 'ing3', '5': 'ing4', '6': 'ing5', Enter: 'cookgo', ' ': 'cookgo', Escape: 'back', Backspace: 'back' }[e.key])
-      : st.homeMode === 'music' ? ({ '1': 'key0', '2': 'key1', '3': 'key2', '4': 'key3', '5': 'key4', '6': 'key5', '7': 'key6', '8': 'key7', l: 'demo', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'puzzle' ? ({ n: 'pnew', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'garden' ? ({ '1': 'plot0', '2': 'plot1', '3': 'plot2', '4': 'plot3', '5': 'plot4', '6': 'plot5', g: 'water', w: 'water', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'album' ? ({ Escape: 'back', Backspace: 'back', Enter: 'back' }[e.key]) : st.homeMode === 'doors'
+      : st.homeMode === 'dog' ? ({ '1': 'feed', '2': 'pet', '3': 'ball', '4': 'trick', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'music' ? ({ '1': 'key0', '2': 'key1', '3': 'key2', '4': 'key3', '5': 'key4', '6': 'key5', '7': 'key6', '8': 'key7', l: 'demo', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'puzzle' ? ({ n: 'pnew', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'garden' ? ({ '1': 'plot0', '2': 'plot1', '3': 'plot2', '4': 'plot3', '5': 'plot4', '6': 'plot5', g: 'water', w: 'water', Escape: 'back', Backspace: 'back' }[e.key]) : st.homeMode === 'album' ? ({ Escape: 'back', Backspace: 'back', Enter: 'back' }[e.key]) : st.homeMode === 'doors'
       ? ({ '1': 'w0', '2': 'w1', '3': 'w2', '4': 'w3', '5': 'w4', '6': 'w5', '7': 'w6', '8': 'w7', '9': 'w8', '0': 'w9', Escape: 'back', Backspace: 'back' }[e.key])
-      : ({ '1': 'sleep', ArrowLeft: 'sleep', '2': 'eat', ArrowRight: 'eat', '3': 'cook', '4': 'travel', '5': 'ward', '6': 'swap', '7': 'album', '8': 'garden', '9': 'puzzle', k: 'music', '0': 'out', Enter: 'out' }[e.key]);
+      : ({ '1': 'sleep', ArrowLeft: 'sleep', '2': 'eat', ArrowRight: 'eat', '3': 'cook', '4': 'travel', '5': 'ward', '6': 'swap', '7': 'album', '8': 'garden', '9': 'puzzle', k: 'music', h: 'dog', '0': 'out', Enter: 'out' }[e.key]);
     if (m) homeAction(m);
     return;
   }
@@ -489,7 +505,7 @@ function onTapScreen(e) {
       else { if (st.picker === 0) st.kind = k; else st.kind2 = k; st.picker = 1 - st.picker; beep(700 + st.picker * 200, .08); }
     }
   } else if (st.screen === 'home') {
-    if ((st.homeMode !== 'menu' && st.homeMode !== 'doors' && st.homeMode !== 'ward' && st.homeMode !== 'swap' && st.homeMode !== 'album' && st.homeMode !== 'cook' && st.homeMode !== 'garden' && st.homeMode !== 'puzzle' && st.homeMode !== 'music') || !e) return;
+    if ((st.homeMode !== 'menu' && st.homeMode !== 'doors' && st.homeMode !== 'ward' && st.homeMode !== 'swap' && st.homeMode !== 'album' && st.homeMode !== 'cook' && st.homeMode !== 'garden' && st.homeMode !== 'puzzle' && st.homeMode !== 'music' && st.homeMode !== 'dog') || !e) return;
     for (const b of st.btns) if (e.clientX > b.x && e.clientX < b.x + b.w && e.clientY > b.y && e.clientY < b.y + b.h) homeAction(b.id);
   } else if (st.screen === 'visit') { if (st.visit.t > 0.6) leaveVisit();
   } else if (st.screen === 'star' && st.screenT > 1) {
@@ -511,6 +527,7 @@ function homeAction(id) {
   if (st.homeMode === 'garden') { gardenAction(id); return; }
   if (st.homeMode === 'puzzle') { puzzleAction(id); return; }
   if (st.homeMode === 'music') { musicAction(id); return; }
+  if (st.homeMode === 'dog') { dogAction(id); return; }
   if (st.homeMode === 'album') { if (id === 'back') { st.homeMode = 'menu'; beep(500, .08); } return; }
   if (st.homeMode === 'swap') {
     if (id === 'back' || id === 'out') { st.homeMode = 'menu'; beep(500, .08); }
@@ -547,6 +564,7 @@ function homeAction(id) {
   if (id === 'ward') { st.homeMode = 'ward'; st.wardFor = 0; return; }
   if (id === 'swap') { st.homeMode = 'swap'; st.wardFor = 0; return; }
   if (id === 'album') { st.homeMode = 'album'; return; }
+  if (id === 'dog') { st.homeMode = 'dog'; st.dog = { mode: 'pet', t: 0 }; say('Wau wau! Wuffi freut sich, dass du da bist!'); return; }
   if (id === 'music') { st.homeMode = 'music'; st.piano = { hit: [], notes: [] }; say('Das Musikzimmer! Tippe auf die Tasten oder drück 1 bis 8.'); return; }
   if (id === 'puzzle') { st.homeMode = 'puzzle'; if (!st.puz) newPuzzle(0); say('Das Spielzimmer! Hier kannst du Puzzles legen.'); return; }
   if (id === 'garden') { st.homeMode = 'garden'; say('Dein eigener Garten! Tippe auf ein leeres Beet, um einen Samen zu pflanzen.'); return; }
@@ -598,6 +616,7 @@ function tryHop(p) {
   if (p.nearDoor) { st.returnX = p.nearDoor; goHome('visit'); return; }
   if (p.nearHouse != null) { enterVisit(p.nearHouse); return; }
   if (p.nearSnow != null) { buildSnow(p.nearSnow); return; }
+  if (p.nearBalloon) { startRide(); return; }
   if (st.seeds > 0 || hasPower('huepf')) {
     if (!hasPower('huepf')) st.seeds--; p.vy = 640 * S; p.jumpY = Math.max(0.01, p.jumpY); sfx.hop();
     for (let i = 0; i < 12; i++) st.sparkles.push(spark(p.x, groundY(p.x) - 10 * S, '#c77dff'));
@@ -658,7 +677,7 @@ function update(dt) {
     else { p.digging = Math.max(0, p.digging - dt * 4); if (p.digging === 0) p.digPaid = false; }
     // laufen (nicht wenn eingegraben)
     let mv = 0;
-    if (p.digging < 0.3) { if (k.left) mv -= 1; if (k.right) mv += 1; }
+    if (p.digging < 0.3 && !st.ride) { if (k.left) mv -= 1; if (k.right) mv += 1; }
     if (mv) { p.face = mv; p.walk += dt * 9; }
     const oldX = p.x, oldJ = p.jumpY;
     p.x = Math.max(60, Math.min(w.len, p.x + mv * speed * dt));
@@ -670,7 +689,8 @@ function update(dt) {
     if (p.jumpY > 0) { p.jumpY += p.vy * dt; p.vy -= 1500 * S * dt;
       for (const o of st.obst) if (Math.abs(p.x - o.x) < obHalf(o) && p.vy < 0 && p.jumpY < o.h * S && oldJ >= o.h * S - 3) { p.jumpY = o.h * S; p.vy = 0; } // oben drauf landen
       if (p.jumpY <= 0) { p.jumpY = 0; p.vy = 0; } }
-    p.nearDoor = 0; p.nearHouse = null; p.nearSnow = null;
+    p.nearDoor = 0; p.nearHouse = null; p.nearSnow = null; p.nearBalloon = false;
+    if (st.balloon && !st.balloon.used && !st.ride && p.digging < .3 && p.jumpY <= 0 && Math.abs(p.x - st.balloon.x) < 70) p.nearBalloon = true;
     if (p.digging < .3 && p.jumpY <= 0) (st.snow || []).forEach((sn, k) => { if (sn.stage < 3 && Math.abs(p.x - sn.x) < 60) p.nearSnow = k; });
     if (w.deco === 'city' && p.digging < .3 && p.jumpY <= 0) { const hi = Math.round((p.x - 90) / 260); if (cityHouse(hi) && Math.abs(p.x - (hi * 260 + 90)) < 60) p.nearHouse = hi; }
     if (p.digging < .3 && p.jumpY <= 0) {
@@ -683,6 +703,11 @@ function update(dt) {
     }
     if (p.hurt > 0) p.hurt -= dt;
   }
+  if (st.ride) { const Rd = st.ride; Rd.t += dt; const end = Rd.t >= RIDE;
+    if (Rd.t > 1) Rd.x = Math.min(w.len - 300, Rd.x + 260 * S * dt * Math.min(1, (Rd.t - 1) / 0.6) * (Rd.t > RIDE - 1.2 ? 0.4 : 1));
+    for (const p of ps) { p.x = Rd.x - (p.id ? 30 : 0); p.jumpY = end ? 0 : Math.max(0.01, rideHeight(Rd.t)); p.vy = 0; p.digging = 0; }
+    if (end) { st.ride = null; st.balloon.gone = 0.01; st.balloon.x = Rd.x; say('Gelandet! Tschüss, Ballon!'); } }
+  if (st.balloon && st.balloon.gone) st.balloon.gone += dt;
   // zu zweit: nicht weiter auseinander als der Bildschirm breit ist
   if (st.two) {
     const gap = W - 140;
@@ -791,7 +816,7 @@ function update(dt) {
     L.y = FLY.has(L.type) ? groundY(L.x) - (40 + Math.sin(L.t * 3) * 8) * S : groundY(L.x);
     if (L.hit) continue;
     for (const p of ps) {
-      if (p.digging > 0.7 || p.hurt > 0) continue;
+      if (p.digging > 0.7 || p.hurt > 0 || st.ride) continue;
       const py = groundY(p.x) - p.jumpY;
       const touching = FLY.has(L.type)
         ? Math.abs(L.x - p.x) < 34 * S && L.y > py - 115 * S * (1 - p.digging * 0.9) && L.y < py + 5
@@ -2020,6 +2045,81 @@ function drawMusicRoom(t, s) {
   btn('demo', 'Lied vorspielen', '#ffd23f', W / 2 - bw - 8); btn('back', 'Zurück', '#ffd6e8', W / 2 + 8);
   st.gbtns = btns;
 }
+// Heißluftballon (y = Boden vom Korb)
+function drawBalloon(x, y, t, idle, carrying) {
+  const s = S, sway = Math.sin(t * 1.5) * 4 * s, ey = y - 230 * s + sway, er = 78 * s;
+  cx.strokeStyle = '#7a5a3a'; cx.lineWidth = 2 * s; for (const d of [-26, 26]) { cx.beginPath(); cx.moveTo(x + d * s, y - 34 * s); cx.lineTo(x + d * 1.9 * s, ey + er * 0.8); cx.stroke(); }
+  cx.save(); cx.beginPath(); cx.ellipse(x, ey, er, er * 1.1, 0, 0, 7); cx.clip();
+  for (let k = 0; k < 7; k++) { cx.fillStyle = ['#ff6fae', '#ffd23f', '#6fd3ff', '#ff8a5c', '#c77dff', '#9be07a', '#ff6fae'][k]; cx.fillRect(x - er + k * er * 2 / 7, ey - er * 1.2, er * 2 / 7 + 1, er * 2.4); }
+  cx.restore(); cx.strokeStyle = '#ffffff88'; cx.lineWidth = 2 * s; cx.beginPath(); cx.ellipse(x, ey, er, er * 1.1, 0, 0, 7); cx.stroke();
+  circle(x - er * 0.4, ey - er * 0.5, er * 0.18, '#ffffff55');
+  cx.fillStyle = '#ffd23f'; cx.beginPath(); cx.moveTo(x - 24 * s, ey + er * 1.05); cx.lineTo(x + 24 * s, ey + er * 1.05); cx.lineTo(x + 14 * s, ey + er * 1.25); cx.lineTo(x - 14 * s, ey + er * 1.25); cx.fill();
+  if (carrying || idle) { const q = (t * 3) % 1; cx.globalAlpha = 0.7 - q * 0.5; circle(x, ey + er * 1.3 + q * 10 * s, (6 + q * 6) * s, '#ffb347'); cx.globalAlpha = 1; } // Flamme
+  // Korb (vorne, damit die Blumen drinstehen)
+  cx.fillStyle = '#b5844f'; rr(x - 34 * s, y - 36 * s, 68 * s, 36 * s, 6 * s); cx.fill();
+  cx.strokeStyle = '#8a5a30'; cx.lineWidth = 2 * s; for (let k = -2; k <= 2; k++) { cx.beginPath(); cx.moveTo(x + k * 12 * s, y - 34 * s); cx.lineTo(x + k * 12 * s, y - 2 * s); cx.stroke(); }
+  cx.fillStyle = '#8a5a30'; cx.fillRect(x - 36 * s, y - 38 * s, 72 * s, 6 * s);
+}
+// Wuffi, das Hündchen
+function drawDog(x, y, s, t, mode, mt) {
+  const wag = Math.sin(t * (mode === 'pet' || mode === 'trick' ? 22 : 6)) * (mode === 'idle' ? 0.25 : 0.6), up = mode === 'trick' && mt < 2.5 ? Math.min(1, mt * 3) : 0;
+  cx.save(); cx.translate(x, y); cx.rotate(-up * 0.6); cx.translate(-x, -y);
+  cx.strokeStyle = '#c8873e'; cx.lineWidth = 7 * s; cx.lineCap = 'round'; cx.beginPath(); cx.moveTo(x - 34 * s, y - 34 * s); cx.lineTo(x - 34 * s - Math.cos(0.9 + wag) * 22 * s, y - 34 * s - Math.sin(0.9 + wag) * 22 * s); cx.stroke(); // Schwanz
+  for (const d of [-24, -12, 14, 26]) { cx.fillStyle = '#d99a52'; rr(x + d * s - 5 * s, y - 22 * s, 10 * s, 22 * s, 5 * s); cx.fill(); circle(x + d * s, y - 2 * s, 6 * s, '#fff1dc'); }
+  cx.fillStyle = '#e8ad66'; cx.beginPath(); cx.ellipse(x, y - 32 * s, 38 * s, 20 * s, 0, 0, 7); cx.fill();
+  circle(x - 8 * s, y - 32 * s, 9 * s, '#fff1dc');
+  const hx = x + 34 * s, hy = y - 56 * s + (mode === 'eat' ? 26 * s * Math.abs(Math.sin(t * 6)) : 0);
+  circle(hx, hy, 22 * s, '#e8ad66');
+  for (const d of [-1, 1]) { cx.fillStyle = '#a8662a'; cx.beginPath(); cx.ellipse(hx + d * 18 * s, hy + 2 * s, 8 * s, 16 * s, d * 0.3 + (mode === 'pet' ? d * Math.sin(t * 10) * 0.2 : 0), 0, 7); cx.fill(); } // Ohren
+  cx.fillStyle = '#fff1dc'; cx.beginPath(); cx.ellipse(hx + 6 * s, hy + 9 * s, 12 * s, 9 * s, 0, 0, 7); cx.fill();
+  circle(hx + 10 * s, hy + 4 * s, 4 * s, '#3a2410');
+  if (mode === 'pet') { cx.strokeStyle = '#3a2410'; cx.lineWidth = 2.5 * s; for (const d of [-8, 8]) { cx.beginPath(); cx.arc(hx + d * s - 2 * s, hy - 6 * s, 4 * s, Math.PI * 1.1, Math.PI * 1.9); cx.stroke(); } }
+  else { circle(hx - 9 * s, hy - 6 * s, 3.5 * s, '#3a2410'); circle(hx + 7 * s, hy - 6 * s, 3.5 * s, '#3a2410'); circle(hx - 8 * s, hy - 7 * s, 1.2 * s, '#fff'); circle(hx + 8 * s, hy - 7 * s, 1.2 * s, '#fff'); }
+  cx.fillStyle = '#ff7a9a'; if (mode !== 'eat') { cx.beginPath(); cx.ellipse(hx + 8 * s, hy + 17 * s, 4 * s, 6 * s, 0, 0, Math.PI); cx.fill(); } // Zunge
+  cx.fillStyle = '#ff6fae'; cx.fillRect(hx - 18 * s, hy + 16 * s, 26 * s, 5 * s); circle(hx - 5 * s, hy + 24 * s, 4 * s, '#ffd23f'); // Halsband
+  cx.restore();
+}
+function drawDogRoom(t, s) {
+  const D = st.dog, fl = H * 0.74; D.t += 1 / 60;
+  cx.fillStyle = '#e6f6e0'; cx.fillRect(0, 0, W, H); for (let x = 30 * s; x < W; x += 70 * s) for (let y = 30 * s; y < fl; y += 70 * s) { cx.fillStyle = '#cdebc4'; cx.beginPath(); cx.ellipse(x + ((y / (70 * s)) % 2) * 35 * s, y, 6 * s, 4 * s, 0.5, 0, 7); cx.fill(); circle(x + ((y / (70 * s)) % 2) * 35 * s + 9 * s, y - 2 * s, 3 * s, '#cdebc4'); }
+  cx.fillStyle = '#c98f5a'; cx.fillRect(0, fl, W, H - fl);
+  bigText('Wuffi, dein Hündchen', H * 0.14, Math.min(28 * s, W * 0.06));
+  // Hundekörbchen
+  const kx = W * 0.25; cx.fillStyle = '#ff9ec7'; cx.beginPath(); cx.ellipse(kx, fl - 10 * s, 80 * s, 26 * s, 0, 0, 7); cx.fill(); cx.fillStyle = '#ffd6e8'; cx.beginPath(); cx.ellipse(kx, fl - 16 * s, 64 * s, 14 * s, 0, 0, 7); cx.fill();
+  // Napf
+  const nx = W * 0.72; cx.fillStyle = '#6fc3ff'; cx.beginPath(); cx.moveTo(nx - 34 * s, fl - 22 * s); cx.lineTo(nx + 34 * s, fl - 22 * s); cx.lineTo(nx + 26 * s, fl); cx.lineTo(nx - 26 * s, fl); cx.fill();
+  if (D.mode === 'eat' && D.t < 3) { cx.fillStyle = '#fff6ea'; rr(nx - 20 * s, fl - 34 * s, 40 * s * Math.max(0.2, 1 - D.t / 3), 10 * s, 5 * s); cx.fill(); }
+  let dx = W * 0.5;
+  if (D.mode === 'eat') dx = nx - 75 * s;
+  if (D.mode === 'ball') { const q = Math.min(1, D.t / 3.2), out = q < 0.5 ? q * 2 : 2 - q * 2; dx = W * 0.4 + out * W * 0.4;
+    const bxx = q < 0.25 ? W * 0.4 + (q / 0.25) * W * 0.44 : dx + 50 * s, byy = q < 0.25 ? fl - 20 * s - Math.sin(q / 0.25 * Math.PI) * 120 * s : fl - 70 * s; circle(bxx, byy, 12 * s, '#ff4f6d'); cx.strokeStyle = '#fff'; cx.lineWidth = 2 * s; cx.beginPath(); cx.arc(bxx, byy, 12 * s, -0.5, 0.8); cx.stroke();
+    if (q >= 1) D.mode = 'idle'; }
+  if (D.mode !== 'ball' && D.mode !== 'eat' && D.t > 4) D.mode = 'idle';
+  if (D.mode === 'eat' && D.t > 3.2) D.mode = 'idle';
+  drawDog(dx, fl, s * 1.6, t, D.mode, D.t);
+  if (D.mode === 'pet') for (let i = 0; i < 5; i++) { const q = (D.t * 0.8 + i / 5) % 1; cx.globalAlpha = 1 - q; heart(dx + 40 * s + Math.sin(i * 2 + q * 6) * 30 * s, fl - 140 * s - q * 90 * s, 9 * s, true); } cx.globalAlpha = 1;
+  if (D.mode === 'pet') drawFlower(dx - 120 * s, fl, st.kind, s * 0.9, { lean: 0.8, noBag: true }); else drawFlower(W * 0.12 + 20 * s, fl, st.kind, s * 0.9, { noBag: true });
+  const btns = [], items = [['feed', 'Füttern', '#ffb36b'], ['pet', 'Streicheln', '#ff9ec7'], ['ball', 'Ball werfen', '#8fd3ff'], ['trick', 'Männchen', '#b9e86a'], ['back', 'Zurück', '#ffffffcc']];
+  const n = W < 600 ? 3 : 5, gap = 10, bw = Math.min(170 * s, (W - 32 - gap * (n - 1)) / n), bh = 46 * s, tot = bw * n + gap * (n - 1);
+  items.forEach(([id, label, col], i) => { const x0 = W / 2 - tot / 2 + (i % n) * (bw + gap), y0 = H * 0.82 + Math.floor(i / n) * (bh + 8 * s);
+    rr(x0, y0, bw, bh, bh / 2); cx.fillStyle = col; cx.fill(); cx.strokeStyle = '#fff'; cx.lineWidth = 3; cx.stroke();
+    cx.fillStyle = '#5a1745'; cx.font = `bold ${18 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(label, x0 + bw / 2, y0 + bh / 2, bw - 12); btns.push({ id, x: x0, y: y0, w: bw, h: bh }); });
+  st.gbtns = btns;
+}
+// Jahreszeit-Schild: immer sichtbar (rechtsbündig bei right=true)
+function seasonIcon(x, y, r, k) {
+  if (k === 0) { for (let i = 0; i < 5; i++) { const a = i * 1.2566 - 1.57; circle(x + Math.cos(a) * r * 0.55, y + Math.sin(a) * r * 0.55, r * 0.45, '#ff8fc4'); } circle(x, y, r * 0.35, '#ffd23f'); }
+  if (k === 1) { cx.strokeStyle = '#ffb000'; cx.lineWidth = r * 0.18; for (let i = 0; i < 8; i++) { const a = i * 0.785; cx.beginPath(); cx.moveTo(x + Math.cos(a) * r * 0.6, y + Math.sin(a) * r * 0.6); cx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); cx.stroke(); } circle(x, y, r * 0.5, '#ffd23f'); }
+  if (k === 2) { cx.save(); cx.translate(x, y); cx.rotate(-0.6); cx.fillStyle = '#f08a2c'; cx.beginPath(); cx.ellipse(0, 0, r * 0.95, r * 0.5, 0, 0, 7); cx.fill(); cx.strokeStyle = '#a0521a'; cx.lineWidth = r * 0.12; cx.beginPath(); cx.moveTo(-r * 1.1, 0); cx.lineTo(r * 0.8, 0); cx.stroke(); cx.restore(); }
+  if (k === 3) { cx.strokeStyle = '#6fbfff'; cx.lineWidth = r * 0.2; cx.lineCap = 'round'; for (let i = 0; i < 3; i++) { const a = i * 1.047; cx.beginPath(); cx.moveTo(x - Math.cos(a) * r, y - Math.sin(a) * r); cx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); cx.stroke(); } circle(x, y, r * 0.2, '#6fbfff'); }
+}
+function seasonBadge(x, y, s, right) {
+  const k = st.season || 0, txt = SEASONS[k], col = ['#ffe3f1', '#fff4c2', '#ffe0c2', '#e3f3ff'][k];
+  cx.font = `bold ${16 * s}px "Comic Sans MS", sans-serif`; const tw = cx.measureText(txt).width, bw = tw + 46 * s, bh = 28 * s, x0 = right ? x - bw : x;
+  rr(x0, y, bw, bh, bh / 2); cx.fillStyle = col; cx.fill(); cx.strokeStyle = '#fff'; cx.lineWidth = 2.5 * s; cx.stroke();
+  seasonIcon(x0 + 17 * s, y + bh / 2, 9 * s, k);
+  cx.fillStyle = '#5a1745'; cx.textAlign = 'left'; cx.textBaseline = 'middle'; cx.fillText(txt, x0 + 32 * s, y + bh / 2 + 1);
+}
 function drawJet(t) {
   const J = st.jet; if (!J) return;
   const s = S, cols = ['#ff4f6d', '#ff9a3c', '#ffd23f', '#5cc85c', '#36b6f0', '#a66bff'];
@@ -2092,15 +2192,16 @@ function hud(t) {
   cx.textAlign = 'right'; cx.font = `bold ${22 * s}px "Comic Sans MS", sans-serif`;
   for (let i = 0; i < WORLDS.length - 1; i++) star5(W - 26 * s - (i % 5) * 30 * s - Math.floor(i / 5) * 15 * s, 24 * s + Math.floor(i / 5) * 26 * s, 11 * s, i < st.stars ? '#ffd23f' : '#ffffff44', i < st.stars ? '#fff' : null);
   cx.fillStyle = '#fff'; cx.strokeStyle = '#0005'; cx.lineWidth = 4;
-  const nm = WORLDS[st.world].name + (WORLDS[st.world].deco === 'wasser' ? '' : ' · ' + SEASONS[st.season]);
+  const nm = WORLDS[st.world].name;
   cx.strokeText(nm, W - 26 * s, 84 * s); cx.fillText(nm, W - 26 * s, 84 * s);
+  seasonBadge(14 * s, 76 * s + Math.ceil(seedMax() / 5) * 28 * s - 6 * s, s, false);
   // Fortschritt
   const w = WORLDS[st.world], narrow = W < 640, pw = narrow ? W * 0.6 : Math.min(260 * s, W * 0.35), px = W / 2 - pw / 2, py = narrow ? 104 * s : 26 * s;
   rr(px, py, pw, 10 * s, 5 * s); cx.fillStyle = '#ffffff55'; cx.fill();
   rr(px, py, pw * Math.min(1, leadX() / w.len), 10 * s, 5 * s); cx.fillStyle = '#ff6fae'; cx.fill();
   star5(px + pw + 14 * s, py + 5 * s, 10 * s, '#ffd23f');
   if (st.power && st.power.kind !== 'herz') { // Zauber-Abzeichen mit Zeit
-    const pw = POWER[st.power.kind], bx = 14 * s, by = 76 * s + Math.ceil(seedMax() / 5) * 28 * s - 6 * s, bw = 150 * s, bh = 30 * s;
+    const pw = POWER[st.power.kind], bx = 14 * s, by = 112 * s + Math.ceil(seedMax() / 5) * 28 * s - 6 * s, bw = 150 * s, bh = 30 * s;
     rr(bx, by, bw, bh, bh / 2); cx.fillStyle = '#ffffffcc'; cx.fill(); cx.strokeStyle = pw.c; cx.lineWidth = 3; cx.stroke();
     star4(bx + 16 * s, by + bh / 2, 7 * s, pw.c);
     cx.fillStyle = '#5a1745'; cx.font = `bold ${13 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'left'; cx.textBaseline = 'middle'; cx.fillText(pw.name, bx + 30 * s, by + bh / 2 - 4 * s);
@@ -2319,6 +2420,8 @@ function drawPlay(t) {
       const h = w.helper; drawHelper(hx, groundY(st.helperX) + 4, h.kind, t, S);
       if (st.helperTalk > 0) speech(h.name + ': ' + h.tip, hx, groundY(st.helperX) - 160 * S, st.helperTalk);
   } }
+  if (st.balloon && !st.ride && (!st.balloon.used || st.balloon.gone < 6)) { const B2 = st.balloon, bx = B2.x - cam; if (bx > -150 && bx < W + 150) drawBalloon(bx, groundY(B2.x) + 4 * S - (B2.gone || 0) * (B2.gone || 0) * 40 * S, t, !B2.used); }
+  { const q = players().find(p => p.nearBalloon && !p.nearDoor); if (q) bubble('⬆ In den Ballon einsteigen', st.balloon.x - cam, groundY(st.balloon.x) - 300 * S); }
   for (const sn of st.snow || []) { const sx = sn.x - cam; if (sx > -80 && sx < W + 80) drawSnowman(sx, groundY(sn.x) + 6 * S, sn.stage, t); }
   { const q = players().find(p => p.nearSnow != null && !p.nearDoor); if (q) { const sn = st.snow[q.nearSnow]; bubble('⬆ Schneemann bauen (' + sn.stage + '/3)', sn.x - cam, groundY(sn.x) - 170 * S); } }
   { const h = players().find(p => p.nearHouse != null && !p.nearDoor); if (h) bubble('⬆ Klopf klopf! Besuch machen', h.nearHouse * 260 + 90 - cam, groundY(h.nearHouse * 260 + 90) - 170 * S); }
@@ -2361,6 +2464,7 @@ function drawPlay(t) {
       cx.fillStyle = '#fff'; cx.fillText(nameOf(p), px, ty);
     }
   }
+  if (st.ride) { const lead = players()[0]; drawBalloon(lead.x - cam - (st.two ? 15 : 0), groundY(lead.x) - lead.jumpY + 4 * S, t, false, true); }
   // Geschenke vom Jet
   for (const g of st.gifts) drawGift(g, cam, t);
   if (st.bee && st.bee.y != null) drawBee(st.bee.x - cam, st.bee.y, t, st.bee.face, 1.3 * S);
@@ -2635,7 +2739,9 @@ function drawHome(t) {
   cx.save(); rr(wx, wy, ww, wh, 60 * s); cx.fillStyle = night ? '#2b3a7a' : '#9fdcff'; cx.fill(); cx.clip();
   if (night) { circle(wx + ww * 0.65, wy + wh * 0.4, 18 * s, '#fff3a0'); circle(wx + ww * 0.72, wy + wh * 0.35, 15 * s, '#2b3a7a');
     for (let i = 0; i < 5; i++) star4(wx + 20 * s + i * 30 * s, wy + 30 * s + (i % 2) * 40 * s, (1.5 + Math.abs(Math.sin(t * 2 + i))) * s, '#fff'); }
-  else { cx.fillStyle = '#5cb85c'; cx.fillRect(wx, wy + wh * 0.75, ww, wh);
+  else { const sk = st.season || 0; cx.fillStyle = ['#5cb85c', '#4caf50', '#c9a23a', '#f4f8ff'][sk]; cx.fillRect(wx, wy + wh * 0.75, ww, wh);
+    for (let i = 0; i < 6; i++) { const q = ((t * 0.3 + i / 6) % 1), fx = wx + ((i * 37) % 160) * s + Math.sin(t + i) * 8 * s, fy = wy + q * wh * 0.8;
+      if (sk === 3) circle(fx, fy, 3 * s, '#fff'); else if (sk === 2) seasonIcon(fx, fy, 6 * s, 2); else if (sk === 0) circle(fx, wy + wh * 0.78 + (i % 2) * 6 * s, 4 * s, ['#ff8fc4', '#fff', '#ffd23f'][i % 3]); }
     if (st.hidCount) { const lx = wx + ww + 40 * s - ((t * 70 * s) % (ww + 80 * s)); cx.save(); cx.translate(lx, wy + wh * 0.5); cx.scale(0.7, 0.7); cx.translate(-lx, -(wy + wh * 0.5)); drawLeaf(lx, wy + wh * 0.5, t); cx.restore(); } }
   cx.restore(); cx.strokeStyle = '#fff'; cx.lineWidth = 8 * s; rr(wx, wy, ww, wh, 60 * s); cx.stroke();
   cx.beginPath(); cx.moveTo(W / 2, wy); cx.lineTo(W / 2, wy + wh); cx.stroke();
@@ -2691,6 +2797,7 @@ function drawHome(t) {
   if (mode === 'menu') {
     if (st.two) { drawFlower(W / 2 - 55 * s, floor, st.kind, s * 1.1, { wear: st.wear[0], bob: Math.sin(t * 3) * 3 * s }); drawFlower(W / 2 + 55 * s, floor, st.kind2, s * 1.1, { wear: st.wear[1], bob: Math.sin(t * 3 + 1) * 3 * s }); }
     else drawFlower(W / 2, floor, st.kind, s * 1.1, { wear: st.wear[0], bob: Math.sin(t * 3) * 3 * s });
+    drawDog(W * 0.6, floor, s * 0.8, t, 'idle', 0);
     drawBee(W / 2 + Math.cos(t * 1.2) * 150 * s, H * 0.45 + Math.sin(t * 2.4) * 30 * s, t, -Math.sign(Math.sin(t * 1.2)) || 1, 1.2 * s);
   }
 
@@ -2702,17 +2809,19 @@ function drawHome(t) {
   if (mode === 'garden') drawGarden(t, s);
   if (mode === 'puzzle') drawPuzzleRoom(t, s);
   if (mode === 'music') drawMusicRoom(t, s);
+  if (mode === 'dog') drawDogRoom(t, s);
   // Herzen
   for (let i = 0; i < 4; i++) heart(W / 2 - 60 * s + i * 40 * s, H * 0.07, 16 * s, i < st.hearts);
+  seasonBadge(14, H * 0.07 - 14 * s, Math.max(s, 0.8), false);
   const txt = mode === 'night' ? (asleep ? 'Gute Nacht! Schlaf schön...' : 'Oink oink! Guten Morgen!') : mode === 'sleep' ? (st.hearts >= 4 ? 'Ausgeschlafen!' : 'Schlaf gut...') : mode === 'eat' ? 'Guten Appetit!'
     : (st.hidCount ? 'Hier drin bist du sicher vor den Blättern!' : 'Willkommen im Blumenhaus!');
-  if (mode !== 'doors' && mode !== 'ward' && mode !== 'swap' && mode !== 'album' && mode !== 'cook' && mode !== 'garden' && mode !== 'puzzle' && mode !== 'music') bigText(txt, H * 0.14, 26 * s);
+  if (mode !== 'doors' && mode !== 'ward' && mode !== 'swap' && mode !== 'album' && mode !== 'cook' && mode !== 'garden' && mode !== 'puzzle' && mode !== 'music' && mode !== 'dog') bigText(txt, H * 0.14, 26 * s);
 
   // Knöpfe
   st.btns = [];
-  if (mode === 'garden' || mode === 'puzzle' || mode === 'music') st.btns = st.gbtns || [];
+  if (mode === 'garden' || mode === 'puzzle' || mode === 'music' || mode === 'dog') st.btns = st.gbtns || [];
   if (mode === 'menu') {
-    const items = [['sleep', 'Schlafen', '#8fc9ff'], ['eat', 'Essen', '#ffb36b'], ['cook', 'Kochen', '#ff9b8a'], ['travel', 'Reisen', '#d6b3ff'], ['ward', 'Schrank', '#ffd23f'], ['swap', 'Wechseln', '#ff9ec7'], ['album', 'Album', '#7fe0d0'], ['garden', 'Garten', '#b9e86a'], ['puzzle', 'Spielzimmer', '#a8d8ff'], ['music', 'Musikzimmer', '#ffc4e1'], ['out', 'Rausgehen', '#9be07a']];
+    const items = [['sleep', 'Schlafen', '#8fc9ff'], ['eat', 'Essen', '#ffb36b'], ['cook', 'Kochen', '#ff9b8a'], ['travel', 'Reisen', '#d6b3ff'], ['ward', 'Schrank', '#ffd23f'], ['swap', 'Wechseln', '#ff9ec7'], ['album', 'Album', '#7fe0d0'], ['garden', 'Garten', '#b9e86a'], ['puzzle', 'Spielzimmer', '#a8d8ff'], ['music', 'Musikzimmer', '#ffc4e1'], ['dog', 'Wuffi', '#ffe08a'], ['out', 'Rausgehen', '#9be07a']];
     const n = W < 600 ? 3 : 6, gap = 12, bw = Math.min(190 * s, (W - 32 - gap * (n - 1)) / n), bh = 48 * s, total = bw * n + gap * (n - 1);
     items.forEach(([id, label, col], i) => {
       const x0 = W / 2 - total / 2 + (i % n) * (bw + gap), y0 = (n === 3 ? H * 0.64 : H * 0.76) + Math.floor(i / n) * (bh + 10 * s);
@@ -2806,7 +2915,7 @@ function drawHome(t) {
   }
   if (mode === 'album') drawAlbum(t, s);
   if (mode === 'cook') drawCook(t, s);
-  if (st.msgT > 0) bubble(st.msg, W / 2, mode === 'music' ? H * 0.2 : mode === 'puzzle' ? H * 0.8 : mode === 'cook' ? H * 0.78 : mode === 'ward' ? H * 0.22 : mode === 'swap' || mode === 'album' ? H * 0.76 : H * 0.48, Math.min(1, st.msgT));
+  if (st.msgT > 0) bubble(st.msg, W / 2, mode === 'dog' ? H * 0.24 : mode === 'music' ? H * 0.2 : mode === 'puzzle' ? H * 0.8 : mode === 'cook' ? H * 0.78 : mode === 'ward' ? H * 0.22 : mode === 'swap' || mode === 'album' ? H * 0.76 : H * 0.48, Math.min(1, st.msgT));
 }
 function drawAlbum(t, s) {
   cx.fillStyle = '#5a1745bb'; cx.fillRect(0, 0, W, H);
