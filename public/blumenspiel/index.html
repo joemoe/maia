@@ -2801,6 +2801,9 @@ function drawHome(t) {
   cx.strokeStyle = '#b5844f'; cx.lineWidth = 2 * s; for (let i = -2; i <= 2; i++) { cx.beginPath(); cx.moveTo(kx + i * 13 * s, ky - 16 * s); cx.lineTo(kx + i * 10 * s, ky - 2 * s); cx.stroke(); }
   cx.strokeStyle = '#c48a48'; cx.lineWidth = 4 * s; cx.beginPath(); cx.ellipse(kx, ky - 18 * s, 38 * s, 18 * s, 0, 0, Math.PI); cx.stroke();
 
+  // Wuffi schläft mit, wenn die Blume schläft
+  if (mode === 'sleep' || mode === 'night') { cx.fillStyle = '#ff9ec7'; cx.beginPath(); cx.ellipse(W * 0.45, floor - 4 * s, 44 * s, 13 * s, 0, 0, 7); cx.fill(); cx.fillStyle = '#ffd6e8'; cx.beginPath(); cx.ellipse(W * 0.45, floor - 8 * s, 34 * s, 7 * s, 0, 0, 7); cx.fill();
+    drawDog(W * 0.45, floor - 6 * s, s * 0.8, t, asleep ? 'sleep' : 'pet', 0); if (asleep) zz(W * 0.45 + 30 * s, floor - 60 * s, 0.6); }
   // Tisch (rechts) mit Essen
   const tx = W * 0.75, ty = floor - 70 * s;
   cx.fillStyle = '#b5703f'; rr(tx - 110 * s, ty, 220 * s, 14 * s, 5 * s); cx.fill();
