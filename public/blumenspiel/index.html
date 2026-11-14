@@ -696,6 +696,8 @@ function update(dt) {
   const w = WORLDS[st.world];
   const speed = 210 * S * (hasPower('flitz') ? 1.6 : 1);
   { const before = (st.dayT || 0) % DAY; st.dayT = (st.dayT || 0) + dt; const now = st.dayT % DAY, d = w.deco;
+    if (before < 45 && now >= 45 && !st.storm && !st.ride) { nextSeason(); say('Schau mal! Jetzt ist ' + SEASONS[st.season] + '!'); beep(660, .15, 'triangle', .08); setTimeout(() => beep(880, .2, 'triangle', .08), 150);
+      if (st.season === 1 && st.bdayYear !== st.year && !(st.boss && !st.boss.defeated)) { st.screen = 'home'; startBday(); return; } }
     if (d !== 'nacht' && d !== 'wasser') {
       if (before < 90 && now >= 90) say('Es wird Nacht! Gleich ist Schlafenszeit.');
       const Bz = st.boss, bossNear = Bz && !Bz.defeated && Bz.x - leadX() < W * 1.5;
