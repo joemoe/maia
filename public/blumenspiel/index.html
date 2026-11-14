@@ -184,8 +184,8 @@ function gardenAction(id) {
       st.seeds--; garden[i] = { at: Date.now(), kind: GARDEN_KINDS[Math.floor(Math.random() * GARDEN_KINDS.length)], boost: 0 }; saveGarden();
       sfx.dig(); say('Eingepflanzt! Gieß ihn mit der Gießkanne, dann wächst er schneller.');
     } else if (plotAge(g) < GROW) say('Die Pflanze wächst noch. Ein bisschen Geduld!');
-    else if (!g.harvested) { g.harvested = 1; saveGarden(); st.seeds = Math.min(seedMax(), st.seeds + 2); sfx.star(); say('Sie blüht! Die Blume schenkt dir 2 neue Samen.'); }
-    else { g.wiggle = Date.now(); beep(988, .1, 'triangle'); say(['Hihi, das kitzelt!', 'Danke, dass du mich gepflanzt hast!', 'Ich bin so gern in deinem Garten!'][i % 3]); }
+    else if (!g.harvested) { g.harvested = 1; saveGarden(); st.seeds = Math.min(seedMax(), st.seeds + 2); sfx.star(); say('Sie blüht! Die Blume schenkt dir 2 neue Samen. Tippe nochmal, dann pflückst du sie.'); }
+    else { garden[i] = null; saveGarden(); [988, 1318].forEach((f, k) => setTimeout(() => beep(f, .12, 'triangle'), k * 90)); say('Gepflückt! Ein schöner Blumenstrauß. Das Beet ist wieder frei.'); }
   }
 }
 // Jahreszeiten: jeden Morgen kommt die nächste
@@ -227,6 +227,11 @@ function buildSnow(i) {
   if (sn.stage === 3) { st.seeds = Math.min(seedMax(), st.seeds + 1); sfx.star(); say('Fertig! Ein Schneemann! Er schenkt dir einen Samen.'); }
   else say(sn.stage === 1 ? 'Eine dicke Schneekugel! Drück nochmal ⬆.' : 'Noch der Kopf! Drück nochmal ⬆.');
 }
+// Eigene Farben für die Blüten (pro Blume), mit Knopf zurück zur echten Farbe
+const COLORS = [['Rosa', '#ff6fae', '#ff9ec7', '#e03b7d'], ['Lila', '#b06bff', '#d4a6ff', '#7a3ad0'], ['Blau', '#5aa8ff', '#9fd0ff', '#2f6fd0'], ['Türkis', '#2fd0c0', '#8ff0e4', '#1a9a8e'],
+  ['Gelb', '#ffc233', '#ffe08a', '#d99a00'], ['Orange', '#ff8a3a', '#ffb37a', '#d9601a'], ['Rot', '#ff3b3b', '#ff7a7a', '#c4141f'], ['Weiß', '#ffffff', '#f4f0ff', '#c9c0dd']];
+st.colors = {}; try { st.colors = JSON.parse(localStorage.getItem('blumen-farbe') || '{}') || {}; } catch (e) {}
+function saveColors() { try { localStorage.setItem('blumen-farbe', JSON.stringify(st.colors)); } catch (e) {} }
 const hasPower = k => st.power && st.power.kind === k;
 const RAINBOW = ['#ff6b6b', '#ffb347', '#ffe66b', '#7ee081', '#6fc3ff', '#b58cff'];
 const FLY = new Set(['leaf', 'wolke', 'fleder', 'hai', 'qualle']); // diese Gegner fliegen/schwimmen
@@ -519,6 +524,11 @@ function homeAction(id) {
   if (st.homeMode === 'ward') {
     if (id === 'back' || id === 'out') { st.homeMode = 'menu'; beep(500, .08); }
     else if (id === 'for0' || id === 'for1') { st.wardFor = +id[3]; beep(700, .06); }
+    else if (id && id.startsWith('col:')) {
+      const kd = kindOf(P[st.wardFor || 0]), v = id.slice(4);
+      if (v === 'orig') { delete st.colors[kd]; say('Wieder die echte Farbe!'); } else { st.colors[kd] = +v; say('Neue Farbe: ' + COLORS[+v][0] + '!'); }
+      saveColors(); beep(880, .08); setTimeout(() => beep(1175, .1), 70);
+    }
     else if (id && id.startsWith('wear:')) {
       const w = id.slice(5), it = WEAR.find(x => x.id === w);
       if (w !== 'none' && (!it || it.stars > unlocked)) { say('Dafür brauchst du ' + it.stars + ' Sterne!'); beep(200, .15, 'triangle'); return; }
@@ -1013,21 +1023,21 @@ function drawFlower(x, y, kind, size, opts = {}) {
   }
   if (!opts.noBag) drawBag(x, y, stemH, s, kind, opts.seeds || 0);
   // Blüte
-  const r = 30 * s, bx = topX, by = topY - r * 0.6;
+  const r = 30 * s, bx = topX, by = topY - r * 0.6, pal = st.colors && st.colors[kind] != null ? COLORS[st.colors[kind]] : null;
   if (kind === 'sonnenblume') {
     for (let ring = 0; ring < 2; ring++) for (let i = 0; i < 14; i++) {
-      const a = i / 14 * Math.PI * 2 + ring * 0.22; cx.fillStyle = ring ? '#ffd21f' : '#ffb800'; cx.beginPath();
+      const a = i / 14 * Math.PI * 2 + ring * 0.22; cx.fillStyle = pal ? (ring ? pal[1] : pal[3]) : ring ? '#ffd21f' : '#ffb800'; cx.beginPath();
       cx.ellipse(bx + Math.cos(a) * r * 1.05, by + Math.sin(a) * r * 1.05, r * 0.5, r * 0.2, a, 0, 7); cx.fill();
     }
     circle(bx, by, r * 0.88, '#8a5a2b');
     for (let i = 0; i < 18; i++) { const a = i * 2.4, d = Math.sqrt(i / 18) * r * 0.75; circle(bx + Math.cos(a) * d, by + Math.sin(a) * d, r * 0.05, '#6b4220'); }
   } else if (kind === 'mohn') {
-    for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2 - Math.PI / 2; cx.fillStyle = i % 2 ? '#e8222e' : '#ff3b3b'; cx.beginPath(); cx.ellipse(bx + Math.cos(a) * r * 0.62, by + Math.sin(a) * r * 0.62, r * 0.68, r * 0.58, a, 0, 7); cx.fill(); }
-    cx.strokeStyle = '#c4141f'; cx.lineWidth = 1.5 * s; for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2 - Math.PI / 2 + 0.63; cx.beginPath(); cx.moveTo(bx + Math.cos(a) * r * 0.5, by + Math.sin(a) * r * 0.5); cx.lineTo(bx + Math.cos(a) * r * 1.05, by + Math.sin(a) * r * 1.05); cx.stroke(); }
+    for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2 - Math.PI / 2; cx.fillStyle = pal ? (i % 2 ? pal[3] : pal[1]) : i % 2 ? '#e8222e' : '#ff3b3b'; cx.beginPath(); cx.ellipse(bx + Math.cos(a) * r * 0.62, by + Math.sin(a) * r * 0.62, r * 0.68, r * 0.58, a, 0, 7); cx.fill(); }
+    cx.strokeStyle = pal ? pal[3] : '#c4141f'; cx.lineWidth = 1.5 * s; for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2 - Math.PI / 2 + 0.63; cx.beginPath(); cx.moveTo(bx + Math.cos(a) * r * 0.5, by + Math.sin(a) * r * 0.5); cx.lineTo(bx + Math.cos(a) * r * 1.05, by + Math.sin(a) * r * 1.05); cx.stroke(); }
     for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; circle(bx + Math.cos(a) * r * 0.8, by + Math.sin(a) * r * 0.8, r * 0.06, '#2a1a22'); }
-    circle(bx, by + r * 0.1, r * 0.72, '#ff6a6a');
+    circle(bx, by + r * 0.1, r * 0.72, pal ? pal[2] : '#ff6a6a');
   } else if (kind === 'tulpe') {
-    cx.fillStyle = '#ff6fae';
+    cx.fillStyle = pal ? pal[1] : '#ff6fae';
     cx.beginPath(); // Kelch mit drei Spitzen
     cx.moveTo(bx - r, by - r * 0.6);
     cx.lineTo(bx - r * 0.55, by - r * 1.25); cx.lineTo(bx - r * 0.15, by - r * 0.75);
@@ -1036,12 +1046,12 @@ function drawFlower(x, y, kind, size, opts = {}) {
     cx.quadraticCurveTo(bx + r * 1.05, by + r * 0.9, bx, by + r * 0.95);
     cx.quadraticCurveTo(bx - r * 1.05, by + r * 0.9, bx - r, by - r * 0.6);
     cx.fill();
-    cx.fillStyle = '#ff94c4'; cx.beginPath(); cx.ellipse(bx, by + r * 0.15, r * 0.78, r * 0.72, 0, 0, Math.PI * 2); cx.fill();
+    cx.fillStyle = pal ? pal[2] : '#ff94c4'; cx.beginPath(); cx.ellipse(bx, by + r * 0.15, r * 0.78, r * 0.72, 0, 0, Math.PI * 2); cx.fill();
   } else {
     const petals = 9;
-    for (let i = 0; i < petals; i++) { const a = i / petals * Math.PI * 2; circle(bx + Math.cos(a) * r * 0.75, by + Math.sin(a) * r * 0.75, r * 0.5, '#ff4f93'); }
-    circle(bx, by, r * 0.95, '#ff6fa8');
-    cx.strokeStyle = '#e03b7d'; cx.lineWidth = 2.2 * s;
+    for (let i = 0; i < petals; i++) { const a = i / petals * Math.PI * 2; circle(bx + Math.cos(a) * r * 0.75, by + Math.sin(a) * r * 0.75, r * 0.5, pal ? pal[1] : '#ff4f93'); }
+    circle(bx, by, r * 0.95, pal ? pal[2] : '#ff6fa8');
+    cx.strokeStyle = pal ? pal[3] : '#e03b7d'; cx.lineWidth = 2.2 * s;
     cx.beginPath(); cx.arc(bx, by - r * 0.55, r * 0.35, Math.PI * 0.9, Math.PI * 2.1); cx.stroke();
     cx.beginPath(); cx.arc(bx, by - r * 0.6, r * 0.18, Math.PI * 0.2, Math.PI * 1.6); cx.stroke();
   }
@@ -2756,7 +2766,16 @@ function drawHome(t) {
       cx.fillText(it.name, x0 + cw / 2, y0 + ch * 0.9, cw - 8);
       st.btns.push({ id: 'wear:' + it.id, x: x0, y: y0, w: cw, h: ch });
     });
-    const bw = Math.min(200 * s, W - 32), bh = 54 * s, x0 = W / 2 - bw / 2, by0 = H * 0.84;
+    { // Farben: eigene Blütenfarbe aussuchen, oder zurück zur echten Farbe
+      const kd = kindOf(pl), cur = st.colors[kd], cr = Math.min(20 * s, (W - 40) / ((COLORS.length + 2.6) * 2.5)), gap2 = cr * 2.5, ow = cr * 5.2, totC = COLORS.length * gap2 + ow, cy0 = Math.max(y0 + ch + 34 * s, H * 0.73);
+      cx.fillStyle = '#fff'; cx.font = `bold ${16 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('Blütenfarbe', W / 2, cy0 - cr - 14 * s);
+      COLORS.forEach(([nm, c1], i) => { const x = W / 2 - totC / 2 + gap2 * (i + 0.5); circle(x, cy0, cr + (cur === i ? 5 * s : 2 * s), cur === i ? '#ffd23f' : '#ffffff'); circle(x, cy0, cr, c1);
+        st.btns.push({ id: 'col:' + i, x: x - cr - 4, y: cy0 - cr - 4, w: cr * 2 + 8, h: cr * 2 + 8 }); });
+      const ox = W / 2 - totC / 2 + COLORS.length * gap2 + 6 * s; rr(ox, cy0 - cr, ow - 6 * s, cr * 2, cr); cx.fillStyle = cur == null ? '#fff6c0' : '#ffffffdd'; cx.fill(); cx.strokeStyle = cur == null ? '#ffd23f' : '#fff'; cx.lineWidth = 3; cx.stroke();
+      cx.fillStyle = '#5a1745'; cx.font = `bold ${Math.min(14 * s, cr * 0.75)}px "Comic Sans MS", sans-serif`; cx.fillText('↺ Original', ox + (ow - 6 * s) / 2, cy0 + 1, ow - 12 * s);
+      st.btns.push({ id: 'col:orig', x: ox, y: cy0 - cr, w: ow - 6 * s, h: cr * 2 });
+    }
+    const bw = Math.min(200 * s, W - 32), bh = 54 * s, x0 = W / 2 - bw / 2, by0 = H * 0.86;
     rr(x0, by0, bw, bh, bh / 2); cx.fillStyle = '#ffffffdd'; cx.fill(); cx.strokeStyle = '#ff6fae'; cx.lineWidth = 4; cx.stroke();
     cx.fillStyle = '#5a1745'; cx.font = `bold ${20 * s}px "Comic Sans MS", sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('Fertig', W / 2, by0 + bh / 2);
     st.btns.push({ id: 'back', x: x0, y: by0, w: bw, h: bh });
@@ -2787,7 +2806,7 @@ function drawHome(t) {
   }
   if (mode === 'album') drawAlbum(t, s);
   if (mode === 'cook') drawCook(t, s);
-  if (st.msgT > 0) bubble(st.msg, W / 2, mode === 'music' ? H * 0.2 : mode === 'puzzle' ? H * 0.8 : mode === 'cook' ? H * 0.78 : mode === 'swap' || mode === 'ward' || mode === 'album' ? H * 0.76 : H * 0.48, Math.min(1, st.msgT));
+  if (st.msgT > 0) bubble(st.msg, W / 2, mode === 'music' ? H * 0.2 : mode === 'puzzle' ? H * 0.8 : mode === 'cook' ? H * 0.78 : mode === 'ward' ? H * 0.22 : mode === 'swap' || mode === 'album' ? H * 0.76 : H * 0.48, Math.min(1, st.msgT));
 }
 function drawAlbum(t, s) {
   cx.fillStyle = '#5a1745bb'; cx.fillRect(0, 0, W, H);
