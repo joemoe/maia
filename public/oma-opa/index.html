@@ -32,6 +32,8 @@
   body.ingame .rund { display: grid; }
   #quit { top: max(12px, env(safe-area-inset-top)); }
   #mute { top: calc(max(12px, env(safe-area-inset-top)) + 56px); }
+  #wechsel { top: calc(max(12px, env(safe-area-inset-top)) + 112px); }
+  a.rund { text-decoration: none; color: inherit; }
 
   #aktion { position: fixed; right: 22px; bottom: max(26px, env(safe-area-inset-bottom)); z-index: 5; width: 96px; height: 96px; border-radius: 50%;
     border: 4px solid var(--ink); background: var(--gelb); box-shadow: 0 5px 0 var(--ink); font-size: 40px; display: none; place-items: center; padding: 0; touch-action: none; }
@@ -71,39 +73,36 @@
 
 <div class="hud" id="oben">
   <span class="chip" id="ortName">🚽 Badezimmer</span>
+  <span class="chip" id="konto">⭐ 0</span>
   <span class="chip" id="chaos"><i></i><span id="chaosText">Chaos 0%</span></span>
 </div>
 <div class="hud" id="toast"></div>
 <div class="hud" id="tipp"><span class="chip">⬅️⬆️⬇️➡️ laufen · Leertaste: schnappen, reißen, werfen</span></div>
 
-<button class="rund" id="quit" aria-label="Zurück">✖</button>
+<a class="rund" id="quit" href="/" aria-label="Zurück zu maia.games">✖</a>
+<button class="rund" id="wechsel" aria-label="Oma oder Opa">👴</button>
 <button class="rund" id="mute" aria-label="Ton an oder aus">🔊</button>
 <button id="aktion" aria-label="Aktion">💪<small id="aktionText">schnappen</small></button>
 
-<div class="overlay on" id="start">
+<div class="overlay on" id="wahl">
   <div class="box">
     <h1>Wer ist hier<br>so verrückt?!</h1>
-    <p>Oma und Opa sind total verrückt! Mach überall Chaos, wo es geht. 🤪</p>
     <h2>Wer bist du?</h2>
     <div class="figuren">
-      <button class="figur" data-f="oma"><canvas width="260" height="260" id="bildOma"></canvas>Oma</button>
-      <button class="figur" data-f="opa"><canvas width="260" height="260" id="bildOpa"></canvas>Opa</button>
+      <button class="figur gross" data-start="oma"><canvas width="260" height="260" id="wahlOma"></canvas>Oma</button>
+      <button class="figur gross" data-start="opa"><canvas width="260" height="260" id="wahlOpa"></canvas>Opa</button>
     </div>
-    <button class="knopf weiss" id="ladenBtn">👗 Kleiderladen · ⭐ <span id="konto">0</span></button>
-    <h2>Wo machst du Chaos?</h2>
-    <p style="font-size:14px">Jedes Mal, wenn du einen Ort ganz ins Chaos stürzt, bekommst du einen Stern. Auch nochmal!</p>
-    <div class="orte" id="orte"></div>
-    <a class="zurueck" href="/">← zurück zu maia.games</a>
   </div>
 </div>
 
 <div class="overlay" id="laden">
   <div class="box">
     <h1>Kleiderladen</h1>
+    <p>Hier kannst du dich umziehen, und Oma oder Opa aussuchen.</p>
     <p>Passt garantiert nie zusammen! 😂 · Du hast ⭐ <b id="konto2">0</b></p>
     <div class="figuren"><button class="figur" data-f="oma"><canvas width="260" height="260" id="ladenOma"></canvas>Oma</button><button class="figur" data-f="opa"><canvas width="260" height="260" id="ladenOpa"></canvas>Opa</button></div>
     <div id="regal"></div>
-    <button class="knopf" id="ladenZu">Fertig ✔</button>
+    <button class="knopf" id="ladenZu">Fertig, raus ins Dorf ✔</button>
   </div>
 </div>
 
@@ -113,46 +112,69 @@
     <h1 id="sternTitel">Super Chaos!</h1>
     <p id="sternText"></p>
     <button class="knopf" id="weiter">Nächster Ort ➜</button>
-    <button class="knopf weiss" id="zumMenu">Menü</button>
   </div>
 </div>
 
 <script>
 'use strict';
-// ---------- Orte ----------
-// Jedes Ding: [Emoji, x, y, Stärke, Name, Kleckerfarbe]
-// Stärke 1 = kann man sofort schnappen. Mehr = muss man erst rausreißen.
-const ORTE = [
-  { id: 'bad', name: 'Badezimmer', emo: '🚽', boden: ['#e4f6ff', '#c6e8f8'], muster: 'fliesen', wand: '#6aa9d1',
-    dinge: [['🚽', 820, 150, 4, 'Toilette', '#7fd3ff'], ['🛁', 210, 140, 5, 'Badewanne', '#7fd3ff'], ['🪞', 520, 95, 2, 'Spiegel', '#e8f4ff'],
-      ['🧻', 360, 300, 1, 'Klopapier', '#ffffff'], ['🧻', 650, 430, 1, 'Klopapier', '#ffffff'], ['🧻', 150, 470, 1, 'Klopapier', '#ffffff'],
-      ['🧴', 570, 250, 1, 'Shampoo', '#ff9ad5'], ['🧴', 780, 480, 1, 'Shampoo', '#9dff9a'], ['🪥', 430, 460, 1, 'Zahnbürste', '#7fd3ff'],
-      ['🧼', 290, 210, 1, 'Seife', '#ffd6ec'], ['🦆', 710, 310, 1, 'Gummiente', '#ffe25a']] },
-  { id: 'kueche', name: 'Küche', emo: '🍳', boden: ['#fff1d6', '#f3d9a6'], muster: 'karo', wand: '#d98a4a',
-    dinge: [['🍰', 480, 300, 1, 'Torte', '#fff0f5'], ['🥚', 200, 260, 1, 'Ei', '#ffd84a'], ['🥚', 230, 420, 1, 'Ei', '#ffd84a'], ['🥚', 700, 460, 1, 'Ei', '#ffd84a'],
-      ['🍽️', 340, 150, 1, 'Teller', '#ffffff'], ['🍽️', 630, 150, 1, 'Teller', '#ffffff'], ['🥛', 820, 300, 1, 'Milch', '#ffffff'],
-      ['🍅', 380, 470, 1, 'Tomate', '#ff4a3a'], ['🍅', 580, 400, 1, 'Tomate', '#ff4a3a'], ['🍳', 120, 120, 2, 'Pfanne', '#ffd84a'],
-      ['🫖', 850, 130, 2, 'Teekanne', '#c98b4a'], ['🪑', 140, 520, 2, 'Stuhl', '#b7793f'], ['🪑', 840, 520, 2, 'Stuhl', '#b7793f']] },
-  { id: 'wohnzimmer', name: 'Wohnzimmer', emo: '🛋️', boden: ['#f0d6b0', '#e2c08f'], muster: 'holz', wand: '#a46bd1',
-    dinge: [['🛋️', 480, 130, 5, 'Sofa', '#ff9ad5'], ['📺', 480, 470, 3, 'Fernseher', '#cfd8e6'], ['🏺', 150, 150, 2, 'Vase', '#e0a060'],
-      ['🪴', 830, 140, 2, 'Pflanze', '#5a3a1a'], ['🪴', 140, 470, 2, 'Pflanze', '#5a3a1a'], ['🖼️', 300, 90, 1, 'Bild', '#ffd84a'], ['🖼️', 660, 90, 1, 'Bild', '#ffd84a'],
-      ['🕰️', 840, 450, 2, 'Uhr', '#c98b4a'], ['📚', 300, 330, 1, 'Bücher', '#ff6b6b'], ['🧸', 650, 320, 1, 'Teddy', '#c98b4a'], ['💡', 820, 300, 1, 'Lampe', '#fff6a0']] },
-  { id: 'supermarkt', name: 'Supermarkt', emo: '🛒', boden: ['#e9edf2', '#d6dde6'], muster: 'fliesen', wand: '#2ec4b6',
-    dinge: [['🛒', 150, 470, 3, 'Einkaufswagen', '#cfd8e6'], ['🍉', 300, 150, 2, 'Melone', '#ff4a6a'], ['🍉', 660, 150, 2, 'Melone', '#ff4a6a'],
-      ['🥫', 220, 290, 1, 'Dose', '#ff6b4a'], ['🥫', 250, 330, 1, 'Dose', '#ff6b4a'], ['🥫', 720, 300, 1, 'Dose', '#ff6b4a'],
-      ['🍌', 480, 130, 1, 'Banane', '#ffe25a'], ['🥖', 840, 160, 1, 'Brot', '#e0a060'], ['🧀', 480, 320, 1, 'Käse', '#ffd84a'],
-      ['🍎', 400, 450, 1, 'Apfel', '#ff4a3a'], ['🍎', 560, 470, 1, 'Apfel', '#ff4a3a'], ['🍾', 830, 470, 1, 'Flasche', '#c8ff9a'], ['🥚', 120, 140, 1, 'Ei', '#ffd84a']] },
-  { id: 'park', name: 'Park', emo: '⛲', boden: ['#9be07a', '#8ad46a'], muster: 'gras', wand: '#3f8f4a',
-    dinge: [['⛲', 480, 290, 5, 'Brunnen', '#7fd3ff'], ['🗑️', 140, 140, 2, 'Mülleimer', '#9aa4b2'], ['🚲', 820, 140, 3, 'Fahrrad', '#cfd8e6'],
-      ['🧺', 210, 450, 1, 'Picknickkorb', '#e0a060'], ['🍦', 330, 500, 1, 'Eis', '#ffd6ec'], ['🍔', 660, 480, 1, 'Burger', '#e0a060'],
-      ['🎈', 760, 330, 1, 'Luftballon', '#ff4a6a'], ['🎈', 200, 300, 1, 'Luftballon', '#ff4a6a'], ['🪣', 620, 140, 1, 'Kübel', '#36b6f0'],
-      ['🥏', 340, 150, 1, 'Frisbee', '#ff5fa2'], ['🪴', 850, 470, 2, 'Blumentopf', '#5a3a1a']] },
-];
 const SPRUDLER = { '🚽': 1, '🛁': 1, '⛲': 1 };
 const KRACH = ['KRACH!', 'BUMM!', 'KLIRR!', 'PLATSCH!', 'WUMMS!', 'ZACK!', 'HIHIHI!', 'HUI!'];
 
 const W = 960, H = 600, RAND = 40;
 const cv = document.getElementById('c'), g = cv.getContext('2d');
+// ---------- Orte ----------
+// Jedes Ding: [Emoji, x, y, Stärke, Name, Kleckerfarbe]
+// Stärke 1 = kann man sofort schnappen. Mehr = muss man erst rausreißen.
+// Türen: seite = an welcher Wand, ziel = wohin sie führt.
+const SZENEN = {
+  draussen: { name: 'Dorf', emo: '🏘️', muster: 'draussen', boden: ['#9be07a', '#8ad46a'], grenze: { l: 30, o: 268, r: W - 30, u: H - 20 },
+    tueren: [{ x: 195, seite: 'oben', y: 250, ziel: 'flur', label: 'ins Haus' }, { x: 465, seite: 'oben', y: 250, ziel: 'laden', label: 'Kleiderladen' }, { x: 755, seite: 'oben', y: 250, ziel: 'supermarkt', label: 'Supermarkt' },
+      { x: 0, y: 470, seite: 'links', ziel: 'park', label: 'zum Park' }],
+    dinge: [['🗑️', 600, 340, 2, 'Mülltonne', '#9aa4b2'], ['🚲', 880, 470, 3, 'Fahrrad', '#cfd8e6'], ['🪴', 330, 300, 1, 'Blumentopf', '#5a3a1a'], ['📦', 100, 320, 1, 'Paket', '#e0a060'], ['🚗', 520, 500, 4, 'Auto', '#ff4a3a']] },
+  flur: { name: 'Flur unten', emo: '🚪', boden: ['#f3e2c4', '#e6cfa6'], muster: 'holz', wand: '#e08a6a',
+    tueren: [{ x: 480, seite: 'unten', ziel: 'draussen', label: 'rausgehen' }, { y: 330, seite: 'links', ziel: 'kueche', label: 'Küche' },
+      { y: 330, seite: 'rechts', ziel: 'wohnzimmer', label: 'Wohnzimmer' }, { x: 700, seite: 'oben', ziel: 'flur2', label: 'Treppe hoch', art: 'treppe' }],
+    dinge: [['🧥', 200, 140, 1, 'Jacke', '#5b6b8a'], ['☂️', 280, 140, 1, 'Regenschirm', '#ff5fa2'], ['👢', 220, 470, 1, 'Stiefel', '#5a3a1a']] },
+  flur2: { name: 'Flur oben (2. Stock)', emo: '🪜', boden: ['#e8dcf5', '#d9c8ee'], muster: 'holz', wand: '#8a63d2',
+    tueren: [{ x: 700, seite: 'oben', ziel: 'flur', label: 'Treppe runter', art: 'treppe' }, { y: 330, seite: 'links', ziel: 'bad', label: 'Badezimmer' },
+      { y: 330, seite: 'rechts', ziel: 'schlafzimmer', label: 'Schlafzimmer' }],
+    dinge: [['🖼️', 300, 100, 1, 'Bild', '#ffd84a'], ['🧺', 480, 480, 1, 'Wäschekorb', '#e0a060']] },
+  bad: { name: 'Badezimmer', emo: '🚽', chaos: true, boden: ['#e4f6ff', '#c6e8f8'], muster: 'fliesen', wand: '#6aa9d1',
+    tueren: [{ y: 330, seite: 'rechts', ziel: 'flur2', label: 'raus' }],
+    dinge: [['🚽', 780, 150, 4, 'Toilette', '#7fd3ff'], ['🛁', 210, 140, 5, 'Badewanne', '#7fd3ff'], ['🪞', 500, 95, 2, 'Spiegel', '#e8f4ff'],
+      ['🧻', 360, 300, 1, 'Klopapier', '#ffffff'], ['🧻', 650, 450, 1, 'Klopapier', '#ffffff'], ['🧻', 150, 470, 1, 'Klopapier', '#ffffff'],
+      ['🧴', 570, 250, 1, 'Shampoo', '#ff9ad5'], ['🧴', 800, 490, 1, 'Shampoo', '#9dff9a'], ['🪥', 430, 460, 1, 'Zahnbürste', '#7fd3ff'],
+      ['🧼', 290, 210, 1, 'Seife', '#ffd6ec'], ['🦆', 680, 300, 1, 'Gummiente', '#ffe25a']] },
+  schlafzimmer: { name: 'Schlafzimmer', emo: '🛏️', chaos: true, boden: ['#ffe3f1', '#ffd0e6'], muster: 'holz', wand: '#ff8fbf', bett: [520, 170],
+    tueren: [{ y: 330, seite: 'links', ziel: 'flur2', label: 'raus' }],
+    dinge: [['🧸', 300, 160, 1, 'Teddy', '#c98b4a'], ['⏰', 760, 170, 1, 'Wecker', '#ff4a3a'], ['💡', 830, 300, 1, 'Nachttischlampe', '#fff6a0'],
+      ['🧦', 300, 470, 1, 'Socke', '#36b6f0'], ['🧦', 640, 500, 1, 'Socke', '#ff5fa2'], ['👟', 450, 420, 1, 'Schuh', '#ffffff'],
+      ['🪞', 160, 470, 2, 'Spiegel', '#e8f4ff'], ['🗄️', 830, 470, 3, 'Kommode', '#b7793f']] },
+  kueche: { name: 'Küche', emo: '🍳', chaos: true, boden: ['#fff1d6', '#f3d9a6'], muster: 'karo', wand: '#d98a4a',
+    tueren: [{ y: 330, seite: 'rechts', ziel: 'flur', label: 'raus' }],
+    dinge: [['🍰', 480, 300, 1, 'Torte', '#fff0f5'], ['🥚', 200, 260, 1, 'Ei', '#ffd84a'], ['🥚', 230, 420, 1, 'Ei', '#ffd84a'], ['🥚', 700, 470, 1, 'Ei', '#ffd84a'],
+      ['🍽️', 340, 150, 1, 'Teller', '#ffffff'], ['🍽️', 630, 150, 1, 'Teller', '#ffffff'], ['🥛', 760, 220, 1, 'Milch', '#ffffff'],
+      ['🍅', 380, 470, 1, 'Tomate', '#ff4a3a'], ['🍅', 580, 400, 1, 'Tomate', '#ff4a3a'], ['🍳', 120, 120, 2, 'Pfanne', '#ffd84a'],
+      ['🫖', 850, 130, 2, 'Teekanne', '#c98b4a'], ['🪑', 140, 520, 2, 'Stuhl', '#b7793f'], ['🪑', 840, 520, 2, 'Stuhl', '#b7793f']] },
+  wohnzimmer: { name: 'Wohnzimmer', emo: '🛋️', chaos: true, boden: ['#f0d6b0', '#e2c08f'], muster: 'holz', wand: '#a46bd1',
+    tueren: [{ y: 330, seite: 'links', ziel: 'flur', label: 'raus' }],
+    dinge: [['🛋️', 480, 130, 5, 'Sofa', '#ff9ad5'], ['📺', 480, 470, 3, 'Fernseher', '#cfd8e6'], ['🏺', 150, 150, 2, 'Vase', '#e0a060'],
+      ['🪴', 830, 140, 2, 'Pflanze', '#5a3a1a'], ['🪴', 160, 500, 2, 'Pflanze', '#5a3a1a'], ['🖼️', 300, 90, 1, 'Bild', '#ffd84a'], ['🖼️', 660, 90, 1, 'Bild', '#ffd84a'],
+      ['🕰️', 840, 450, 2, 'Uhr', '#c98b4a'], ['📚', 300, 330, 1, 'Bücher', '#ff6b6b'], ['🧸', 650, 320, 1, 'Teddy', '#c98b4a'], ['💡', 820, 260, 1, 'Lampe', '#fff6a0']] },
+  supermarkt: { name: 'Supermarkt', emo: '🛒', chaos: true, boden: ['#e9edf2', '#d6dde6'], muster: 'fliesen', wand: '#2ec4b6',
+    tueren: [{ x: 480, seite: 'unten', ziel: 'draussen', label: 'rausgehen' }],
+    dinge: [['🛒', 150, 470, 3, 'Einkaufswagen', '#cfd8e6'], ['🍉', 300, 150, 2, 'Melone', '#ff4a6a'], ['🍉', 660, 150, 2, 'Melone', '#ff4a6a'],
+      ['🥫', 220, 290, 1, 'Dose', '#ff6b4a'], ['🥫', 250, 340, 1, 'Dose', '#ff6b4a'], ['🥫', 720, 300, 1, 'Dose', '#ff6b4a'],
+      ['🍌', 480, 130, 1, 'Banane', '#ffe25a'], ['🥖', 840, 160, 1, 'Brot', '#e0a060'], ['🧀', 480, 320, 1, 'Käse', '#ffd84a'],
+      ['🍎', 360, 450, 1, 'Apfel', '#ff4a3a'], ['🍎', 620, 450, 1, 'Apfel', '#ff4a3a'], ['🍾', 830, 470, 1, 'Flasche', '#c8ff9a'], ['🥚', 120, 140, 1, 'Ei', '#ffd84a']] },
+  park: { name: 'Park', emo: '⛲', chaos: true, boden: ['#9be07a', '#8ad46a'], muster: 'gras', wand: '#3f8f4a',
+    tueren: [{ y: 330, seite: 'rechts', ziel: 'draussen', label: 'nach Hause' }],
+    dinge: [['⛲', 480, 290, 5, 'Brunnen', '#7fd3ff'], ['🗑️', 140, 140, 2, 'Mülleimer', '#9aa4b2'], ['🚲', 800, 140, 3, 'Fahrrad', '#cfd8e6'],
+      ['🧺', 210, 450, 1, 'Picknickkorb', '#e0a060'], ['🍦', 330, 500, 1, 'Eis', '#ffd6ec'], ['🍔', 660, 480, 1, 'Burger', '#e0a060'],
+      ['🎈', 700, 420, 1, 'Luftballon', '#ff4a6a'], ['🎈', 200, 300, 1, 'Luftballon', '#ff4a6a'], ['🪣', 620, 140, 1, 'Kübel', '#36b6f0'],
+      ['🥏', 340, 150, 1, 'Frisbee', '#ff5fa2'], ['🪴', 820, 500, 2, 'Blumentopf', '#5a3a1a']] },
+};
+const CHAOS_ORTE = Object.keys(SZENEN).filter(k => SZENEN[k].chaos);
 let sc = 1, ox = 0, oy = 0, DPR = 1;
 function resize() {
   DPR = Math.min(2, window.devicePixelRatio || 1);
@@ -342,18 +364,10 @@ function bildVorschau(id, wer) { const k = document.getElementById(id).getContex
 
 // ---------- Startmenü ----------
 function zeigeFigurWahl() { document.querySelectorAll('.figur').forEach(b => b.classList.toggle('an', b.dataset.f === stand.figur)); }
-document.querySelectorAll('.figur').forEach(b => b.addEventListener('click', () => { stand.figur = b.dataset.f; speichern(); zeigeFigurWahl(); sKicher(); if (document.getElementById('laden').classList.contains('on')) baueLaden(); }));
-function baueOrte() {
-  const box = document.getElementById('orte'); box.innerHTML = '';
-  ORTE.forEach((o, i) => {
-    const frei = i === 0 || stand.sterne[ORTE[i - 1].id];
-    const b = document.createElement('button'); b.className = 'ort'; b.disabled = !frei;
-    b.innerHTML = `<b>${frei ? o.emo : '🔒'}</b>${o.name}<div class="st">${stand.sterne[o.id] ? '⭐' + (stand.sterne[o.id] > 1 ? ' x' + stand.sterne[o.id] : '') : '☆'}</div>`;
-    b.addEventListener('click', () => starteOrt(i)); box.appendChild(b);
-  });
-}
-function vorschauen() { bildVorschau('bildOma', 'oma'); bildVorschau('bildOpa', 'opa'); bildVorschau('ladenOma', 'oma'); bildVorschau('ladenOpa', 'opa');
-  document.getElementById('konto').textContent = stand.konto || 0; document.getElementById('konto2').textContent = stand.konto || 0; }
+document.querySelectorAll('.figur[data-f]').forEach(b => b.addEventListener('click', () => { stand.figur = b.dataset.f; speichern(); zeigeFigurWahl(); sKicher(); baueLaden(); vorschauen(); }));
+function vorschauen() { bildVorschau('ladenOma', 'oma'); bildVorschau('ladenOpa', 'opa'); bildVorschau('wahlOma', 'oma'); bildVorschau('wahlOpa', 'opa');
+  document.getElementById('konto').textContent = '⭐ ' + (stand.konto || 0); document.getElementById('konto2').textContent = stand.konto || 0;
+  document.getElementById('wechsel').textContent = stand.figur === 'oma' ? '👴' : '👵'; }
 function baueLaden() {
   const box = document.getElementById('regal'); box.innerHTML = ''; const kl = stand.kleider[stand.figur];
   for (const teil in LADEN) {
@@ -372,45 +386,66 @@ function baueLaden() {
     box.appendChild(reihe);
   }
 }
-document.getElementById('ladenBtn').addEventListener('click', () => { ac(); baueLaden(); vorschauen(); zeigeFigurWahl(); document.getElementById('start').classList.remove('on'); document.getElementById('laden').classList.add('on'); });
-document.getElementById('ladenZu').addEventListener('click', () => { document.getElementById('laden').classList.remove('on'); document.getElementById('start').classList.add('on'); vorschauen(); zeigeFigurWahl(); });
-zeigeFigurWahl(); baueOrte(); vorschauen();
+function ladenAuf() { laeuft = false; stick = null; baueLaden(); vorschauen(); zeigeFigurWahl(); document.body.classList.remove('ingame'); document.getElementById('laden').classList.add('on'); }
+document.getElementById('ladenZu').addEventListener('click', () => { document.getElementById('laden').classList.remove('on'); document.body.classList.add('ingame'); laeuft = true; vorschauen(); });
+document.getElementById('wechsel').addEventListener('click', () => { stand.figur = stand.figur === 'oma' ? 'opa' : 'oma'; speichern(); vorschauen(); sKicher(); toast(stand.figur === 'oma' ? 'Chaos-Oma! 👵' : 'Chaos-Opa! 👴'); });
+zeigeFigurWahl(); vorschauen();
 
 // ---------- Spielzustand ----------
-let ortNr = 0, ort = null, dinge = [], teilchen = [], kleckse = [], flieger = [], texte = [];
-let P = null, laeuft = false, wackeln = 0, fertigT = -1, zeit = 0;
-function starteOrt(i) {
-  ac(); ortNr = i; ort = ORTE[i];
-  dinge = ort.dinge.map(([emo, x, y, hp, name, farbe]) => ({ emo, x, y, hp, max: hp, name, farbe, r: hp > 1 ? 34 : 22, kaputt: false, rueckeln: 0, sprudelt: false }));
-  teilchen = []; kleckse = []; flieger = []; texte = []; fertigT = -1;
-  P = { x: W / 2, y: H - 80, bx: 1, by: 0, blick: 1, traegt: null, laeuft: false, spur: [] };
-  document.getElementById('ortName').textContent = ort.emo + ' ' + ort.name;
-  document.getElementById('start').classList.remove('on'); document.getElementById('stern').classList.remove('on');
-  document.body.classList.add('ingame'); laeuft = true; chaosAnzeige();
-  toast('Los, mach Chaos! 🤪'); sKicher();
+for (const id in SZENEN) for (const t of SZENEN[id].tueren) {
+  if (t.seite === 'oben' && t.y == null) t.y = RAND + 20; if (t.seite === 'unten') t.y = H - RAND + 20;
+  if (t.seite === 'links' && t.x == null) t.x = RAND; if (t.seite === 'rechts') t.x = W - RAND;
 }
-function zumMenu() { laeuft = false; document.body.classList.remove('ingame'); document.getElementById('stern').classList.remove('on'); baueOrte(); zeigeFigurWahl(); vorschauen(); document.getElementById('start').classList.add('on'); }
-document.getElementById('quit').addEventListener('click', zumMenu);
-document.getElementById('zumMenu').addEventListener('click', zumMenu);
-document.getElementById('weiter').addEventListener('click', () => { if (ortNr + 1 < ORTE.length) starteOrt(ortNr + 1); else zumMenu(); });
+const STD_GRENZE = { l: RAND + 18, o: RAND + 40, r: W - RAND - 18, u: H - RAND + 10 };
+const grenze = () => ort.grenze || STD_GRENZE;
+let ortId = 'draussen', ort = null, dinge = [], teilchen = [], kleckse = [], flieger = [], texte = [];
+let welt = {}; // was heute schon kaputt ist (bis man schlafen geht)
+let P = null, laeuft = false, wackeln = 0, fertigT = -1, zeit = 0, schlafT = 0;
+function raum(id) {
+  if (!welt[id]) welt[id] = { dinge: SZENEN[id].dinge.map(([emo, x, y, hp, name, farbe]) => ({ emo, x, y, hp, max: hp, name, farbe, r: hp > 1 ? 34 : 22, kaputt: false, rueckeln: 0 })), kleckse: [], sternDa: false };
+  return welt[id];
+}
+function betrete(id, vonId) {
+  if (P && P.traegt) { const d = P.traegt; P.traegt = null; zerbrechen(d, P.x, P.y); }
+  ortId = id; ort = SZENEN[id]; const r = raum(id); dinge = r.dinge; kleckse = r.kleckse;
+  teilchen = []; flieger = []; texte = []; fertigT = -1;
+  const alt = P || { bx: 1, by: 0, blick: 1 };
+  P = { x: W / 2, y: H - 100, bx: alt.bx, by: alt.by, blick: alt.blick, traegt: null, laeuft: false, spur: [] };
+  const t = ort.tueren.find(t => t.ziel === vonId);
+  if (t) { // neben der Tür hereinkommen
+    const rein = { oben: [0, 75], unten: [0, -75], links: [75, 0], rechts: [-75, 0] }[t.seite];
+    P.x = t.x + rein[0]; P.y = t.y + rein[1] + (t.seite === 'oben' ? 20 : 0);
+    if (t.seite === 'links' || t.seite === 'rechts') P.y += 30;
+    const gz = grenze(); P.x = Math.max(gz.l, Math.min(gz.r, P.x)); P.y = Math.max(gz.o, Math.min(gz.u, P.y));
+  }
+  document.getElementById('ortName').textContent = ort.emo + ' ' + ort.name;
+  document.getElementById('chaos').style.display = ort.chaos ? '' : 'none';
+  if (ort.chaos) chaosAnzeige();
+}
+function losgehen() {
+  ac(); welt = {}; P = null; betrete('draussen', null);
+  document.body.classList.add('ingame'); laeuft = true; toast('Los, mach Chaos! 🤪');
+}
+document.getElementById('weiter').addEventListener('click', () => { document.getElementById('stern').classList.remove('on'); document.body.classList.add('ingame'); laeuft = true; });
 const muteBtn = document.getElementById('mute');
 function muteZeigen() { muteBtn.textContent = laut ? '🔊' : '🔇'; }
 muteBtn.addEventListener('click', () => { laut = !laut; try { localStorage.setItem('oma-opa-ton', laut ? 'an' : 'aus'); } catch (e) {} muteZeigen(); }); muteZeigen();
 
 let toastT = 0;
-function toast(t) { const el = document.getElementById('toast'); el.textContent = t; el.classList.add('on'); toastT = 1.6; }
+function toast(t, dauer = 1.6) { const el = document.getElementById('toast'); el.textContent = t; el.classList.add('on'); toastT = dauer; }
 function chaosAnzeige() {
+  if (!ort.chaos) return;
   const n = dinge.filter(d => d.kaputt).length, p = Math.round(n / dinge.length * 100);
   document.querySelector('#chaos i').style.width = p + '%'; document.getElementById('chaosText').textContent = 'Chaos ' + p + '%';
-  if (n === dinge.length && fertigT < 0) fertigT = 1.2;
+  if (n === dinge.length && fertigT < 0 && !welt[ortId].sternDa) fertigT = 1.2;
 }
 
 // ---------- Eingabe ----------
 const keys = {};
 addEventListener('keydown', e => {
+  ac();
   const k = e.key.toLowerCase(); keys[k] = true;
   if ((k === ' ' || k === 'enter') && laeuft) { e.preventDefault(); if (!e.repeat) aktion(); }
-  if (k === 'escape' && laeuft) zumMenu();
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 let stick = null; // Joystick zum Wischen
@@ -442,8 +477,14 @@ function naechstes() {
   }
   return b;
 }
+function naheTuer() { for (const t of ort.tueren) if (Math.hypot(t.x - P.x, t.y - P.y) < (t.seite === 'oben' ? 95 : 80)) return t; return null; }
+function amBett() { return ort.bett && Math.hypot(ort.bett[0] - P.x, ort.bett[1] + 40 - P.y) < 110; }
 function aktion() {
+  if (schlafT > 0) return;
   if (P.traegt) { werfen(); return; }
+  const tuer = naheTuer(); if (tuer && tuer.ziel === 'laden') { ton(660, .1, 'triangle', .06); ladenAuf(); return; }
+  if (tuer) { ton(392, .08, 'square', .05); ton(523, .1, 'square', .05, 0, .08); betrete(tuer.ziel, ortId); return; }
+  if (amBett()) { schlafen(); return; }
   const d = naechstes(); if (!d) { sKicher(); text(P.x, P.y - 120, pick(['Hihi!', 'Huiii!', 'Juhu!']), '#fff'); return; }
   if (d.hp > 1) { // rausreißen
     d.hp--; d.rueckeln = .3; wackeln = .15; sReiss(); bruchstuecke(d, 4);
@@ -454,6 +495,16 @@ function aktion() {
       P.traegt = d; d.r = 22;
     }
   } else { P.traegt = d; sSchnapp(); text(d.x, d.y - 40, 'Schnapp!', '#fff'); }
+}
+function schlafen() {
+  schlafT = 4.5; P.laeuft = false; P.spur = []; stick = null; toast('Gute Nacht! 😴', 2);
+  [392, 330, 262].forEach((f, i) => ton(f, .5, 'sine', .08, 0, i * .45));
+}
+function aufwachen() {
+  welt = {}; const id = ortId; P.traegt = null; betrete(id, null);
+  P.x = ort.bett[0]; P.y = ort.bett[1] + 90;
+  toast('Guten Morgen! ☀️ Alles aufgeräumt!', 2.6);
+  [523, 659, 784, 1047].forEach((f, i) => ton(f, .15, 'triangle', .1, 0, i * .1));
 }
 function werfen() {
   const d = P.traegt; P.traegt = null; sWurf();
@@ -484,6 +535,13 @@ function update(dt) {
   zeit += dt;
   if (toastT > 0) { toastT -= dt; if (toastT <= 0) document.getElementById('toast').classList.remove('on'); }
   if (!laeuft) return;
+  if (schlafT > 0) {
+    schlafT -= dt;
+    if (Math.random() < dt * 2.5) { text(ort.bett[0] + 30 + Math.random() * 40, ort.bett[1] - 40, pick(['Z', 'Zz', 'Zzz', 'Schnarch!']), '#fff'); if (Math.random() < .5) ton(90, .5, 'sawtooth', .03, 30); }
+    for (const t of texte) { t.y -= 40 * dt; t.leben -= dt * .6; } texte = texte.filter(t => t.leben > 0);
+    if (schlafT <= 0) aufwachen();
+    return;
+  }
   const [ix, iy] = eingabe();
   P.laeuft = Math.hypot(ix, iy) > .1;
   if (P.laeuft) { P.bx = ix; P.by = iy; if (Math.abs(ix) > .2) P.blick = Math.sign(ix); }
@@ -492,13 +550,15 @@ function update(dt) {
   if (P.traegt) { P.traegt.x = P.x; P.traegt.y = P.y; }
   const sl = P.spur[0]; if (!sl || Math.hypot(sl[0] - P.x, sl[1] - P.y) > 6) { P.spur.unshift([P.x, P.y]); if (P.spur.length > 70) P.spur.pop(); }
   // Aktionsknopf-Text
-  const nd = P.traegt ? null : naechstes();
-  const at = P.traegt ? ['🎯', 'werfen!'] : nd ? (nd.hp > 1 ? ['💪', 'reißen!'] : ['✊', 'schnappen']) : ['🤪', 'Quatsch'];
-  if (aktBtn.firstChild.nodeValue !== at[0]) { aktBtn.firstChild.nodeValue = at[0]; document.getElementById('aktionText').textContent = at[1]; }
+  const tuer = P.traegt ? null : naheTuer();
+  const nd = P.traegt || tuer ? null : naechstes();
+  const at = P.traegt ? ['🎯', 'werfen!'] : tuer ? ['🚪', tuer.label] : amBett() ? ['😴', 'schlafen'] : nd ? (nd.hp > 1 ? ['💪', 'reißen!'] : ['✊', 'schnappen']) : ['🤪', 'Quatsch'];
+  if (aktBtn.firstChild.nodeValue !== at[0] || document.getElementById('aktionText').textContent !== at[1]) { aktBtn.firstChild.nodeValue = at[0]; document.getElementById('aktionText').textContent = at[1]; }
   // Fliegende Sachen
+  const gz = grenze();
   for (const f of flieger) {
     f.x += f.vx * dt; f.y += f.vy * dt; f.dreh += dt * 14; f.weg += Math.hypot(f.vx, f.vy) * dt;
-    let treffer = f.x < RAND + 10 || f.x > W - RAND - 10 || f.y < RAND + 10 || f.y > H - RAND || f.weg > 560;
+    let treffer = f.x < gz.l - 8 || f.x > gz.r + 8 || f.y < gz.o - 110 || f.y > gz.u - 60 || f.weg > 560;
     for (const d of dinge) {
       if (d.kaputt || d === f.d || d === P.traegt) continue;
       if (Math.hypot(d.x - f.x, d.y - 20 - f.y) < d.r + 18) {
@@ -507,7 +567,7 @@ function update(dt) {
         else { sReiss(); bruchstuecke(d, 5); text(d.x, d.y - 50, 'BONK!', '#ffcf3f'); if (d.hp === 1) d.r = 22; }
       }
     }
-    if (treffer) { f.fertig = true; zerbrechen(f.d, Math.max(RAND + 10, Math.min(W - RAND - 10, f.x)), Math.max(RAND + 20, Math.min(H - RAND, f.y + 20))); }
+    if (treffer) { f.fertig = true; zerbrechen(f.d, Math.max(gz.l, Math.min(gz.r, f.x)), Math.max(gz.o - 20, Math.min(gz.u, f.y + 20))); }
   }
   flieger = flieger.filter(f => !f.fertig);
   for (const d of dinge) if (d.rueckeln > 0) d.rueckeln -= dt;
@@ -524,19 +584,21 @@ function update(dt) {
   if (fertigT > 0) { fertigT -= dt; if (fertigT <= 0) stern(); }
 }
 function bewege(nx, ny) {
-  nx = Math.max(RAND + 18, Math.min(W - RAND - 18, nx)); ny = Math.max(RAND + 40, Math.min(H - RAND + 10, ny));
+  const gz = grenze();
+  nx = Math.max(gz.l, Math.min(gz.r, nx)); ny = Math.max(gz.o, Math.min(gz.u, ny));
   for (const d of dinge) {
     if (d.kaputt || d === P.traegt) continue;
     if (Math.hypot(d.x - nx, d.y - ny) < d.r + 14) return;
   }
+  if (ort.bett && Math.abs(nx - ort.bett[0]) < 85 && ny > ort.bett[1] - 60 && ny < ort.bett[1] + 30) return;
   P.x = nx; P.y = ny;
 }
 function stern() {
-  laeuft = false; stand.sterne[ort.id] = (stand.sterne[ort.id] || 0) + 1; stand.konto = (stand.konto || 0) + 1; speichern(); sStern();
+  laeuft = false; welt[ortId].sternDa = true; stand.sterne[ortId] = (stand.sterne[ortId] || 0) + 1; stand.konto = (stand.konto || 0) + 1; speichern(); sStern(); vorschauen();
   document.getElementById('sternTitel').textContent = 'Super Chaos!';
-  document.getElementById('sternText').textContent = (stand.figur === 'oma' ? 'Die verrückte Oma' : 'Der verrückte Opa') + ' hat ' + (ort.id === 'park' ? 'den ' : ort.id === 'kueche' ? 'die ' : 'das ') + ort.name + ' komplett ins Chaos gestürzt! Du bekommst einen Stern! Im Kleiderladen kannst du damit verrückte Sachen kaufen.';
-  const letzter = ortNr + 1 >= ORTE.length;
-  document.getElementById('weiter').textContent = letzter ? 'Alle Sterne! 🎉 Menü' : 'Nächster Ort: ' + ORTE[ortNr + 1].name + ' ➜';
+  const art = { park: 'den ', kueche: 'die ' }[ortId] || 'das ';
+  document.getElementById('sternText').textContent = (stand.figur === 'oma' ? 'Die verrückte Oma' : 'Der verrückte Opa') + ' hat ' + art + ort.name + ' komplett ins Chaos gestürzt! Du bekommst einen Stern! Im Kleiderladen im Dorf kannst du damit verrückte Sachen kaufen.';
+  document.getElementById('weiter').textContent = 'Weiter Chaos machen ➜';
   document.getElementById('stern').classList.add('on'); document.body.classList.remove('ingame');
 }
 
@@ -553,10 +615,15 @@ function zeichneBoden() {
   else if (ort.muster === 'karo') { for (let x = 0; x < W; x += 40) for (let y = 0; y < H; y += 40) if (((x + y) / 40) % 2 === 0) g.fillRect(x, y, 40, 40); }
   else if (ort.muster === 'holz') { for (let y = 0; y < H; y += 30) { g.fillRect(0, y, W, 2); for (let x = (y / 30 % 2) * 90; x < W; x += 180) g.fillRect(x, y, 2, 30); } }
   else { for (let i = 0; i < 260; i++) { const x = (i * 97) % W, y = (i * 61 + (i % 7) * 23) % H; g.fillRect(x, y, 3, 8); } }
-  // Wände
-  g.fillStyle = ort.wand; g.fillRect(0, 0, W, RAND + 20); g.fillRect(0, 0, RAND, H); g.fillRect(W - RAND, 0, RAND, H); g.fillRect(0, H - RAND + 20, W, RAND);
-  g.fillStyle = '#0002'; g.fillRect(RAND, RAND + 20, W - RAND * 2, 8);
-  g.strokeStyle = '#23324a'; g.lineWidth = 4; g.strokeRect(RAND, RAND + 20, W - RAND * 2, H - RAND * 2);
+  if (ort.muster === 'draussen') zeichneDraussen();
+  else {
+    // Wände
+    g.fillStyle = ort.wand; g.fillRect(0, 0, W, RAND + 20); g.fillRect(0, 0, RAND, H); g.fillRect(W - RAND, 0, RAND, H); g.fillRect(0, H - RAND + 20, W, RAND);
+    g.fillStyle = '#0002'; g.fillRect(RAND, RAND + 20, W - RAND * 2, 8);
+    g.strokeStyle = '#23324a'; g.lineWidth = 4; g.strokeRect(RAND, RAND + 20, W - RAND * 2, H - RAND * 2);
+    for (const t of ort.tueren) zeichneTuer(t);
+  }
+  if (ort.bett) zeichneBett();
   // Kleckse und Splitter
   for (const k of kleckse) {
     g.fillStyle = k.farbe;
@@ -565,6 +632,72 @@ function zeichneBoden() {
     for (let i = 0; i <= 12; i++) { const a = i / 12 * Math.PI * 2, rr = k.r * (0.75 + 0.25 * Math.sin(a * 3 + (k.form || 0))); g.lineTo(k.x + Math.cos(a) * rr, k.y + Math.sin(a) * rr * .6); }
     g.fill(); g.globalAlpha = 1;
   }
+}
+function schild(txt, x, y) {
+  g.font = 'bold 18px "Comic Sans MS","Chalkboard SE",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const w = g.measureText(txt).width + 18; g.fillStyle = '#fffdf5'; g.strokeStyle = '#23324a'; g.lineWidth = 3;
+  g.beginPath(); g.roundRect ? g.roundRect(x - w / 2, y - 14, w, 28, 10) : g.rect(x - w / 2, y - 14, w, 28); g.fill(); g.stroke();
+  g.fillStyle = '#23324a'; g.fillText(txt, x, y + 1);
+}
+function zeichneTuer(t) {
+  const ink = '#23324a'; g.strokeStyle = ink; g.lineWidth = 4;
+  if (t.art === 'treppe') { // Treppe an der oberen Wand
+    for (let i = 0; i < 5; i++) { g.fillStyle = i % 2 ? '#c98b4a' : '#e0a060'; g.fillRect(t.x - 60, RAND + 20 - i * 12 + 48, 120, 12); g.strokeRect(t.x - 60, RAND + 20 - i * 12 + 48, 120, 12); }
+    schild((t.label.includes('hoch') ? '⬆ ' : '⬇ ') + t.label, t.x, RAND + 4); return;
+  }
+  g.fillStyle = '#b7793f';
+  if (t.seite === 'oben' || t.seite === 'unten') {
+    const y0 = t.seite === 'oben' ? 6 : H - RAND + 20;
+    g.fillRect(t.x - 36, y0, 72, RAND + 14); g.strokeRect(t.x - 36, y0, 72, RAND + 14);
+    g.fillStyle = '#ffcf3f'; g.beginPath(); g.arc(t.x + 22, y0 + 26, 4, 0, 7); g.fill();
+    schild(t.label, t.x, t.seite === 'oben' ? RAND + 46 : H - RAND - 2);
+  } else {
+    const x0 = t.seite === 'links' ? 0 : W - RAND;
+    g.fillRect(x0, t.y - 40, RAND, 80); g.strokeRect(x0, t.y - 40, RAND, 80);
+    g.fillStyle = '#ffcf3f'; g.beginPath(); g.arc(x0 + RAND / 2, t.y + 20, 4, 0, 7); g.fill();
+    schild(t.label, t.seite === 'links' ? RAND + 60 : W - RAND - 60, t.y - 60);
+  }
+}
+function zeichneDraussen() {
+  const ink = '#23324a'; g.strokeStyle = ink; g.lineWidth = 4; g.lineJoin = 'round';
+  // Himmel
+  g.fillStyle = '#9fd8ff'; g.fillRect(0, 0, W, 120);
+  // Gehweg und Straße
+  g.fillStyle = '#d9d2c4'; g.fillRect(0, 250, W, 40);
+  g.fillStyle = '#7d8496'; g.fillRect(0, 540, W, 60); g.fillStyle = '#fff6c2'; for (let x = 10; x < W; x += 80) g.fillRect(x, 568, 44, 5);
+  // Haus von Oma und Opa: zwei Stockwerke
+  g.fillStyle = '#ffe2b8'; g.fillRect(60, 70, 270, 182); g.strokeRect(60, 70, 270, 182);
+  g.fillStyle = '#ff5fa2'; g.beginPath(); g.moveTo(40, 74); g.lineTo(195, 4); g.lineTo(350, 74); g.closePath(); g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(60, 160); g.lineTo(330, 160); g.stroke();
+  g.fillStyle = '#8ec5ff'; for (const [x, y] of [[85, 90], [175, 90], [265, 90], [85, 180], [265, 180]]) { g.fillRect(x, y, 42, 42); g.strokeRect(x, y, 42, 42); }
+  g.fillStyle = '#ff9ad5'; g.fillRect(265, 90, 42, 12);
+  g.fillStyle = '#b7793f'; g.fillRect(165, 182, 60, 70); g.strokeRect(165, 182, 60, 70); g.fillStyle = '#ffcf3f'; g.beginPath(); g.arc(213, 220, 4, 0, 7); g.fill();
+  schild('Oma & Opa', 195, 52);
+  // Kleiderladen
+  g.fillStyle = '#ffd6ec'; g.fillRect(375, 120, 180, 132); g.strokeRect(375, 120, 180, 132);
+  for (let i = 0; i < 6; i++) { g.fillStyle = i % 2 ? '#fff' : '#a46bd1'; g.fillRect(365 + i * 33.3, 100, 33.3, 30); } g.strokeRect(365, 100, 200, 30);
+  g.fillStyle = '#bfe9ff'; g.fillRect(435, 180, 60, 72); g.strokeRect(435, 180, 60, 72);
+  g.fillStyle = '#bfe9ff'; g.fillRect(388, 150, 40, 40); g.strokeRect(388, 150, 40, 40); g.fillRect(502, 150, 40, 40); g.strokeRect(502, 150, 40, 40);
+  emoji(g, '👗', 408, 170, 28); emoji(g, '🎩', 522, 170, 28);
+  schild('Kleiderladen', 465, 84);
+  // Supermarkt
+  g.fillStyle = '#e9edf2'; g.fillRect(600, 110, 310, 142); g.strokeRect(600, 110, 310, 142);
+  g.fillStyle = '#2ec4b6'; g.fillRect(590, 88, 330, 34); g.strokeRect(590, 88, 330, 34);
+  g.fillStyle = '#fff'; g.font = 'bold 22px "Comic Sans MS","Chalkboard SE",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('SUPERMARKT', 755, 106);
+  g.fillStyle = '#bfe9ff'; g.fillRect(720, 170, 70, 82); g.strokeRect(720, 170, 70, 82); g.beginPath(); g.moveTo(755, 170); g.lineTo(755, 252); g.stroke();
+  for (const x of [620, 820]) { g.fillRect(x, 150, 70, 60); g.strokeRect(x, 150, 70, 60); }
+  // Weg zum Park
+  g.fillStyle = '#e8d6a8'; g.fillRect(0, 440, 120, 60);
+  emoji(g, '🌳', 40, 370, 60); emoji(g, '🌲', 930, 330, 56);
+  schild('⬅ zum Park', 80, 410); schild('Dorfplatz', 760, 420);
+}
+function zeichneBett() {
+  const [x, y] = ort.bett, ink = '#23324a';
+  g.strokeStyle = ink; g.lineWidth = 4;
+  g.fillStyle = '#b7793f'; g.fillRect(x - 90, y - 70, 180, 24); g.strokeRect(x - 90, y - 70, 180, 24); // Kopfteil
+  g.fillStyle = '#fff'; g.fillRect(x - 80, y - 50, 160, 90); g.strokeRect(x - 80, y - 50, 160, 90);
+  g.fillStyle = '#fff3b0'; g.fillRect(x - 70, y - 44, 60, 24); g.strokeRect(x - 70, y - 44, 60, 24); g.fillRect(x + 10, y - 44, 60, 24); g.strokeRect(x + 10, y - 44, 60, 24);
+  g.fillStyle = muster(g, 'blumen'); g.fillRect(x - 80, y - 14, 160, 54); g.strokeRect(x - 80, y - 14, 160, 54);
 }
 function render() {
   g.setTransform(DPR, 0, 0, DPR, 0, 0); g.fillStyle = '#3a2f55'; g.fillRect(0, 0, innerWidth, innerHeight);
@@ -580,6 +713,7 @@ function render() {
   const liste = dinge.filter(d => !d.kaputt && d !== P.traegt).map(d => ({ y: d.y, f: () => zeichneDing(d) }));
   liste.push({ y: P.y, f: zeichneSpieler });
   liste.sort((a, b) => a.y - b.y).forEach(o => o.f());
+  if (schlafT > 0) { g.fillStyle = '#141838'; g.globalAlpha = Math.min(.65, (4.5 - schlafT) * .5, schlafT * .5); g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
   for (const f of flieger) { g.fillStyle = '#0003'; g.beginPath(); g.ellipse(f.x, f.y + 100, 16, 5, 0, 0, 7); g.fill(); emoji(g, f.d.emo, f.x, f.y, f.d.max > 1 ? 56 : 42, f.dreh); }
   for (const t of teilchen) {
     if (t.emo) emoji(g, t.emo, t.x, t.y, 20, t.dreh);
@@ -613,12 +747,22 @@ function zeichneDing(d) {
   }
 }
 function zeichneSpieler() {
+  if (schlafT > 0 && ort.bett) { // liegt im Bett und schnarcht
+    const [x, y] = ort.bett; g.save(); g.translate(x + 60, y + 6); g.rotate(-Math.PI / 2);
+    zeichneFigur(g, stand.figur, 0, 0, .9, 0, 1, false, false, stand.kleider[stand.figur]); g.restore();
+    g.fillStyle = muster(g, 'blumen'); g.strokeStyle = '#23324a'; g.lineWidth = 4; g.fillRect(x - 20, y - 20, 100, 58); g.strokeRect(x - 20, y - 20, 100, 58);
+    return;
+  }
   zeichneFigur(g, stand.figur, P.x, P.y, 1, zeit, P.blick, P.laeuft, !!P.traegt, stand.kleider[stand.figur]);
   if (P.traegt) { const d = P.traegt; emoji(g, d.emo, P.x, P.y - 118 + Math.sin(zeit * 8) * 3, d.max > 1 ? 60 : 44, Math.sin(zeit * 6) * .15); }
 }
 
 let letzte = performance.now();
 function schleife(t) { const dt = Math.min(.05, (t - letzte) / 1000); letzte = t; update(dt); render(); requestAnimationFrame(schleife); }
+betrete('draussen', null);
+document.querySelectorAll('[data-start]').forEach(b => b.addEventListener('click', () => {
+  stand.figur = b.dataset.start; speichern(); vorschauen(); document.getElementById('wahl').classList.remove('on'); losgehen(); sKicher();
+}));
 requestAnimationFrame(schleife);
 </script>
 </body>
