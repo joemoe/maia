@@ -583,7 +583,7 @@ function betrete(id, vonId) {
 }
 function losgehen() {
   ac(); welt = {}; P = null; betrete('draussen', null);
-  document.body.classList.add('ingame'); laeuft = true; levelAnzeige(); toast('Level ' + (stand.level + 1) + ': ' + LEVELS[stand.level].text, 2.6);
+  document.body.classList.add('ingame'); laeuft = true; levelAnzeige(); toast('Level ' + (stand.level + 1) + ': ' + LEVELS[stand.level].name, 2.6);
 }
 document.getElementById('weiter').addEventListener('click', naechsteMeldung);
 const muteBtn = document.getElementById('mute');
@@ -901,6 +901,13 @@ function zeichneDraussen() {
   for (let x = 60; x < DW; x += 170) { if (x > 1320 && x < 1540) continue; emoji(g, x % 340 < 170 ? '🌳' : '🌲', x, 230 + (x % 3) * 20, 70); }
   for (let x = 1600; x < DW; x += 210) emoji(g, '🌳', x, 1400 + (x % 2) * 120, 72);
   emoji(g, '🌳', 260, 1580, 70); emoji(g, '🌲', 1250, 1560, 66);
+  // Weg in den Wald (rechts unten) mit großem Schild
+  g.fillStyle = '#e8d6a8'; g.fillRect(DW - 160, 1410, 160, 60);
+  g.fillStyle = '#3f8f4a'; g.fillRect(DW - 40, 1340, 40, 200); emoji(g, '🌲', DW - 30, 1330, 60); emoji(g, '🌲', DW - 30, 1560, 60);
+  g.fillStyle = '#5a3a1a'; g.fillRect(DW - 20, 1380, 12, 120); schild('zum Wald ➡ 🌲', DW - 130, 1385);
+  // Wegweiser an den Kreuzungen
+  const weiser = (x, y) => { g.fillStyle = '#5a3a1a'; g.fillRect(x - 5, y - 70, 10, 74); schild('🌲 Wald ➡', x + 50, y - 78); schild('⬅ Park 🌳', x - 50, y - 46); };
+  weiser(560, 840); weiser(1320, 840); weiser(1530, 1420); weiser(2150, 840);
   schild('Dorfplatz', 2300, 1330); schild('Hauptstraße', 700, 690); schild('Schulgasse', 1560, 1310);
 }
 function zeichneHaus(hs) {
