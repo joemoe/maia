@@ -494,18 +494,18 @@ zeigeFigurWahl(); vorschauen();
 
 // ---------- Levels ----------
 const LEVELS = [
-  { name: 'Klo-Chaos', text: 'Mach das Badezimmer ganz kaputt', ev: 'chaos', p: 'bad' },
-  { name: 'Kabrio-Rumms', text: 'Fahr mit dem pinken Kabrio 5 Sachen um', ev: 'rumms', n: 5 },
-  { name: 'Krippe', text: 'Hilf den 1000 Jahre alten Frauen bei der Krippe', ev: 'krippe' },
-  { name: 'Küchen-Chaos', text: 'Mach die Küche ganz kaputt', ev: 'chaos', p: 'kueche' },
-  { name: 'Upsi Pupsi', text: 'Geh in den Wald und hör 3 Pupse', ev: 'pups', n: 3 },
-  { name: 'Supermarkt-Chaos', text: 'Mach den Supermarkt ganz kaputt', ev: 'chaos', p: 'supermarkt' },
-  { name: 'Verrückt angezogen', text: 'Kauf dir etwas im Kleiderladen', ev: 'kauf' },
-  { name: 'Wohnzimmer-Chaos', text: 'Mach das Wohnzimmer ganz kaputt', ev: 'chaos', p: 'wohnzimmer' },
-  { name: 'Wald-Chaos', text: 'Mach den Wald ganz kaputt', ev: 'chaos', p: 'wald' },
-  { name: 'Gute Nacht', text: 'Geh im Schlafzimmer ins Bett und schlaf', ev: 'schlafen' },
-  { name: 'Park-Chaos', text: 'Mach den Park ganz kaputt', ev: 'chaos', p: 'park' },
-  { name: 'Hup-Konzert', text: 'Hup 20 mal mit dem Kabrio', ev: 'hupe', n: 20 },
+  { name: 'Klo-Chaos', text: 'Mach das Badezimmer ganz kaputt', ev: 'chaos', p: 'bad', ziel: 'bad' },
+  { name: 'Kabrio-Rumms', text: 'Fahr mit dem pinken Kabrio 5 Sachen um', ev: 'rumms', n: 5, ziel: 'auto' },
+  { name: 'Krippe', text: 'Hilf den 1000 Jahre alten Frauen bei der Krippe', ev: 'krippe', ziel: 'krippe' },
+  { name: 'Küchen-Chaos', text: 'Mach die Küche ganz kaputt', ev: 'chaos', p: 'kueche', ziel: 'kueche' },
+  { name: 'Upsi Pupsi', text: 'Geh in den Wald und hör 3 Pupse', ev: 'pups', n: 3, ziel: 'wald' },
+  { name: 'Supermarkt-Chaos', text: 'Mach den Supermarkt ganz kaputt', ev: 'chaos', p: 'supermarkt', ziel: 'supermarkt' },
+  { name: 'Verrückt angezogen', text: 'Kauf dir etwas im Kleiderladen', ev: 'kauf', ziel: 'laden' },
+  { name: 'Wohnzimmer-Chaos', text: 'Mach das Wohnzimmer ganz kaputt', ev: 'chaos', p: 'wohnzimmer', ziel: 'wohnzimmer' },
+  { name: 'Wald-Chaos', text: 'Mach den Wald ganz kaputt', ev: 'chaos', p: 'wald', ziel: 'wald' },
+  { name: 'Gute Nacht', text: 'Geh im Schlafzimmer ins Bett und schlaf', ev: 'schlafen', ziel: 'schlafzimmer' },
+  { name: 'Park-Chaos', text: 'Mach den Park ganz kaputt', ev: 'chaos', p: 'park', ziel: 'park' },
+  { name: 'Hup-Konzert', text: 'Hup 20 mal mit dem Kabrio', ev: 'hupe', n: 20, ziel: 'auto' },
 ];
 let levelZaehler = 0;
 stand.level = stand.level || 0; stand.levelDone = stand.levelDone || {};
@@ -517,6 +517,35 @@ function ereignis(ev, p) {
     const neu = !stand.levelDone[stand.level]; stand.levelDone[stand.level] = true; stand.konto = (stand.konto || 0) + 1; speichern(); vorschauen(); levelZaehler = -999;
     meldung('Level geschafft!', 'Level ' + (stand.level + 1) + ' „' + L.name + '“ geschafft! Du bekommst einen Stern! ⭐', true);
   }
+}
+// Wegschild: wohin muss ich für mein Level?
+function wegZiel() {
+  const L = LEVELS[stand.level]; if (!L || levelZaehler < 0 || !P) return null;
+  let T = L.ziel;
+  if (T === 'auto') { if (ortId === 'draussen') return auto.drin ? null : { x: auto.x, y: auto.y, was: 'Kabrio' }; T = 'draussen'; }
+  if (T === 'laden') { if (ortId === 'draussen') { const t = ort.tueren.find(t => t.ziel === 'laden'); return { x: t.x, y: t.y, was: 'Kleiderladen' }; } T = 'draussen'; }
+  if (ortId === T) return ort.bett && L.ev === 'schlafen' ? { x: ort.bett[0], y: ort.bett[1], was: 'Bett' } : null;
+  const weg = { [ortId]: null }, q = [ortId];
+  while (q.length) { const id = q.shift(); if (id === T) break; for (const t of SZENEN[id].tueren) if (SZENEN[t.ziel] && !(t.ziel in weg)) { weg[t.ziel] = { von: id, t }; q.push(t.ziel); } }
+  if (!(T in weg)) return null;
+  let id = T; while (weg[id] && weg[id].von !== ortId) id = weg[id].von;
+  const t = weg[id].t; return { x: t.x, y: t.y, was: t.label };
+}
+function zeichneWegschild(z) {
+  const b = Math.sin(zeit * 6) * 10, y = z.y - (z.was === 'Kabrio' ? 110 : 40);
+  emoji(g, '⬇️', z.x, y - 60 + b, 54);
+  g.font = 'bold 18px "Comic Sans MS","Chalkboard SE",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const txt = '📜 hier lang!', w = g.measureText(txt).width + 20, sy = y - 110 + b;
+  g.fillStyle = '#fff3b0'; g.strokeStyle = '#23324a'; g.lineWidth = 3; g.beginPath(); g.roundRect ? g.roundRect(z.x - w / 2, sy - 15, w, 30, 10) : g.rect(z.x - w / 2, sy - 15, w, 30); g.fill(); g.stroke();
+  g.fillStyle = '#23324a'; g.fillText(txt, z.x, sy + 1);
+}
+function zeichneRandpfeil(z) { // Ziel ist außerhalb vom Bild: Pfeil am Rand
+  const sx = z.x - camX, sy = z.y - 60 - camY; if (sx > 30 && sx < W - 30 && sy > 30 && sy < H - 30) return;
+  const cx = W / 2, cy = H / 2, a = Math.atan2(sy - cy, sx - cx), k = Math.min((W / 2 - 60) / Math.abs(Math.cos(a) || 1e-6), (H / 2 - 60) / Math.abs(Math.sin(a) || 1e-6));
+  const px = cx + Math.cos(a) * k, py = cy + Math.sin(a) * k;
+  g.save(); g.translate(px, py); g.fillStyle = '#ffcf3f'; g.strokeStyle = '#23324a'; g.lineWidth = 4; g.beginPath(); g.arc(0, 0, 30, 0, 7); g.fill(); g.stroke();
+  g.rotate(a); g.fillStyle = '#23324a'; g.beginPath(); g.moveTo(20, 0); g.lineTo(-8, -14); g.lineTo(-8, 14); g.closePath(); g.fill(); g.restore();
+  g.font = 'bold 15px "Comic Sans MS","Chalkboard SE",sans-serif'; g.textAlign = 'center'; g.fillStyle = '#fff'; g.strokeStyle = '#23324a'; g.lineWidth = 4; g.strokeText(z.was, px, py + 46); g.fillText(z.was, px, py + 46);
 }
 function levelWaehlen(i) { stand.level = i; levelZaehler = 0; speichern(); levelAnzeige(); toast('Level ' + (i + 1) + ': ' + LEVELS[i].name, 2.2); }
 function baueLevels() {
@@ -1044,6 +1073,7 @@ function render() {
     else { g.fillStyle = t.farbe; g.globalAlpha = Math.min(1, t.leben * 2); if (t.wasser || t.gas) { if (t.gas) g.globalAlpha = Math.min(.7, t.leben * .5); g.beginPath(); g.arc(t.x, t.y, t.gr, 0, 7); g.fill(); } else { g.save(); g.translate(t.x, t.y); g.rotate(t.dreh); g.fillRect(-t.gr / 2, -t.gr / 2, t.gr, t.gr); g.restore(); } g.globalAlpha = 1; }
   }
   for (const l of ort.leute || []) sprechblase(l);
+  const wz = laeuft && schlafT <= 0 ? wegZiel() : null; if (wz) zeichneWegschild(wz);
   if (polizei) sprechblase({ x: polizei.x, y: polizei.y, art: 'polizei', saetze: ['Halt! Polizei!', 'Stehen bleiben, Chaos-' + (stand.figur === 'oma' ? 'Oma!' : 'Opa!')] }, true);
   if (ort.fremd && hausZeit > 14) { g.globalAlpha = .18 + .12 * Math.sin(zeit * 12); g.fillStyle = Math.sin(zeit * 6) > 0 ? '#ff3a3a' : '#3a6aff'; g.fillRect(camX, camY, W, 22); g.fillRect(camX, camY + H - 22, W, 22); g.fillRect(camX, camY, 22, H); g.fillRect(camX + W - 22, camY, 22, H); g.globalAlpha = 1; }
   g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
@@ -1052,6 +1082,7 @@ function render() {
     g.lineWidth = 6; g.strokeStyle = '#23324a'; g.strokeText(t.t, t.x, t.y); g.fillStyle = t.farbe; g.fillText(t.t, t.x, t.y); g.globalAlpha = 1;
   }
   g.restore();
+  if (wz) { g.save(); g.beginPath(); g.rect(0, 0, W, H); g.clip(); zeichneRandpfeil(wz); g.restore(); }
   // Joystick
   if (stick) {
     g.setTransform(DPR, 0, 0, DPR, 0, 0);
