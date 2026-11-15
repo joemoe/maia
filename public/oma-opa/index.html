@@ -584,6 +584,7 @@ let ortId = 'draussen', ort = null, dinge = [], teilchen = [], kleckse = [], fli
 let welt = {}; // was heute schon kaputt ist (bis man schlafen geht)
 let P = null, laeuft = false, wackeln = 0, fertigT = -1, zeit = 0, schlafT = 0;
 let camX = 0, camY = 0, hausZeit = 0, polizei = null, sireneT = 0;
+let raus = null, sterneT = 0, polizeiTuer = null; // Rauswurf-Animation
 const auto = { x: 520, y: 650, blick: 1, drin: false, hupe: 0 }; // das pinke Kabrio
 const ortW = () => ort.w || W, ortH = () => ort.h || H;
 function kamera() { camX = Math.max(0, Math.min(ortW() - W, P.x - W / 2)); camY = Math.max(0, Math.min(ortH() - H, P.y - H * .72)); }
@@ -684,7 +685,7 @@ function hinstellen() {
 }
 function amBett() { return ort.bett && Math.hypot(ort.bett[0] - P.x, ort.bett[1] + 40 - P.y) < 110; }
 function aktion() {
-  if (schlafT > 0) return;
+  if (schlafT > 0 || raus) return;
   if (P.traegt && amStall()) { hinstellen(); return; }
   if (P.traegt) { werfen(); return; }
   if (auto.drin) { aussteigen(); return; }
@@ -750,6 +751,9 @@ function update(dt) {
     if (schlafT <= 0) aufwachen();
     return;
   }
+  if (raus) { rausUpdate(dt); return; }
+  if (sterneT > 0) sterneT -= dt;
+  if (polizeiTuer) { polizeiTuer.T -= dt; if (polizeiTuer.T <= 0 || ortId !== 'draussen') polizeiTuer = null; }
   const [ix, iy] = eingabe();
   P.laeuft = Math.hypot(ix, iy) > .1;
   if (P.laeuft) { P.bx = ix; P.by = iy; if (Math.abs(ix) > .2) P.blick = Math.sign(ix); }
@@ -792,7 +796,7 @@ function update(dt) {
     if (polizei) {
       const dx = P.x - polizei.x, dy = P.y - polizei.y, d = Math.hypot(dx, dy);
       polizei.x += dx / d * 215 * dt; polizei.y += dy / d * 215 * dt; polizei.blick = Math.sign(dx) || 1;
-      if (d < 48) { const von = ortId; betrete('draussen', von); toast('Die Polizei hat dich rausgeworfen! 🚨', 2.6); sKicher(); }
+      if (d < 48 && !raus) { const t = ort.tueren[0]; raus = { phase: 1, t: 0, von: ortId, x0: P.x, y0: P.y, x1: t.x, y1: t.y - 30, hoch: 0, dreh: 0 }; P.traegt = null; toast('ERWISCHT! 🚨', 1.4); wackeln = .4; sReiss(); text(P.x, P.y - 140, 'PACK!', '#3a6aff'); }
     }
   }
   // Wasser sprudelt
@@ -821,6 +825,32 @@ function pupsen(l) {
   const d = Math.hypot(l.x - P.x, l.y - P.y);
   if (d < 700) { rauschen(.5, 140, .5 * (1 - d / 700)); ton(70 + Math.random() * 30, .4, 'sawtooth', .08 * (1 - d / 700), -30); }
   if (d < 450) ereignis('pups');
+}
+function rausUpdate(dt) {
+  raus.t += dt; P.laeuft = false;
+  for (const t of teilchen) { t.x += t.vx * dt; t.y += t.vy * dt; if (!t.gas) t.vy += 520 * dt; t.leben -= dt; } teilchen = teilchen.filter(t => t.leben > 0);
+  for (const t of texte) { t.y -= 40 * dt; t.leben -= dt * .9; } texte = texte.filter(t => t.leben > 0);
+  if (wackeln > 0) wackeln -= dt;
+  if (raus.phase === 1) { // Polizei packt dich und wirbelt dich zur Tür
+    const k = Math.min(1, raus.t / .9); P.x = raus.x0 + (raus.x1 - raus.x0) * k; P.y = raus.y0 + (raus.y1 - raus.y0) * k;
+    raus.hoch = Math.sin(Math.PI * k) * 70; raus.dreh = k * 14;
+    if (polizei) { polizei.x += (P.x + 40 - polizei.x) * dt * 6; polizei.y += (P.y + 10 - polizei.y) * dt * 6; }
+    if (Math.random() < dt * 20) teilchen.push({ x: P.x, y: P.y - 60, vx: (Math.random() - .5) * 200, vy: -100, leben: .5, farbe: pick(['#3a6aff', '#ff3a3a', '#fff']), gr: 5 });
+    if (k >= 1) {
+      betrete('draussen', raus.von); const t = ort.tueren.find(t => t.ziel === raus.von), dir = Math.random() < .5 ? -1 : 1;
+      raus = { phase: 2, t: 0, x0: t.x, y0: t.y - 20, x1: t.x + dir * 230, y1: t.y + 230, hoch: 0, dreh: 0, dir };
+      polizeiTuer = { x: t.x, y: t.y + 24, T: 3.5, blick: dir }; P.x = raus.x0; P.y = raus.y0; kamera();
+      rauschen(.4, 900, .5); ton(300, .5, 'sawtooth', .07, 900); text(t.x, t.y - 80, 'WUSCH!', '#fff');
+    }
+  } else { // in hohem Bogen raus aus dem Haus
+    const k = Math.min(1, raus.t / 1.2); P.x = raus.x0 + (raus.x1 - raus.x0) * k; P.y = raus.y0 + (raus.y1 - raus.y0) * k;
+    raus.hoch = Math.sin(Math.PI * k) * 260; raus.dreh = k * 18 * raus.dir; kamera();
+    if (k >= 1) {
+      raus = null; sterneT = 2.2; wackeln = .45; P.spur = [];
+      rauschen(.35, 200, .7); ton(80, .4, 'triangle', .25, -40); text(P.x, P.y - 130, 'PLUMPS!', '#ffcf3f'); toast('Die Polizei hat dich rausgeworfen! 🚨', 2.4);
+      for (let i = 0; i < 16; i++) { const a = Math.random() * Math.PI; teilchen.push({ x: P.x, y: P.y, vx: Math.cos(a) * 220 * (Math.random() < .5 ? -1 : 1), vy: -Math.random() * 160, leben: .7, farbe: pick(['#d9d2c4', '#c9b89a', '#fff']), gr: 6 + Math.random() * 6 }); }
+    }
+  }
 }
 function bewege(nx, ny) {
   const gz = grenze();
@@ -1062,6 +1092,7 @@ function render() {
   const liste = dinge.filter(d => !d.kaputt && d !== P.traegt).map(d => ({ y: d.y, f: () => zeichneDing(d) }));
   liste.push({ y: P.y, f: zeichneSpieler });
   for (const l of ort.leute || []) liste.push({ y: l.y, f: () => zeichneLeute(l) });
+  if (polizeiTuer) liste.push({ y: polizeiTuer.y, f: () => zeichneFigur(g, 'opa', polizeiTuer.x, polizeiTuer.y, 1, zeit, polizeiTuer.blick, false, false, { hut: 'polizei', oben: '#2a4d8f', unten: '#1f3566', brille: 'std' }) });
   if (polizei) liste.push({ y: polizei.y, f: () => zeichneFigur(g, 'opa', polizei.x, polizei.y, 1, zeit, polizei.blick, true, false, { hut: 'polizei', oben: '#2a4d8f', unten: '#1f3566', brille: 'std' }) });
   if (ortId === 'wald') for (const [x, y, k] of WALD_BAEUME) liste.push({ y, f: () => { g.fillStyle = '#0003'; g.beginPath(); g.ellipse(x, y, 34, 10, 0, 0, 7); g.fill(); emoji(g, k === 1 ? '🌳' : '🌲', x, y - 52, 112); } });
   if (ortId === 'draussen') { for (const hs of HAEUSER) liste.push({ y: hs.y1 - 2, f: () => zeichneHaus(hs) }); if (!auto.drin) liste.push({ y: auto.y, f: () => zeichneAuto(auto.x, auto.y, auto.blick, false) }); }
@@ -1073,7 +1104,8 @@ function render() {
     else { g.fillStyle = t.farbe; g.globalAlpha = Math.min(1, t.leben * 2); if (t.wasser || t.gas) { if (t.gas) g.globalAlpha = Math.min(.7, t.leben * .5); g.beginPath(); g.arc(t.x, t.y, t.gr, 0, 7); g.fill(); } else { g.save(); g.translate(t.x, t.y); g.rotate(t.dreh); g.fillRect(-t.gr / 2, -t.gr / 2, t.gr, t.gr); g.restore(); } g.globalAlpha = 1; }
   }
   for (const l of ort.leute || []) sprechblase(l);
-  const wz = laeuft && schlafT <= 0 ? wegZiel() : null; if (wz) zeichneWegschild(wz);
+  const wz = laeuft && schlafT <= 0 && !raus ? wegZiel() : null; if (wz) zeichneWegschild(wz);
+  if (polizeiTuer) sprechblase({ x: polizeiTuer.x, y: polizeiTuer.y, saetze: ['Und bleib draußen!'] }, true);
   if (polizei) sprechblase({ x: polizei.x, y: polizei.y, art: 'polizei', saetze: ['Halt! Polizei!', 'Stehen bleiben, Chaos-' + (stand.figur === 'oma' ? 'Oma!' : 'Opa!')] }, true);
   if (ort.fremd && hausZeit > 14) { g.globalAlpha = .18 + .12 * Math.sin(zeit * 12); g.fillStyle = Math.sin(zeit * 6) > 0 ? '#ff3a3a' : '#3a6aff'; g.fillRect(camX, camY, W, 22); g.fillRect(camX, camY + H - 22, W, 22); g.fillRect(camX, camY, 22, H); g.fillRect(camX + W - 22, camY, 22, H); g.globalAlpha = 1; }
   g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
@@ -1106,6 +1138,12 @@ function zeichneDing(d) {
   }
 }
 function zeichneSpieler() {
+  if (raus) { // wirbelt durch die Luft
+    g.fillStyle = '#0003'; g.beginPath(); g.ellipse(P.x, P.y, 26 * (1 - raus.hoch / 400), 8, 0, 0, 7); g.fill();
+    g.save(); g.translate(P.x, P.y - raus.hoch - 55); g.rotate(raus.dreh);
+    zeichneFigur(g, stand.figur, 0, 55, 1, zeit, 1, false, true, stand.kleider[stand.figur]); g.restore(); return;
+  }
+  if (sterneT > 0) for (let i = 0; i < 3; i++) { const a = zeit * 5 + i * 2.1; emoji(g, '⭐', P.x + Math.cos(a) * 30, P.y - 120 + Math.sin(a) * 9, 20); }
   if (auto.drin) { zeichneAuto(P.x, P.y, P.blick, true); return; }
   if (schlafT > 0 && ort.bett) { // liegt im Bett und schnarcht
     const [x, y] = ort.bett; g.save(); g.translate(x + 60, y + 6); g.rotate(-Math.PI / 2);
