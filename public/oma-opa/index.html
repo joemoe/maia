@@ -38,6 +38,8 @@
   #aktion { position: fixed; right: 22px; bottom: max(26px, env(safe-area-inset-bottom)); z-index: 5; width: 96px; height: 96px; border-radius: 50%;
     border: 4px solid var(--ink); background: var(--gelb); box-shadow: 0 5px 0 var(--ink); font-size: 40px; display: none; place-items: center; padding: 0; touch-action: none; }
   body.ingame #aktion { display: grid; }
+  #hupe { position: fixed; right: 132px; bottom: max(36px, env(safe-area-inset-bottom)); z-index: 5; width: 70px; height: 70px; border-radius: 50%; border: 4px solid var(--ink); background: #ff9ad5; box-shadow: 0 4px 0 var(--ink); font-size: 32px; display: none; place-items: center; padding: 0; touch-action: none; }
+  body.ingame.imauto #hupe { display: grid; }
   #aktion:active, #aktion.on { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
   #aktion small { position: absolute; bottom: -24px; font-size: 14px; font-weight: bold; color: #fff; text-shadow: 0 0 4px var(--ink), 0 0 2px var(--ink); white-space: nowrap; }
 
@@ -77,11 +79,12 @@
   <span class="chip" id="chaos"><i></i><span id="chaosText">Chaos 0%</span></span>
 </div>
 <div class="hud" id="toast"></div>
-<div class="hud" id="tipp"><span class="chip">⬅️⬆️⬇️➡️ laufen · Leertaste: schnappen, reißen, werfen</span></div>
+<div class="hud" id="tipp"><span class="chip">⬅️⬆️⬇️➡️ laufen · Leertaste: schnappen, reißen, werfen, Tür · H: hupen</span></div>
 
 <a class="rund" id="quit" href="/" aria-label="Zurück zu maia.games">✖</a>
 <button class="rund" id="wechsel" aria-label="Oma oder Opa">👴</button>
 <button class="rund" id="mute" aria-label="Ton an oder aus">🔊</button>
+<button id="hupe" aria-label="Hupen">📯</button>
 <button id="aktion" aria-label="Aktion">💪<small id="aktionText">schnappen</small></button>
 
 <div class="overlay on" id="wahl">
@@ -127,10 +130,16 @@ const cv = document.getElementById('c'), g = cv.getContext('2d');
 // Stärke 1 = kann man sofort schnappen. Mehr = muss man erst rausreißen.
 // Türen: seite = an welcher Wand, ziel = wohin sie führt.
 const SZENEN = {
-  draussen: { name: 'Dorf', emo: '🏘️', muster: 'draussen', boden: ['#9be07a', '#8ad46a'], grenze: { l: 30, o: 268, r: W - 30, u: H - 20 },
-    tueren: [{ x: 195, seite: 'oben', y: 250, ziel: 'flur', label: 'ins Haus' }, { x: 465, seite: 'oben', y: 250, ziel: 'laden', label: 'Kleiderladen' }, { x: 755, seite: 'oben', y: 250, ziel: 'supermarkt', label: 'Supermarkt' },
-      { x: 0, y: 470, seite: 'links', ziel: 'park', label: 'zum Park' }],
-    dinge: [['🗑️', 600, 340, 2, 'Mülltonne', '#9aa4b2'], ['🚲', 880, 470, 3, 'Fahrrad', '#cfd8e6'], ['🪴', 330, 300, 1, 'Blumentopf', '#5a3a1a'], ['📦', 100, 320, 1, 'Paket', '#e0a060'], ['🚗', 520, 500, 4, 'Auto', '#ff4a3a']] },
+  draussen: { name: 'Dorf', emo: '🏘️', muster: 'draussen', boden: ['#9be07a', '#8ad46a'], w: 2880, h: 1640, grenze: { l: 30, o: 60, r: 2850, u: 1610 },
+    tueren: [{ x: 350, seite: 'oben', y: 528, ziel: 'flur', label: 'ins Haus' }, { x: 710, seite: 'oben', y: 528, ziel: 'laden', label: 'Kleiderladen' },
+      { x: 1075, seite: 'oben', y: 528, ziel: 'supermarkt', label: 'Supermarkt' }, { x: 0, y: 1440, seite: 'links', ziel: 'park', label: 'zum Park' }],
+    dinge: [['🗑️', 560, 470, 2, 'Mülltonne', '#9aa4b2'], ['🗑️', 1330, 470, 2, 'Mülltonne', '#9aa4b2'], ['🗑️', 2200, 1100, 2, 'Mülltonne', '#9aa4b2'],
+      ['🚲', 1500, 470, 3, 'Fahrrad', '#cfd8e6'], ['🛴', 860, 1100, 1, 'Roller', '#36b6f0'], ['🪴', 160, 480, 1, 'Blumentopf', '#5a3a1a'], ['🪴', 1850, 480, 1, 'Blumentopf', '#5a3a1a'],
+      ['📦', 2560, 480, 1, 'Paket', '#e0a060'], ['📦', 1180, 1110, 1, 'Paket', '#e0a060'], ['🛒', 1300, 760, 2, 'Einkaufswagen', '#cfd8e6'],
+      ['🎃', 2400, 760, 1, 'Kürbis', '#ff9a2a'], ['⛱️', 1050, 1430, 2, 'Sonnenschirm', '#ff5fa2'], ['🪣', 1120, 1480, 1, 'Kübel', '#36b6f0'],
+      ['🍦', 1700, 1110, 1, 'Eis', '#ffd6ec'], ['🥐', 1660, 480, 1, 'Kipferl', '#e0a060'], ['🎈', 2050, 1440, 1, 'Luftballon', '#ff4a6a'], ['🎈', 2120, 1470, 1, 'Luftballon', '#36b6f0'],
+      ['🪧', 1440, 300, 1, 'Schild', '#e0a060'], ['🧯', 820, 1110, 1, 'Feuerlöscher', '#ff4a3a'], ['🦴', 2700, 1450, 1, 'Knochen', '#fff'], ['🧺', 1900, 1500, 1, 'Picknickkorb', '#e0a060'],
+      ['⛲', 2300, 1440, 5, 'Dorfbrunnen', '#7fd3ff'], ['🌻', 400, 1460, 1, 'Sonnenblume', '#ffe25a'], ['🌻', 460, 1500, 1, 'Sonnenblume', '#ffe25a']] },
   flur: { name: 'Flur unten', emo: '🚪', boden: ['#f3e2c4', '#e6cfa6'], muster: 'holz', wand: '#e08a6a',
     tueren: [{ x: 480, seite: 'unten', ziel: 'draussen', label: 'rausgehen' }, { y: 330, seite: 'links', ziel: 'kueche', label: 'Küche' },
       { y: 330, seite: 'rechts', ziel: 'wohnzimmer', label: 'Wohnzimmer' }, { x: 700, seite: 'oben', ziel: 'flur2', label: 'Treppe hoch', art: 'treppe' }],
@@ -174,6 +183,23 @@ const SZENEN = {
       ['🎈', 700, 420, 1, 'Luftballon', '#ff4a6a'], ['🎈', 200, 300, 1, 'Luftballon', '#ff4a6a'], ['🪣', 620, 140, 1, 'Kübel', '#36b6f0'],
       ['🥏', 340, 150, 1, 'Frisbee', '#ff5fa2'], ['🪴', 820, 500, 2, 'Blumentopf', '#5a3a1a']] },
 };
+// Häuser im Dorf: Unterkante y1 (dort ist der Gehsteig), Höhe h. tuer = wo die Tür ist.
+const HAEUSER = [
+  { x0: 200, x1: 500, y1: 528, h: 250, farbe: '#ffe2b8', dach: '#ff5fa2', name: 'Oma & Opa', tuer: 350, stock: 2, vorhang: true },
+  { x0: 600, x1: 820, y1: 528, h: 160, farbe: '#ffd6ec', markise: '#a46bd1', name: 'Kleiderladen', tuer: 710, deko: ['👗', '🎩'] },
+  { x0: 900, x1: 1250, y1: 528, h: 170, farbe: '#e9edf2', band: '#2ec4b6', name: 'SUPERMARKT', tuer: 1075, glas: true },
+  { x0: 1560, x1: 1790, y1: 528, h: 160, farbe: '#fff3b0', markise: '#ff9a2a', name: 'Bäckerei', tuer: 1675, deko: ['🥐', '🍞'], zu: true },
+  { x0: 1900, x1: 2150, y1: 528, h: 210, farbe: '#f4ead8', dach: '#8a63d2', name: 'Kirche', tuer: 2025, turm: true, zu: true },
+  { x0: 2260, x1: 2500, y1: 528, h: 200, farbe: '#bfe6ff', dach: '#2ec4b6', tuer: 2380, stock: 2, zu: true },
+  { x0: 2580, x1: 2810, y1: 528, h: 200, farbe: '#ffd6a8', dach: '#ff7b6b', tuer: 2695, stock: 2, zu: true },
+  { x0: 180, x1: 560, y1: 1148, h: 220, farbe: '#ffcf8a', dach: '#c2306f', name: 'Schule', tuer: 370, stock: 2, zu: true },
+  { x0: 660, x1: 960, y1: 1148, h: 180, farbe: '#ff6b5a', band: '#ffffff', name: 'FEUERWEHR', tuer: 810, tor: true, zu: true },
+  { x0: 1040, x1: 1290, y1: 1148, h: 190, farbe: '#d9f2c4', dach: '#3f8f4a', tuer: 1165, stock: 2, zu: true },
+  { x0: 1560, x1: 1800, y1: 1148, h: 160, farbe: '#d6f5ff', markise: '#ff5fa2', name: 'Eisdiele', tuer: 1680, deko: ['🍨', '🍦'], zu: true },
+  { x0: 1940, x1: 2320, y1: 1148, h: 230, farbe: '#f0e0c8', dach: '#5b6b8a', name: 'Rathaus', tuer: 2130, stock: 2, uhr: true, zu: true },
+  { x0: 2440, x1: 2760, y1: 1148, h: 190, farbe: '#ffe0f0', dach: '#ffcf3f', tuer: 2600, stock: 2, zu: true },
+];
+SZENEN.draussen.blocker = HAEUSER.map(hs => [hs.x0, hs.y1 - 110, hs.x1, hs.y1]).concat([[600, 1330, 980, 1560]]); // Teich
 const CHAOS_ORTE = Object.keys(SZENEN).filter(k => SZENEN[k].chaos);
 let sc = 1, ox = 0, oy = 0, DPR = 1;
 function resize() {
@@ -401,16 +427,21 @@ const grenze = () => ort.grenze || STD_GRENZE;
 let ortId = 'draussen', ort = null, dinge = [], teilchen = [], kleckse = [], flieger = [], texte = [];
 let welt = {}; // was heute schon kaputt ist (bis man schlafen geht)
 let P = null, laeuft = false, wackeln = 0, fertigT = -1, zeit = 0, schlafT = 0;
+let camX = 0, camY = 0;
+const auto = { x: 520, y: 650, blick: 1, drin: false, hupe: 0 }; // das pinke Kabrio
+const ortW = () => ort.w || W, ortH = () => ort.h || H;
+function kamera() { camX = Math.max(0, Math.min(ortW() - W, P.x - W / 2)); camY = Math.max(0, Math.min(ortH() - H, P.y - H * .72)); }
 function raum(id) {
   if (!welt[id]) welt[id] = { dinge: SZENEN[id].dinge.map(([emo, x, y, hp, name, farbe]) => ({ emo, x, y, hp, max: hp, name, farbe, r: hp > 1 ? 34 : 22, kaputt: false, rueckeln: 0 })), kleckse: [], sternDa: false };
   return welt[id];
 }
 function betrete(id, vonId) {
   if (P && P.traegt) { const d = P.traegt; P.traegt = null; zerbrechen(d, P.x, P.y); }
+  auto.drin = false; document.body.classList.remove('imauto');
   ortId = id; ort = SZENEN[id]; const r = raum(id); dinge = r.dinge; kleckse = r.kleckse;
   teilchen = []; flieger = []; texte = []; fertigT = -1;
   const alt = P || { bx: 1, by: 0, blick: 1 };
-  P = { x: W / 2, y: H - 100, bx: alt.bx, by: alt.by, blick: alt.blick, traegt: null, laeuft: false, spur: [] };
+  P = { x: id === 'draussen' ? 350 : W / 2, y: id === 'draussen' ? 640 : H - 100, bx: alt.bx, by: alt.by, blick: alt.blick, traegt: null, laeuft: false, spur: [] };
   const t = ort.tueren.find(t => t.ziel === vonId);
   if (t) { // neben der Tür hereinkommen
     const rein = { oben: [0, 75], unten: [0, -75], links: [75, 0], rechts: [-75, 0] }[t.seite];
@@ -418,6 +449,7 @@ function betrete(id, vonId) {
     if (t.seite === 'links' || t.seite === 'rechts') P.y += 30;
     const gz = grenze(); P.x = Math.max(gz.l, Math.min(gz.r, P.x)); P.y = Math.max(gz.o, Math.min(gz.u, P.y));
   }
+  kamera();
   document.getElementById('ortName').textContent = ort.emo + ' ' + ort.name;
   document.getElementById('chaos').style.display = ort.chaos ? '' : 'none';
   if (ort.chaos) chaosAnzeige();
@@ -446,6 +478,7 @@ addEventListener('keydown', e => {
   ac();
   const k = e.key.toLowerCase(); keys[k] = true;
   if ((k === ' ' || k === 'enter') && laeuft) { e.preventDefault(); if (!e.repeat) aktion(); }
+  if (k === 'h' && laeuft && auto.drin && !e.repeat) hupen();
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 let stick = null; // Joystick zum Wischen
@@ -455,6 +488,7 @@ addEventListener('pointerup', e => { if (stick && e.pointerId === stick.id) stic
 addEventListener('pointercancel', e => { if (stick && e.pointerId === stick.id) stick = null; });
 const aktBtn = document.getElementById('aktion');
 aktBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); ac(); aktBtn.classList.add('on'); aktion(); });
+document.getElementById('hupe').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (auto.drin) hupen(); });
 aktBtn.addEventListener('pointerup', () => aktBtn.classList.remove('on'));
 aktBtn.addEventListener('pointerleave', () => aktBtn.classList.remove('on'));
 
@@ -478,12 +512,18 @@ function naechstes() {
   return b;
 }
 function naheTuer() { for (const t of ort.tueren) if (Math.hypot(t.x - P.x, t.y - P.y) < (t.seite === 'oben' ? 95 : 80)) return t; return null; }
+function amAuto() { return ortId === 'draussen' && !auto.drin && Math.hypot(auto.x - P.x, auto.y - P.y) < 95; }
+function einsteigen() { document.body.classList.add('imauto'); auto.drin = true; P.x = auto.x; P.y = auto.y; P.blick = auto.blick; P.spur = []; toast('Brumm brumm! 💗', 1.2); [196, 247, 294].forEach((f, i) => ton(f, .18, 'sawtooth', .07, 40, i * .1)); }
+function aussteigen() { document.body.classList.remove('imauto'); auto.drin = false; auto.x = P.x; auto.y = P.y; auto.blick = P.blick; const gz = grenze(); P.y = Math.min(gz.u, P.y + 70); P.spur = []; ton(330, .1, 'square', .05, -80); }
+function hupen() { auto.hupe = .4; ton(440, .25, 'square', .08); ton(554, .25, 'square', .06); text(P.x + P.blick * 70, P.y - 90, 'TÖÖÖT!', '#ff5fa2'); }
 function amBett() { return ort.bett && Math.hypot(ort.bett[0] - P.x, ort.bett[1] + 40 - P.y) < 110; }
 function aktion() {
   if (schlafT > 0) return;
   if (P.traegt) { werfen(); return; }
+  if (auto.drin) { aussteigen(); return; }
   const tuer = naheTuer(); if (tuer && tuer.ziel === 'laden') { ton(660, .1, 'triangle', .06); ladenAuf(); return; }
   if (tuer) { ton(392, .08, 'square', .05); ton(523, .1, 'square', .05, 0, .08); betrete(tuer.ziel, ortId); return; }
+  if (amAuto()) { einsteigen(); return; }
   if (amBett()) { schlafen(); return; }
   const d = naechstes(); if (!d) { sKicher(); text(P.x, P.y - 120, pick(['Hihi!', 'Huiii!', 'Juhu!']), '#fff'); return; }
   if (d.hp > 1) { // rausreißen
@@ -545,20 +585,22 @@ function update(dt) {
   const [ix, iy] = eingabe();
   P.laeuft = Math.hypot(ix, iy) > .1;
   if (P.laeuft) { P.bx = ix; P.by = iy; if (Math.abs(ix) > .2) P.blick = Math.sign(ix); }
-  const sp = 300;
+  const sp = auto.drin ? 560 : 300;
   bewege(P.x + ix * sp * dt, P.y); bewege(P.x, P.y + iy * sp * dt);
+  if (auto.drin) { auto.x = P.x; auto.y = P.y; auto.blick = P.blick; if (auto.hupe > 0) auto.hupe -= dt; }
+  kamera();
   if (P.traegt) { P.traegt.x = P.x; P.traegt.y = P.y; }
   const sl = P.spur[0]; if (!sl || Math.hypot(sl[0] - P.x, sl[1] - P.y) > 6) { P.spur.unshift([P.x, P.y]); if (P.spur.length > 70) P.spur.pop(); }
   // Aktionsknopf-Text
-  const tuer = P.traegt ? null : naheTuer();
+  const tuer = P.traegt || auto.drin ? null : naheTuer();
   const nd = P.traegt || tuer ? null : naechstes();
-  const at = P.traegt ? ['🎯', 'werfen!'] : tuer ? ['🚪', tuer.label] : amBett() ? ['😴', 'schlafen'] : nd ? (nd.hp > 1 ? ['💪', 'reißen!'] : ['✊', 'schnappen']) : ['🤪', 'Quatsch'];
+  const at = P.traegt ? ['🎯', 'werfen!'] : auto.drin ? ['🚶', 'aussteigen'] : tuer ? ['🚪', tuer.label] : amAuto() ? ['🚗', 'einsteigen'] : tuer ? ['🚪', tuer.label] : amBett() ? ['😴', 'schlafen'] : nd ? (nd.hp > 1 ? ['💪', 'reißen!'] : ['✊', 'schnappen']) : ['🤪', 'Quatsch'];
   if (aktBtn.firstChild.nodeValue !== at[0] || document.getElementById('aktionText').textContent !== at[1]) { aktBtn.firstChild.nodeValue = at[0]; document.getElementById('aktionText').textContent = at[1]; }
   // Fliegende Sachen
   const gz = grenze();
   for (const f of flieger) {
     f.x += f.vx * dt; f.y += f.vy * dt; f.dreh += dt * 14; f.weg += Math.hypot(f.vx, f.vy) * dt;
-    let treffer = f.x < gz.l - 8 || f.x > gz.r + 8 || f.y < gz.o - 110 || f.y > gz.u - 60 || f.weg > 560;
+    let treffer = f.x < gz.l - 8 || f.x > gz.r + 8 || f.y < gz.o - 110 || f.y > gz.u - 60 || f.weg > 560 || (ort.blocker || []).some(([x0, y0, x1, y1]) => f.x > x0 && f.x < x1 && f.y + 100 > y0 && f.y + 100 < y1);
     for (const d of dinge) {
       if (d.kaputt || d === f.d || d === P.traegt) continue;
       if (Math.hypot(d.x - f.x, d.y - 20 - f.y) < d.r + 18) {
@@ -586,9 +628,18 @@ function update(dt) {
 function bewege(nx, ny) {
   const gz = grenze();
   nx = Math.max(gz.l, Math.min(gz.r, nx)); ny = Math.max(gz.o, Math.min(gz.u, ny));
+  const br = auto.drin ? 46 : 14;
+  for (const [x0, y0, x1, y1] of ort.blocker || []) if (nx > x0 - br && nx < x1 + br && ny > y0 && ny < y1 + 6) return;
   for (const d of dinge) {
     if (d.kaputt || d === P.traegt) continue;
-    if (Math.hypot(d.x - nx, d.y - ny) < d.r + 14) return;
+    if (Math.hypot(d.x - nx, d.y - ny) < d.r + br) {
+      if (auto.drin && !(d.rumms > zeit)) { // mit dem Kabrio reinfahren = Chaos!
+        d.rumms = zeit + .4; d.hp -= 2; d.rueckeln = .3; wackeln = .2;
+        if (d.hp <= 0) { if (SPRUDLER[d.emo]) kleckse.push({ x: d.x, y: d.y, r: 30, farbe: '#7fd3ff', sprudel: 4 }); zerbrechen(d, d.x, d.y); }
+        else { sReiss(); bruchstuecke(d, 5); text(d.x, d.y - 50, 'RUMMS!', '#ff5fa2'); if (d.hp === 1) d.r = 22; }
+      }
+      return;
+    }
   }
   if (ort.bett && Math.abs(nx - ort.bett[0]) < 85 && ny > ort.bett[1] - 60 && ny < ort.bett[1] + 30) return;
   P.x = nx; P.y = ny;
@@ -609,12 +660,12 @@ function emoji(c, e, x, y, gr, rot = 0) {
   c.fillText(e, 0, 0); c.restore();
 }
 function zeichneBoden() {
-  const [a, b] = ort.boden; g.fillStyle = a; g.fillRect(0, 0, W, H);
+  const [a, b] = ort.boden; g.fillStyle = a; g.fillRect(0, 0, ortW(), ortH());
   g.fillStyle = b;
   if (ort.muster === 'fliesen') { for (let x = 0; x < W; x += 60) for (let y = 0; y < H; y += 60) if (((x + y) / 60) % 2 === 0) g.fillRect(x, y, 60, 60); }
   else if (ort.muster === 'karo') { for (let x = 0; x < W; x += 40) for (let y = 0; y < H; y += 40) if (((x + y) / 40) % 2 === 0) g.fillRect(x, y, 40, 40); }
   else if (ort.muster === 'holz') { for (let y = 0; y < H; y += 30) { g.fillRect(0, y, W, 2); for (let x = (y / 30 % 2) * 90; x < W; x += 180) g.fillRect(x, y, 2, 30); } }
-  else { for (let i = 0; i < 260; i++) { const x = (i * 97) % W, y = (i * 61 + (i % 7) * 23) % H; g.fillRect(x, y, 3, 8); } }
+  else { const n = ortW() * ortH() / 2200; for (let i = 0; i < n; i++) { const x = (i * 97) % ortW(), y = (i * 61 + (i % 7) * 23) % ortH(); g.fillRect(x, y, 3, 8); } }
   if (ort.muster === 'draussen') zeichneDraussen();
   else {
     // Wände
@@ -659,37 +710,75 @@ function zeichneTuer(t) {
   }
 }
 function zeichneDraussen() {
-  const ink = '#23324a'; g.strokeStyle = ink; g.lineWidth = 4; g.lineJoin = 'round';
-  // Himmel
-  g.fillStyle = '#9fd8ff'; g.fillRect(0, 0, W, 120);
-  // Gehweg und Straße
-  g.fillStyle = '#d9d2c4'; g.fillRect(0, 250, W, 40);
-  g.fillStyle = '#7d8496'; g.fillRect(0, 540, W, 60); g.fillStyle = '#fff6c2'; for (let x = 10; x < W; x += 80) g.fillRect(x, 568, 44, 5);
-  // Haus von Oma und Opa: zwei Stockwerke
-  g.fillStyle = '#ffe2b8'; g.fillRect(60, 70, 270, 182); g.strokeRect(60, 70, 270, 182);
-  g.fillStyle = '#ff5fa2'; g.beginPath(); g.moveTo(40, 74); g.lineTo(195, 4); g.lineTo(350, 74); g.closePath(); g.fill(); g.stroke();
-  g.beginPath(); g.moveTo(60, 160); g.lineTo(330, 160); g.stroke();
-  g.fillStyle = '#8ec5ff'; for (const [x, y] of [[85, 90], [175, 90], [265, 90], [85, 180], [265, 180]]) { g.fillRect(x, y, 42, 42); g.strokeRect(x, y, 42, 42); }
-  g.fillStyle = '#ff9ad5'; g.fillRect(265, 90, 42, 12);
-  g.fillStyle = '#b7793f'; g.fillRect(165, 182, 60, 70); g.strokeRect(165, 182, 60, 70); g.fillStyle = '#ffcf3f'; g.beginPath(); g.arc(213, 220, 4, 0, 7); g.fill();
-  schild('Oma & Opa', 195, 52);
-  // Kleiderladen
-  g.fillStyle = '#ffd6ec'; g.fillRect(375, 120, 180, 132); g.strokeRect(375, 120, 180, 132);
-  for (let i = 0; i < 6; i++) { g.fillStyle = i % 2 ? '#fff' : '#a46bd1'; g.fillRect(365 + i * 33.3, 100, 33.3, 30); } g.strokeRect(365, 100, 200, 30);
-  g.fillStyle = '#bfe9ff'; g.fillRect(435, 180, 60, 72); g.strokeRect(435, 180, 60, 72);
-  g.fillStyle = '#bfe9ff'; g.fillRect(388, 150, 40, 40); g.strokeRect(388, 150, 40, 40); g.fillRect(502, 150, 40, 40); g.strokeRect(502, 150, 40, 40);
-  emoji(g, '👗', 408, 170, 28); emoji(g, '🎩', 522, 170, 28);
-  schild('Kleiderladen', 465, 84);
-  // Supermarkt
-  g.fillStyle = '#e9edf2'; g.fillRect(600, 110, 310, 142); g.strokeRect(600, 110, 310, 142);
-  g.fillStyle = '#2ec4b6'; g.fillRect(590, 88, 330, 34); g.strokeRect(590, 88, 330, 34);
-  g.fillStyle = '#fff'; g.font = 'bold 22px "Comic Sans MS","Chalkboard SE",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('SUPERMARKT', 755, 106);
-  g.fillStyle = '#bfe9ff'; g.fillRect(720, 170, 70, 82); g.strokeRect(720, 170, 70, 82); g.beginPath(); g.moveTo(755, 170); g.lineTo(755, 252); g.stroke();
-  for (const x of [620, 820]) { g.fillRect(x, 150, 70, 60); g.strokeRect(x, 150, 70, 60); }
-  // Weg zum Park
-  g.fillStyle = '#e8d6a8'; g.fillRect(0, 440, 120, 60);
-  emoji(g, '🌳', 40, 370, 60); emoji(g, '🌲', 930, 330, 56);
-  schild('⬅ zum Park', 80, 410); schild('Dorfplatz', 760, 420);
+  const ink = '#23324a', DW = ortW(), DH = ortH(); g.lineJoin = 'round';
+  // Straßen mit Gehsteig
+  const strasse = (x, y, w, h, quer) => {
+    g.fillStyle = '#d9d2c4'; quer ? g.fillRect(x, y - 30, w, h + 60) : g.fillRect(x - 30, y, w + 60, h);
+    g.fillStyle = '#7d8496'; g.fillRect(x, y, w, h); g.fillStyle = '#fff6c2';
+    if (quer) for (let i = x + 10; i < x + w; i += 80) g.fillRect(i, y + h / 2 - 3, 44, 6); else for (let i = y + 10; i < y + h; i += 80) g.fillRect(x + w / 2 - 3, i, 6, 44);
+  };
+  strasse(1380, 0, 100, DH, false); strasse(0, 560, DW, 100, true); strasse(0, 1180, DW, 100, true);
+  g.fillStyle = '#7d8496'; g.fillRect(1380, 560, 100, 100); g.fillRect(1380, 1180, 100, 100);
+  // Zebrastreifen
+  g.fillStyle = '#fff'; for (let i = 0; i < 6; i++) { g.fillRect(1240 + 0, 566 + i * 15, 60, 8); g.fillRect(1540, 1186 + i * 15, 60, 8); }
+  // Teich mit Enten
+  g.fillStyle = '#7fd3ff'; g.strokeStyle = ink; g.lineWidth = 4; g.beginPath(); g.ellipse(790, 1450, 190, 110, 0, 0, 7); g.fill(); g.stroke();
+  g.fillStyle = '#bfe9ff'; g.beginPath(); g.ellipse(740, 1420, 80, 30, 0, 0, 7); g.fill();
+  emoji(g, '🦆', 720 + Math.sin(zeit) * 40, 1450, 34); emoji(g, '🦆', 880 + Math.cos(zeit * .8) * 30, 1490, 28);
+  // Parkweg
+  g.fillStyle = '#e8d6a8'; g.fillRect(0, 1410, 140, 60);
+  g.fillStyle = '#5a3a1a'; g.fillRect(4, 1380, 12, 120); schild('⬅ zum Park', 110, 1385);
+  // Bäume und Zäune hinten
+  for (let x = 60; x < DW; x += 170) { if (x > 1320 && x < 1540) continue; emoji(g, x % 340 < 170 ? '🌳' : '🌲', x, 230 + (x % 3) * 20, 70); }
+  for (let x = 1600; x < DW; x += 210) emoji(g, '🌳', x, 1400 + (x % 2) * 120, 72);
+  emoji(g, '🌳', 260, 1580, 70); emoji(g, '🌲', 1250, 1560, 66);
+  schild('Dorfplatz', 2300, 1330); schild('Hauptstraße', 700, 690); schild('Schulgasse', 1560, 1310);
+}
+function zeichneHaus(hs) {
+  const ink = '#23324a', w = hs.x1 - hs.x0, top = hs.y1 - hs.h; g.strokeStyle = ink; g.lineWidth = 4; g.lineJoin = 'round';
+  g.fillStyle = '#0002'; g.fillRect(hs.x0 + 8, hs.y1 - 4, w, 12);
+  if (hs.turm) { const tx = hs.x0 + w * .78; g.fillStyle = hs.farbe; g.fillRect(tx - 30, top - 120, 60, 140); g.strokeRect(tx - 30, top - 120, 60, 140);
+    g.fillStyle = hs.dach; g.beginPath(); g.moveTo(tx - 38, top - 118); g.lineTo(tx, top - 200); g.lineTo(tx + 38, top - 118); g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = '#ffcf3f'; g.beginPath(); g.moveTo(tx, top - 200); g.lineTo(tx, top - 230); g.moveTo(tx - 10, top - 220); g.lineTo(tx + 10, top - 220); g.stroke(); g.strokeStyle = ink; }
+  g.fillStyle = hs.farbe; g.fillRect(hs.x0, top, w, hs.h); g.strokeRect(hs.x0, top, w, hs.h);
+  if (hs.dach) { g.fillStyle = hs.dach; g.beginPath(); g.moveTo(hs.x0 - 20, top + 4); g.lineTo(hs.x0 + w / 2, top - Math.min(90, w * .28)); g.lineTo(hs.x1 + 20, top + 4); g.closePath(); g.fill(); g.stroke(); }
+  if (hs.band) { g.fillStyle = hs.band; g.fillRect(hs.x0 - 10, top - 20, w + 20, 36); g.strokeRect(hs.x0 - 10, top - 20, w + 20, 36);
+    g.fillStyle = hs.band === '#ffffff' ? '#ff3a3a' : '#fff'; g.font = 'bold 22px "Comic Sans MS","Chalkboard SE",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(hs.name, hs.x0 + w / 2, top - 1); }
+  if (hs.markise) { const n = Math.round(w / 34); for (let i = 0; i < n; i++) { g.fillStyle = i % 2 ? '#fff' : hs.markise; g.fillRect(hs.x0 - 10 + i * (w + 20) / n, top + 6, (w + 20) / n, 30); } g.strokeRect(hs.x0 - 10, top + 6, w + 20, 30); }
+  if (hs.stock === 2) { g.beginPath(); g.moveTo(hs.x0, top + hs.h * .48); g.lineTo(hs.x1, top + hs.h * .48); g.stroke(); }
+  // Fenster
+  g.fillStyle = hs.glas ? '#bfe9ff' : '#8ec5ff';
+  const reihen = hs.stock === 2 ? [top + hs.h * .14, top + hs.h * .6] : [top + hs.h * .42];
+  for (const fy of reihen) for (let fx = hs.x0 + 25; fx + 44 < hs.x1 - 10; fx += Math.max(80, (w - 50) / Math.floor((w - 50) / 80))) {
+    if (Math.abs(fx + 22 - hs.tuer) < 55 && fy > top + hs.h * .4) continue;
+    g.fillStyle = hs.glas ? '#bfe9ff' : '#8ec5ff'; g.fillRect(fx, fy, 44, 44); g.strokeRect(fx, fy, 44, 44);
+    if (hs.vorhang && fy < top + hs.h * .4 && fx > hs.x0 + w / 2) { g.fillStyle = '#ff9ad5'; g.fillRect(fx, fy, 44, 12); }
+  }
+  if (hs.deko) { emoji(g, hs.deko[0], hs.x0 + 47, top + hs.h * .42 + 22, 30); emoji(g, hs.deko[1], hs.x1 - 47, top + hs.h * .42 + 22, 30); }
+  if (hs.uhr) { g.fillStyle = '#fff'; g.beginPath(); g.arc(hs.x0 + w / 2, top + 30, 20, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.moveTo(hs.x0 + w / 2, top + 30); g.lineTo(hs.x0 + w / 2, top + 16); g.moveTo(hs.x0 + w / 2, top + 30); g.lineTo(hs.x0 + w / 2 + 10, top + 30); g.stroke(); }
+  // Tür
+  const tw = hs.tor ? 110 : 60, th = hs.tor ? 110 : 72;
+  g.fillStyle = hs.tor ? '#ffcf3f' : hs.glas ? '#bfe9ff' : '#b7793f'; g.fillRect(hs.tuer - tw / 2, hs.y1 - th, tw, th); g.strokeRect(hs.tuer - tw / 2, hs.y1 - th, tw, th);
+  if (!hs.tor && !hs.glas) { g.fillStyle = '#ffcf3f'; g.beginPath(); g.arc(hs.tuer + 18, hs.y1 - 36, 4, 0, 7); g.fill(); }
+  if (hs.zu) schild('zu', hs.tuer, hs.y1 - th - 14);
+  if (hs.name && !hs.band) schild(hs.name, hs.x0 + w / 2, top - (hs.dach ? 30 : 4) + (hs.markise ? -18 : 0));
+}
+function zeichneAuto(x, y, blick, mitFahrer) {
+  const ink = '#23324a';
+  g.fillStyle = '#0003'; g.beginPath(); g.ellipse(x, y + 2, 78, 12, 0, 0, 7); g.fill();
+  if (mitFahrer) zeichneFigur(g, stand.figur, x - 8 * blick, y - 14, .85, zeit, blick, false, false, stand.kleider[stand.figur]);
+  g.save(); g.translate(x, y); g.scale(blick < 0 ? -1 : 1, 1);
+  g.strokeStyle = ink; g.lineWidth = 4; g.lineJoin = 'round';
+  // Windschutzscheibe
+  g.fillStyle = '#bfe9ffcc'; g.beginPath(); g.moveTo(22, -40); g.lineTo(34, -72); g.lineTo(42, -72); g.lineTo(36, -40); g.closePath(); g.fill(); g.stroke();
+  // Karosserie (pink!)
+  g.fillStyle = '#ff5fa2'; g.beginPath(); g.moveTo(-80, -14); g.lineTo(-76, -44); g.lineTo(-30, -46); g.lineTo(-24, -38); g.lineTo(40, -40); g.quadraticCurveTo(76, -38, 80, -20); g.lineTo(80, -10); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#ff9ad5'; g.fillRect(-60, -34, 100, 8);
+  g.fillStyle = '#fff6a0'; g.beginPath(); g.ellipse(74, -28, 6, 5, 0, 0, 7); g.fill(); g.stroke();
+  g.fillStyle = '#ff3a3a'; g.fillRect(-82, -38, 6, 10);
+  for (const rx of [-48, 50]) { g.fillStyle = ink; g.beginPath(); g.arc(rx, -10, 15, 0, 7); g.fill(); g.fillStyle = '#d8d8e0'; g.beginPath(); g.arc(rx, -10, 6, 0, 7); g.fill(); }
+  g.fillStyle = '#fff'; g.font = 'bold 13px sans-serif'; g.textAlign = 'center'; g.fillText('♥', -6, -18);
+  g.restore();
 }
 function zeichneBett() {
   const [x, y] = ort.bett, ink = '#23324a';
@@ -704,6 +793,7 @@ function render() {
   if (!ort) return;
   const wx = wackeln > 0 ? (Math.random() - .5) * 14 * wackeln / .25 : 0, wy = wackeln > 0 ? (Math.random() - .5) * 14 * wackeln / .25 : 0;
   g.setTransform(DPR * sc, 0, 0, DPR * sc, DPR * (ox + wx), DPR * (oy + wy));
+  g.save(); g.beginPath(); g.rect(0, 0, W, H); g.clip(); g.translate(-camX, -camY);
   zeichneBoden();
   if (stand.figur === 'opa' && P.spur.length > 1) { // der Bart schleift hinterher
     g.lineCap = 'round'; g.lineJoin = 'round';
@@ -712,8 +802,9 @@ function render() {
   // Dinge + Figur nach Tiefe sortiert
   const liste = dinge.filter(d => !d.kaputt && d !== P.traegt).map(d => ({ y: d.y, f: () => zeichneDing(d) }));
   liste.push({ y: P.y, f: zeichneSpieler });
+  if (ortId === 'draussen') { for (const hs of HAEUSER) liste.push({ y: hs.y1 - 2, f: () => zeichneHaus(hs) }); if (!auto.drin) liste.push({ y: auto.y, f: () => zeichneAuto(auto.x, auto.y, auto.blick, false) }); }
   liste.sort((a, b) => a.y - b.y).forEach(o => o.f());
-  if (schlafT > 0) { g.fillStyle = '#141838'; g.globalAlpha = Math.min(.65, (4.5 - schlafT) * .5, schlafT * .5); g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
+  if (schlafT > 0) { g.fillStyle = '#141838'; g.globalAlpha = Math.min(.65, (4.5 - schlafT) * .5, schlafT * .5); g.fillRect(camX, camY, W, H); g.globalAlpha = 1; }
   for (const f of flieger) { g.fillStyle = '#0003'; g.beginPath(); g.ellipse(f.x, f.y + 100, 16, 5, 0, 0, 7); g.fill(); emoji(g, f.d.emo, f.x, f.y, f.d.max > 1 ? 56 : 42, f.dreh); }
   for (const t of teilchen) {
     if (t.emo) emoji(g, t.emo, t.x, t.y, 20, t.dreh);
@@ -724,6 +815,7 @@ function render() {
     g.globalAlpha = Math.min(1, t.leben * 2); g.font = 'bold 30px "Comic Sans MS","Chalkboard SE",sans-serif';
     g.lineWidth = 6; g.strokeStyle = '#23324a'; g.strokeText(t.t, t.x, t.y); g.fillStyle = t.farbe; g.fillText(t.t, t.x, t.y); g.globalAlpha = 1;
   }
+  g.restore();
   // Joystick
   if (stick) {
     g.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -747,6 +839,7 @@ function zeichneDing(d) {
   }
 }
 function zeichneSpieler() {
+  if (auto.drin) { zeichneAuto(P.x, P.y, P.blick, true); return; }
   if (schlafT > 0 && ort.bett) { // liegt im Bett und schnarcht
     const [x, y] = ort.bett; g.save(); g.translate(x + 60, y + 6); g.rotate(-Math.PI / 2);
     zeichneFigur(g, stand.figur, 0, 0, .9, 0, 1, false, false, stand.kleider[stand.figur]); g.restore();
