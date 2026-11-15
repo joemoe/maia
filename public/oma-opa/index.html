@@ -36,6 +36,8 @@
   #quit { top: max(12px, env(safe-area-inset-top)); }
   #mute { top: calc(max(12px, env(safe-area-inset-top)) + 56px); }
   #wechsel { top: calc(max(12px, env(safe-area-inset-top)) + 112px); }
+  #levelBtn { top: calc(max(12px, env(safe-area-inset-top)) + 168px); background: #fff3b0; animation: wink 2s ease-in-out 3; }
+  @keyframes wink { 50% { transform: scale(1.18) rotate(-8deg); } }
   a.rund { text-decoration: none; color: inherit; }
 
   #aktion { position: fixed; right: 22px; bottom: max(26px, env(safe-area-inset-bottom)); z-index: 5; width: 96px; height: 96px; border-radius: 50%;
@@ -87,6 +89,7 @@
 
 <a class="rund" id="quit" href="/" aria-label="Zurück zu maia.games">✖</a>
 <button class="rund" id="wechsel" aria-label="Oma oder Opa">👴</button>
+<button class="rund" id="levelBtn" aria-label="Levels aussuchen">📜</button>
 <button class="rund" id="mute" aria-label="Ton an oder aus">🔊</button>
 <button id="hupe" aria-label="Hupen">📯</button>
 <button id="aktion" aria-label="Aktion">💪<small id="aktionText">schnappen</small></button>
@@ -525,6 +528,7 @@ function baueLevels() {
 function levelsAuf() { laeuft = false; stick = null; baueLevels(); document.body.classList.remove('ingame'); document.getElementById('levels').classList.add('on'); }
 function levelsZu() { document.getElementById('levels').classList.remove('on'); document.body.classList.add('ingame'); laeuft = true; }
 document.getElementById('levelChip').addEventListener('click', levelsAuf);
+document.getElementById('levelBtn').addEventListener('click', levelsAuf);
 document.getElementById('levelsZu').addEventListener('click', levelsZu);
 // Meldungen (Stern, Level geschafft) nacheinander zeigen
 const meldungen = []; let meldungOffen = false;
