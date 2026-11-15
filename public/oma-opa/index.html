@@ -18,6 +18,9 @@
   .hud { position: fixed; z-index: 4; pointer-events: none; }
   #oben { left: 12px; top: max(12px, env(safe-area-inset-top)); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; max-width: calc(100vw - 80px); }
   .chip { background: var(--paper); border: 3px solid var(--ink); border-radius: 999px; padding: 4px 12px; font-size: 16px; font-weight: bold; box-shadow: 0 3px 0 var(--ink); white-space: nowrap; }
+  #levelChip { pointer-events: auto; cursor: pointer; background: #fff3b0; max-width: min(360px, 60vw); overflow: hidden; text-overflow: ellipsis; }
+  .ort.jetzt { box-shadow: 0 0 0 4px var(--gelb), 0 4px 0 var(--ink); }
+  .ort small { display: block; font-size: 13px; font-weight: normal; margin-top: 4px; }
   #chaos { position: relative; overflow: hidden; width: min(260px, 46vw); }
   #chaos i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, #ffcf3f, #ff5fa2); transition: width .3s; }
   #chaos span { position: relative; }
@@ -76,6 +79,7 @@
 <div class="hud" id="oben">
   <span class="chip" id="ortName">🚽 Badezimmer</span>
   <span class="chip" id="konto">⭐ 0</span>
+  <span class="chip" id="levelChip">📜 Level</span>
   <span class="chip" id="chaos"><i></i><span id="chaosText">Chaos 0%</span></span>
 </div>
 <div class="hud" id="toast"></div>
@@ -109,12 +113,22 @@
   </div>
 </div>
 
+<div class="overlay" id="levels">
+  <div class="box">
+    <h1>Levels</h1>
+    <p>Such dir ein Level aus! Für jedes geschaffte Level gibt es einen Stern.</p>
+    <div class="orte" id="levelListe"></div>
+    <button class="knopf weiss" id="levelsZu">Zurück ins Spiel</button>
+  </div>
+</div>
+
 <div class="overlay" id="stern">
   <div class="box">
     <div class="gross">⭐</div>
     <h1 id="sternTitel">Super Chaos!</h1>
     <p id="sternText"></p>
-    <button class="knopf" id="weiter">Nächster Ort ➜</button>
+    <button class="knopf" id="weiter">Weiter ➜</button>
+    <button class="knopf weiss" id="naechstes" hidden>Nächstes Level ➜</button>
   </div>
 </div>
 
@@ -200,6 +214,50 @@ const HAEUSER = [
   { x0: 2440, x1: 2760, y1: 1148, h: 190, farbe: '#ffe0f0', dach: '#ffcf3f', tuer: 2600, stock: 2, zu: true },
 ];
 SZENEN.draussen.blocker = HAEUSER.map(hs => [hs.x0, hs.y1 - 110, hs.x1, hs.y1]).concat([[600, 1330, 980, 1560]]); // Teich
+SZENEN.draussen.tueren.push({ x: 1165, seite: 'oben', y: 1148, ziel: 'krippe', label: 'Krippenlokal' }, { x: 2880, y: 1440, seite: 'rechts', ziel: 'wald', label: 'zum Wald' });
+{ const h = HAEUSER.find(h => h.tuer === 1165); h.name = 'Krippenlokal'; h.zu = false; h.farbe = '#ffe9c2'; h.dach = '#b0503a'; h.deko = ['⭐', '🐑']; }
+const WALD_BAEUME = [];
+for (let i = 0; i < 46; i++) { const x = 120 + (i * 397) % 1720, y = 140 + (i * 233 + (i % 5) * 61) % 980; if (Math.abs(y - 600) < 70 && x < 400) continue; WALD_BAEUME.push([x, y, i % 3]); }
+SZENEN.wald = { name: 'Wald', emo: '🌲', chaos: true, muster: 'wald', boden: ['#5aa04a', '#4f9440'], w: 1920, h: 1200, grenze: { l: 30, o: 60, r: 1890, u: 1170 },
+  blocker: WALD_BAEUME.map(([x, y]) => [x - 22, y - 26, x + 22, y]),
+  tueren: [{ x: 0, y: 600, seite: 'links', ziel: 'draussen', label: 'zurück ins Dorf' }],
+  dinge: [['🍄', 300, 420, 1, 'Pilz', '#ff4a3a'], ['🍄', 900, 760, 1, 'Pilz', '#ff4a3a'], ['🍄', 1500, 300, 1, 'Pilz', '#ff4a3a'], ['🪵', 620, 300, 2, 'Baumstamm', '#8a5a2a'],
+    ['🪵', 1300, 980, 2, 'Baumstamm', '#8a5a2a'], ['🌰', 760, 520, 1, 'Kastanie', '#8a5a2a'], ['🫐', 1100, 420, 1, 'Heidelbeeren', '#5a5ad6'], ['🌼', 420, 900, 1, 'Blume', '#ffe25a'],
+    ['🪨', 1650, 700, 3, 'Felsen', '#9aa4b2'], ['🏕️', 1000, 600, 4, 'Zelt', '#ff9a2a'], ['🪺', 1700, 1050, 1, 'Nest', '#c98b4a'], ['🍯', 1450, 560, 1, 'Honig', '#ffcf3f']] };
+SZENEN.krippe = { name: 'Krippenlokal', emo: '⭐', krippe: [480, 175], blocker: [[310, 110, 650, 236]], boden: ['#f3e2c4', '#e6cfa6'], muster: 'holz', wand: '#b0503a',
+  tueren: [{ x: 480, seite: 'unten', ziel: 'draussen', label: 'rausgehen' }],
+  dinge: [['🐑', 150, 320, 1, 'Schaf'], ['🐑', 830, 430, 1, 'Schaf'], ['🐄', 220, 500, 1, 'Ochse'], ['🫏', 780, 280, 1, 'Esel'], ['👼', 360, 420, 1, 'Engel'],
+    ['🌟', 620, 470, 1, 'Stern'], ['👑', 120, 160, 1, 'König'], ['👑', 860, 150, 1, 'König'], ['👑', 560, 340, 1, 'König']] };
+const BUNT = () => ({ hut: pick(['nichts', 'party', 'blumen', 'topf', 'krone']), oben: pick(['std', 'leo', 'blumen', 'neon', 'regenbogen', 'erdbeer']), unten: pick(['std', 'ringel', 'tupfen', 'jeans']), schuhe: pick(['std', 'stiefel', 'hasen']), brille: pick(['std', 'herz', 'stern', 'riesig']) });
+SZENEN.draussen.leute = [[700, 720], [1700, 700], [2500, 760], [500, 1340], [1900, 1350], [2600, 1350], [300, 760], [1100, 760], [2050, 740], [2750, 700], [1200, 1340], [1650, 1500], [2450, 1520], [150, 1560]].map(([x, y], i) => ({ art: i % 2 ? 'opa' : 'oma', x, y, kl: BUNT(),
+  saetze: ['Ich bin 10.000.000 Jahre alt!', pick(['Und du?', 'Früher war hier alles Wald!', 'Hast du meine Brille gesehen?', 'Hihi, du bist ja verrückt!', 'Ich fahr gleich Skateboard!']), 'Ich bin 10.000.000 Jahre alt!'] }));
+SZENEN.krippe.leute = [[300, 230], [680, 230], [470, 540]].map(([x, y], i) => ({ art: 'oma', x, y, kl: { ...BUNT(), hut: 'nichts' }, still: true,
+  saetze: ['Hilfst du mir bei der Krippe?', 'Ich bin 1000 Jahre alt!', i === 2 ? 'Die Figuren gehören in den Stall!' : 'Bring die Figuren zum Stall, bitte!'] }));
+SZENEN.wald.leute = [[500, 640], [1200, 300], [1350, 820], [700, 1000], [1700, 450]].map(([x, y]) => ({ art: 'wald', x, y, pups: 2 + Math.random() * 5, pupsT: 0,
+  saetze: [pick(['Hallo! Wir wohnen im Wald!', 'Willkommen im Wald!', 'Magst du mein Blätterkleid?']), pick(['Ich kämme mich nie!', 'Wir essen nur Bohnen!', 'Hihihi!'])] }));
+// Alle anderen Häuser im Dorf kann man auch betreten
+const INNEN = {
+  'Bäckerei': { emo: '🥐', wand: '#ff9a2a', boden: ['#fff3d6', '#f3e0b0'], muster: 'karo', sachen: ['🥐', '🍞', '🥨', '🧁', '🎂', '🥖', '🍩', '🍪'], gross: ['🧺'], saetze: ['Frische Kipferl! Ich bin 10.000.000 Jahre alt!', 'Nicht die Torte werfen!'] },
+  'Kirche': { emo: '⛪', wand: '#8a63d2', boden: ['#ece6f5', '#ddd3ee'], muster: 'fliesen', sachen: ['🕯️', '🕯️', '💐', '📖', '🕯️'], gross: ['🔔', '🪑', '🪑'], saetze: ['Psssst! Hier ist es leise!', 'Ich bin 10.000.000 Jahre alt!'] },
+  'Schule': { emo: '🏫', wand: '#c2306f', boden: ['#fff1d6', '#f3d9a6'], muster: 'holz', sachen: ['📚', '✏️', '🖍️', '🎒', '📐', '🍎', '📏'], gross: ['🌍', '🪑'], saetze: ['Hausaufgaben? Hihi!', 'Ich bin die Lehrerin und 10.000.000 Jahre alt!'] },
+  'FEUERWEHR': { emo: '🚒', wand: '#ff3a3a', boden: ['#e9edf2', '#d6dde6'], muster: 'fliesen', sachen: ['🧯', '🪣', '⛑️', '🧯', '🔦'], gross: ['🚒', '🪜'], saetze: ['Tatü tata!', 'Ich lösche schon seit 10.000.000 Jahren!'] },
+  'Eisdiele': { emo: '🍨', wand: '#ff5fa2', boden: ['#d6f5ff', '#bfeaff'], muster: 'karo', sachen: ['🍨', '🍦', '🍧', '🧁', '🍦', '🍒', '🍓'], gross: ['🪑'], saetze: ['Welche Sorte? Pups-Geschmack?', 'Ich bin 10.000.000 Jahre alt!'] },
+  'Rathaus': { emo: '🏛️', wand: '#5b6b8a', boden: ['#f0e0c8', '#e2cfa8'], muster: 'holz', sachen: ['📜', '📜', '✒️', '📎', '🗂️'], gross: ['🖨️', '🗄️', '🪴'], saetze: ['Ich bin der Bürgermeister!', 'Ich bin 10.000.000 Jahre alt!'] },
+  '': { emo: '🏠', wand: '#ff7b6b', boden: ['#f0d6b0', '#e2c08f'], muster: 'holz', sachen: ['🧸', '🖼️', '📚', '☕', '🧦', '🎮', '🍪'], gross: ['📺', '🛋️', '🪴'], saetze: ['Hallo! Ich bin 10.000.000 Jahre alt!', 'Möchtest du einen Keks?', 'Mach bitte kein Chaos! ...Oh.'] },
+};
+HAEUSER.forEach((hs, i) => {
+  if (!hs.zu) return;
+  const typ = INNEN[hs.name || ''], id = 'haus' + i, namen = { '': 'Nachbarhaus' };
+  const plaetze = [[160, 160], [330, 140], [640, 140], [800, 170], [200, 330], [760, 330], [330, 470], [620, 470], [150, 500], [820, 500], [480, 300]];
+  const dinge = [];
+  typ.gross.forEach((e, k) => { const [x, y] = plaetze[k]; dinge.push([e, x, y, 3, e, pick(['#cfd8e6', '#b7793f', '#ff9ad5'])]); });
+  typ.sachen.forEach((e, k) => { const [x, y] = plaetze[(k + typ.gross.length) % plaetze.length]; dinge.push([e, x, y, 1, e, pick(['#ffd84a', '#ff9ad5', '#7fd3ff', '#ffffff'])]); });
+  SZENEN[id] = { name: hs.name ? hs.name[0] + hs.name.slice(1).toLowerCase() : 'Nachbarhaus', emo: typ.emo, chaos: true, fremd: true, boden: typ.boden, muster: typ.muster, wand: hs.dach || hs.markise || typ.wand,
+    tueren: [{ x: 480, seite: 'unten', ziel: 'draussen', label: 'rausgehen' }], dinge,
+    leute: [[420, 220], [560, 400]].map(([x, y], k) => ({ art: (i + k) % 2 ? 'opa' : 'oma', x, y, kl: BUNT(), saetze: [typ.saetze[k % typ.saetze.length], pick(['Hihi!', 'Huch, wer bist du denn?', 'Ich bin 10.000.000 Jahre alt!', 'Upsi!'])] })) };
+  SZENEN.draussen.tueren.push({ x: hs.tuer, seite: 'oben', y: hs.y1, ziel: id, label: SZENEN[id].name });
+  hs.zu = false;
+});
 const CHAOS_ORTE = Object.keys(SZENEN).filter(k => SZENEN[k].chaos);
 let sc = 1, ox = 0, oy = 0, DPR = 1;
 function resize() {
@@ -217,7 +275,7 @@ function speichern() { try { localStorage.setItem('oma-opa-chaos', JSON.stringif
 
 // ---------- Ton ----------
 let AC = null, laut = true; try { laut = localStorage.getItem('oma-opa-ton') !== 'aus'; } catch (e) {}
-function ac() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (AC && AC.state === 'suspended') AC.resume(); return AC; }
+function ac() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); musikStart(); } catch (e) {} } if (AC && AC.state === 'suspended') AC.resume(); return AC; }
 function ton(f, d = .12, typ = 'square', vol = .06, slide = 0, when = 0) {
   if (!laut || !ac()) return; const t = AC.currentTime + when, o = AC.createOscillator(), v = AC.createGain();
   o.type = typ; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f + slide), t + d);
@@ -235,6 +293,17 @@ const sWurf = () => { ton(300, .18, 'sawtooth', .04, 500); };
 const sReiss = () => { rauschen(.15, 400, .35); ton(90 + Math.random() * 40, .14, 'sawtooth', .07, 40); };
 const sLos = () => { [330, 440, 660].forEach((f, i) => ton(f, .12, 'square', .06, 0, i * .07)); rauschen(.4, 300, .4); };
 const sStern = () => { [523, 659, 784, 1047, 784, 1047].forEach((f, i) => ton(f, .18, 'triangle', .12, 0, i * .12)); };
+// Verrückte Hintergrundmusik (Oom-pah-Polka mit Quietsch-Melodie)
+let musikSchritt = 0, musikTimer = null;
+const MELODIE = [659, 0, 784, 659, 523, 0, 587, 659, 698, 0, 659, 587, 523, 0, 392, 0, 659, 0, 784, 880, 988, 0, 880, 784, 698, 659, 587, 523, 587, 0, 523, 0];
+const BASS = [131, 196, 131, 196, 175, 220, 175, 220, 131, 196, 131, 196, 98, 147, 98, 147];
+function musikTakt() {
+  if (!laut || !AC || !laeuft) return; const i = musikSchritt++ % 32;
+  if (MELODIE[i]) ton(MELODIE[i] * (polizei ? 1.06 : 1), .16, 'square', .022);
+  if (i % 2 === 0) ton(BASS[(i / 2) % 16], .14, 'triangle', .07);
+  if (i % 4 === 2) rauschen(.05, 6000, .05);
+}
+function musikStart() { if (!musikTimer) musikTimer = setInterval(musikTakt, 170); }
 const sKicher = () => { [700, 820, 700, 860].forEach((f, i) => ton(f, .07, 'square', .04, 120, i * .09)); };
 
 // ---------- Figuren zeichnen ----------
@@ -381,6 +450,9 @@ function zeichneHut(c, art, hy) {
     case 'blumen': for (let i = 0; i < 7; i++) { c.fillStyle = ['#ff5fa2', '#ffe25a', '#36b6f0', '#fff'][i % 4]; c.beginPath(); c.arc(-15 + i * 5, hy + 2 - Math.sin(i / 6 * Math.PI) * 6, 4, 0, 7); c.fill(); c.stroke(); } break;
     case 'krone': c.fillStyle = '#ffd23f'; c.beginPath(); c.moveTo(-14, hy + 2); c.lineTo(-14, hy - 16); c.lineTo(-7, hy - 8); c.lineTo(0, hy - 20); c.lineTo(7, hy - 8); c.lineTo(14, hy - 16); c.lineTo(14, hy + 2); c.closePath(); c.fill(); c.stroke();
       c.fillStyle = '#ff3a5a'; c.beginPath(); c.arc(0, hy - 4, 3, 0, 7); c.fill(); break;
+    case 'polizei': c.fillStyle = '#1f3566'; c.beginPath(); c.ellipse(0, hy + 2, 20, 5, 0, 0, 7); c.fill(); c.stroke();
+      c.beginPath(); c.moveTo(-15, hy); c.lineTo(-17, hy - 16); c.lineTo(17, hy - 16); c.lineTo(15, hy); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = '#ffd23f'; c.beginPath(); c.arc(0, hy - 8, 4, 0, 7); c.fill(); break;
     case 'cowboy': c.fillStyle = '#b7793f'; c.beginPath(); c.ellipse(0, hy, 28, 6, 0, 0, 7); c.fill(); c.stroke();
       c.beginPath(); c.moveTo(-13, hy - 2); c.lineTo(-11, hy - 22); c.quadraticCurveTo(0, hy - 16, 11, hy - 22); c.lineTo(13, hy - 2); c.closePath(); c.fill(); c.stroke();
       c.fillStyle = '#ff5fa2'; c.fillRect(-12, hy - 7, 24, 4); break;
@@ -404,7 +476,7 @@ function baueLaden() {
       b.textContent = name + (hat ? '' : ' · ' + '⭐'.repeat(preis));
       b.addEventListener('click', () => {
         if (!hat) { if ((stand.konto || 0) < preis) { b.classList.remove('nein'); void b.offsetWidth; b.classList.add('nein'); ton(160, .2, 'square', .06, -60); return; }
-          stand.konto -= preis; stand.gekauft[key] = true; sStern(); } else sSchnapp();
+          stand.konto -= preis; stand.gekauft[key] = true; sStern(); ereignis('kauf'); } else sSchnapp();
         kl[teil] = id; speichern(); baueLaden(); vorschauen();
       });
       reihe.lastChild.appendChild(b);
@@ -417,17 +489,68 @@ document.getElementById('ladenZu').addEventListener('click', () => { document.ge
 document.getElementById('wechsel').addEventListener('click', () => { stand.figur = stand.figur === 'oma' ? 'opa' : 'oma'; speichern(); vorschauen(); sKicher(); toast(stand.figur === 'oma' ? 'Chaos-Oma! 👵' : 'Chaos-Opa! 👴'); });
 zeigeFigurWahl(); vorschauen();
 
+// ---------- Levels ----------
+const LEVELS = [
+  { name: 'Klo-Chaos', text: 'Mach das Badezimmer ganz kaputt', ev: 'chaos', p: 'bad' },
+  { name: 'Kabrio-Rumms', text: 'Fahr mit dem pinken Kabrio 5 Sachen um', ev: 'rumms', n: 5 },
+  { name: 'Krippe', text: 'Hilf den 1000 Jahre alten Frauen bei der Krippe', ev: 'krippe' },
+  { name: 'Küchen-Chaos', text: 'Mach die Küche ganz kaputt', ev: 'chaos', p: 'kueche' },
+  { name: 'Upsi Pupsi', text: 'Geh in den Wald und hör 3 Pupse', ev: 'pups', n: 3 },
+  { name: 'Supermarkt-Chaos', text: 'Mach den Supermarkt ganz kaputt', ev: 'chaos', p: 'supermarkt' },
+  { name: 'Verrückt angezogen', text: 'Kauf dir etwas im Kleiderladen', ev: 'kauf' },
+  { name: 'Wohnzimmer-Chaos', text: 'Mach das Wohnzimmer ganz kaputt', ev: 'chaos', p: 'wohnzimmer' },
+  { name: 'Wald-Chaos', text: 'Mach den Wald ganz kaputt', ev: 'chaos', p: 'wald' },
+  { name: 'Gute Nacht', text: 'Geh im Schlafzimmer ins Bett und schlaf', ev: 'schlafen' },
+  { name: 'Park-Chaos', text: 'Mach den Park ganz kaputt', ev: 'chaos', p: 'park' },
+  { name: 'Hup-Konzert', text: 'Hup 20 mal mit dem Kabrio', ev: 'hupe', n: 20 },
+];
+let levelZaehler = 0;
+stand.level = stand.level || 0; stand.levelDone = stand.levelDone || {};
+function levelAnzeige() { const L = LEVELS[stand.level]; document.getElementById('levelChip').textContent = '📜 ' + (stand.level + 1) + ': ' + L.text + (levelZaehler < 0 ? ' ✓' : L.n ? ' (' + levelZaehler + '/' + L.n + ')' : ''); }
+function ereignis(ev, p) {
+  const L = LEVELS[stand.level]; if (!L || levelZaehler < 0 || L.ev !== ev || (L.p && L.p !== p)) return;
+  levelZaehler++; levelAnzeige();
+  if (levelZaehler >= (L.n || 1)) {
+    const neu = !stand.levelDone[stand.level]; stand.levelDone[stand.level] = true; stand.konto = (stand.konto || 0) + 1; speichern(); vorschauen(); levelZaehler = -999;
+    meldung('Level geschafft!', 'Level ' + (stand.level + 1) + ' „' + L.name + '“ geschafft! Du bekommst einen Stern! ⭐', true);
+  }
+}
+function levelWaehlen(i) { stand.level = i; levelZaehler = 0; speichern(); levelAnzeige(); toast('Level ' + (i + 1) + ': ' + LEVELS[i].name, 2.2); }
+function baueLevels() {
+  const box = document.getElementById('levelListe'); box.innerHTML = '';
+  LEVELS.forEach((L, i) => { const b = document.createElement('button'); b.className = 'ort' + (i === stand.level ? ' jetzt' : '');
+    b.innerHTML = `<b>${stand.levelDone[i] ? '⭐' : i + 1}</b>${L.name}<small>${L.text}</small>`;
+    b.addEventListener('click', () => { levelWaehlen(i); levelsZu(); }); box.appendChild(b); });
+}
+function levelsAuf() { laeuft = false; stick = null; baueLevels(); document.body.classList.remove('ingame'); document.getElementById('levels').classList.add('on'); }
+function levelsZu() { document.getElementById('levels').classList.remove('on'); document.body.classList.add('ingame'); laeuft = true; }
+document.getElementById('levelChip').addEventListener('click', levelsAuf);
+document.getElementById('levelsZu').addEventListener('click', levelsZu);
+// Meldungen (Stern, Level geschafft) nacheinander zeigen
+const meldungen = []; let meldungOffen = false;
+function meldung(titel, text, levelFertig) { meldungen.push({ titel, text, levelFertig }); sStern(); if (!meldungOffen) naechsteMeldung(); }
+function naechsteMeldung() {
+  const m = meldungen.shift(); if (!m) { meldungOffen = false; document.getElementById('stern').classList.remove('on'); document.body.classList.add('ingame'); laeuft = true; return; }
+  meldungOffen = true; laeuft = false; stick = null;
+  document.getElementById('sternTitel').textContent = m.titel; document.getElementById('sternText').textContent = m.text;
+  const nx = LEVELS.findIndex((L, i) => i > stand.level && !stand.levelDone[i]);
+  document.getElementById('naechstes').hidden = !(m.levelFertig && nx >= 0); document.getElementById('naechstes').dataset.i = nx;
+  document.getElementById('weiter').textContent = 'Weiter ➜';
+  document.getElementById('stern').classList.add('on'); document.body.classList.remove('ingame');
+}
+document.getElementById('naechstes').addEventListener('click', () => { levelWaehlen(+document.getElementById('naechstes').dataset.i); naechsteMeldung(); });
+
 // ---------- Spielzustand ----------
 for (const id in SZENEN) for (const t of SZENEN[id].tueren) {
-  if (t.seite === 'oben' && t.y == null) t.y = RAND + 20; if (t.seite === 'unten') t.y = H - RAND + 20;
-  if (t.seite === 'links' && t.x == null) t.x = RAND; if (t.seite === 'rechts') t.x = W - RAND;
+  if (t.seite === 'oben' && t.y == null) t.y = RAND + 20; if (t.seite === 'unten' && t.y == null) t.y = H - RAND + 20;
+  if (t.seite === 'links' && t.x == null) t.x = RAND; if (t.seite === 'rechts' && t.x == null) t.x = W - RAND;
 }
 const STD_GRENZE = { l: RAND + 18, o: RAND + 40, r: W - RAND - 18, u: H - RAND + 10 };
 const grenze = () => ort.grenze || STD_GRENZE;
 let ortId = 'draussen', ort = null, dinge = [], teilchen = [], kleckse = [], flieger = [], texte = [];
 let welt = {}; // was heute schon kaputt ist (bis man schlafen geht)
 let P = null, laeuft = false, wackeln = 0, fertigT = -1, zeit = 0, schlafT = 0;
-let camX = 0, camY = 0;
+let camX = 0, camY = 0, hausZeit = 0, polizei = null, sireneT = 0;
 const auto = { x: 520, y: 650, blick: 1, drin: false, hupe: 0 }; // das pinke Kabrio
 const ortW = () => ort.w || W, ortH = () => ort.h || H;
 function kamera() { camX = Math.max(0, Math.min(ortW() - W, P.x - W / 2)); camY = Math.max(0, Math.min(ortH() - H, P.y - H * .72)); }
@@ -436,10 +559,10 @@ function raum(id) {
   return welt[id];
 }
 function betrete(id, vonId) {
-  if (P && P.traegt) { const d = P.traegt; P.traegt = null; zerbrechen(d, P.x, P.y); }
+  if (P && P.traegt) { const d = P.traegt; P.traegt = null; if (ort.krippe) { d.y = Math.min(d.y, H - 140); } else zerbrechen(d, P.x, P.y); }
   auto.drin = false; document.body.classList.remove('imauto');
   ortId = id; ort = SZENEN[id]; const r = raum(id); dinge = r.dinge; kleckse = r.kleckse;
-  teilchen = []; flieger = []; texte = []; fertigT = -1;
+  teilchen = []; flieger = []; texte = []; fertigT = -1; hausZeit = 0; polizei = null;
   const alt = P || { bx: 1, by: 0, blick: 1 };
   P = { x: id === 'draussen' ? 350 : W / 2, y: id === 'draussen' ? 640 : H - 100, bx: alt.bx, by: alt.by, blick: alt.blick, traegt: null, laeuft: false, spur: [] };
   const t = ort.tueren.find(t => t.ziel === vonId);
@@ -456,9 +579,9 @@ function betrete(id, vonId) {
 }
 function losgehen() {
   ac(); welt = {}; P = null; betrete('draussen', null);
-  document.body.classList.add('ingame'); laeuft = true; toast('Los, mach Chaos! 🤪');
+  document.body.classList.add('ingame'); laeuft = true; levelAnzeige(); toast('Level ' + (stand.level + 1) + ': ' + LEVELS[stand.level].text, 2.6);
 }
-document.getElementById('weiter').addEventListener('click', () => { document.getElementById('stern').classList.remove('on'); document.body.classList.add('ingame'); laeuft = true; });
+document.getElementById('weiter').addEventListener('click', naechsteMeldung);
 const muteBtn = document.getElementById('mute');
 function muteZeigen() { muteBtn.textContent = laut ? '🔊' : '🔇'; }
 muteBtn.addEventListener('click', () => { laut = !laut; try { localStorage.setItem('oma-opa-ton', laut ? 'an' : 'aus'); } catch (e) {} muteZeigen(); }); muteZeigen();
@@ -515,10 +638,21 @@ function naheTuer() { for (const t of ort.tueren) if (Math.hypot(t.x - P.x, t.y 
 function amAuto() { return ortId === 'draussen' && !auto.drin && Math.hypot(auto.x - P.x, auto.y - P.y) < 95; }
 function einsteigen() { document.body.classList.add('imauto'); auto.drin = true; P.x = auto.x; P.y = auto.y; P.blick = auto.blick; P.spur = []; toast('Brumm brumm! 💗', 1.2); [196, 247, 294].forEach((f, i) => ton(f, .18, 'sawtooth', .07, 40, i * .1)); }
 function aussteigen() { document.body.classList.remove('imauto'); auto.drin = false; auto.x = P.x; auto.y = P.y; auto.blick = P.blick; const gz = grenze(); P.y = Math.min(gz.u, P.y + 70); P.spur = []; ton(330, .1, 'square', .05, -80); }
-function hupen() { auto.hupe = .4; ton(440, .25, 'square', .08); ton(554, .25, 'square', .06); text(P.x + P.blick * 70, P.y - 90, 'TÖÖÖT!', '#ff5fa2'); }
+function hupen() { ereignis('hupe'); auto.hupe = .4; ton(440, .25, 'square', .08); ton(554, .25, 'square', .06); text(P.x + P.blick * 70, P.y - 90, 'TÖÖÖT!', '#ff5fa2'); }
+function amStall() { return ort.krippe && Math.hypot(ort.krippe[0] - P.x, ort.krippe[1] + 40 - P.y) < 170; }
+function hinstellen() {
+  const d = P.traegt; P.traegt = null; const r = welt[ortId]; r.platz = (r.platz || 0) + 1;
+  d.kaputt = true; d.platziert = r.platz; ton(660, .1, 'triangle', .07); ton(880, .14, 'triangle', .07, 0, .1); text(P.x, P.y - 130, pick(['Danke!', 'Wunderbar!', 'Schön!']), '#ffcf3f');
+  if (dinge.every(x => x.platziert)) {
+    for (const l of ort.leute) l.saetze = ['Danke! Die Krippe ist wunderschön!', 'Du bist die Beste!', 'Ich bin 1000 Jahre alt und so glücklich!'];
+    if (!r.sternDa) { r.sternDa = true; stand.konto = (stand.konto || 0) + 1; speichern(); vorschauen(); meldung('Die Krippe ist fertig!', 'Die 1000 Jahre alten Frauen sagen DANKE! Du bekommst einen Stern! ⭐'); }
+    ereignis('krippe');
+  }
+}
 function amBett() { return ort.bett && Math.hypot(ort.bett[0] - P.x, ort.bett[1] + 40 - P.y) < 110; }
 function aktion() {
   if (schlafT > 0) return;
+  if (P.traegt && amStall()) { hinstellen(); return; }
   if (P.traegt) { werfen(); return; }
   if (auto.drin) { aussteigen(); return; }
   const tuer = naheTuer(); if (tuer && tuer.ziel === 'laden') { ton(660, .1, 'triangle', .06); ladenAuf(); return; }
@@ -537,6 +671,7 @@ function aktion() {
   } else { P.traegt = d; sSchnapp(); text(d.x, d.y - 40, 'Schnapp!', '#fff'); }
 }
 function schlafen() {
+  ereignis('schlafen');
   schlafT = 4.5; P.laeuft = false; P.spur = []; stick = null; toast('Gute Nacht! 😴', 2);
   [392, 330, 262].forEach((f, i) => ton(f, .5, 'sine', .08, 0, i * .45));
 }
@@ -594,13 +729,14 @@ function update(dt) {
   // Aktionsknopf-Text
   const tuer = P.traegt || auto.drin ? null : naheTuer();
   const nd = P.traegt || tuer ? null : naechstes();
-  const at = P.traegt ? ['🎯', 'werfen!'] : auto.drin ? ['🚶', 'aussteigen'] : tuer ? ['🚪', tuer.label] : amAuto() ? ['🚗', 'einsteigen'] : tuer ? ['🚪', tuer.label] : amBett() ? ['😴', 'schlafen'] : nd ? (nd.hp > 1 ? ['💪', 'reißen!'] : ['✊', 'schnappen']) : ['🤪', 'Quatsch'];
+  const at = P.traegt && amStall() ? ['🙏', 'hinstellen'] : P.traegt ? ['🎯', 'werfen!'] : auto.drin ? ['🚶', 'aussteigen'] : tuer ? ['🚪', tuer.label] : amAuto() ? ['🚗', 'einsteigen'] : tuer ? ['🚪', tuer.label] : amBett() ? ['😴', 'schlafen'] : nd ? (nd.hp > 1 ? ['💪', 'reißen!'] : ['✊', 'schnappen']) : ['🤪', 'Quatsch'];
   if (aktBtn.firstChild.nodeValue !== at[0] || document.getElementById('aktionText').textContent !== at[1]) { aktBtn.firstChild.nodeValue = at[0]; document.getElementById('aktionText').textContent = at[1]; }
   // Fliegende Sachen
   const gz = grenze();
   for (const f of flieger) {
     f.x += f.vx * dt; f.y += f.vy * dt; f.dreh += dt * 14; f.weg += Math.hypot(f.vx, f.vy) * dt;
     let treffer = f.x < gz.l - 8 || f.x > gz.r + 8 || f.y < gz.o - 110 || f.y > gz.u - 60 || f.weg > 560 || (ort.blocker || []).some(([x0, y0, x1, y1]) => f.x > x0 && f.x < x1 && f.y + 100 > y0 && f.y + 100 < y1);
+    if (ort.krippe) { if (treffer) { f.fertig = true; f.d.x = Math.max(gz.l, Math.min(gz.r, f.x)); f.d.y = Math.max(gz.o, Math.min(gz.u, f.y + 100)); text(f.d.x, f.d.y - 50, 'Hoppla!', '#fff'); } continue; }
     for (const d of dinge) {
       if (d.kaputt || d === f.d || d === P.traegt) continue;
       if (Math.hypot(d.x - f.x, d.y - 20 - f.y) < d.r + 18) {
@@ -613,17 +749,45 @@ function update(dt) {
   }
   flieger = flieger.filter(f => !f.fertig);
   for (const d of dinge) if (d.rueckeln > 0) d.rueckeln -= dt;
+  for (const l of ort.leute || []) leuteUpdate(l, dt);
+  // Wer zu lange in einem fremden Haus Chaos macht, bekommt Besuch von der Polizei
+  if (ort.fremd && !meldungOffen) {
+    hausZeit += dt;
+    if (hausZeit > 14 && hausZeit - dt <= 14) toast('Die Nachbarn rufen die Polizei! 🚨', 2.2);
+    if (hausZeit > 20 && !polizei) { const t = ort.tueren[0]; polizei = { x: t.x, y: t.y - 50, blick: 1, laeuft: true }; toast('Polizei! Lauf! 🚨', 1.6); }
+    if (hausZeit > 14) { sireneT -= dt; if (sireneT <= 0) { sireneT = .7; ton(660, .32, 'square', .04); ton(880, .32, 'square', .04, 0, .35); } }
+    if (polizei) {
+      const dx = P.x - polizei.x, dy = P.y - polizei.y, d = Math.hypot(dx, dy);
+      polizei.x += dx / d * 215 * dt; polizei.y += dy / d * 215 * dt; polizei.blick = Math.sign(dx) || 1;
+      if (d < 48) { const von = ortId; betrete('draussen', von); toast('Die Polizei hat dich rausgeworfen! 🚨', 2.6); sKicher(); }
+    }
+  }
   // Wasser sprudelt
   for (const k of kleckse) if (k.sprudel) {
     k.r = Math.min(110, k.r + dt * 6);
     if (Math.random() < dt * 30) teilchen.push({ x: k.x + (Math.random() - .5) * 10, y: k.y - 10, vx: (Math.random() - .5) * 160, vy: -260 - Math.random() * 160, z: 0, leben: .9, farbe: pick(['#7fd3ff', '#bfe9ff', '#fff']), gr: 3 + Math.random() * 3, wasser: true });
   }
-  for (const t of teilchen) { t.x += t.vx * dt; t.y += t.vy * dt; t.vy += 520 * dt; t.leben -= dt; t.dreh = (t.dreh || 0) + dt * 8; }
+  for (const t of teilchen) { t.x += t.vx * dt; t.y += t.vy * dt; if (!t.gas) t.vy += 520 * dt; else t.gr += dt * 10; t.leben -= dt; t.dreh = (t.dreh || 0) + dt * 8; }
   teilchen = teilchen.filter(t => t.leben > 0);
   for (const t of texte) { t.y -= 40 * dt; t.leben -= dt * .9; }
   texte = texte.filter(t => t.leben > 0);
   if (wackeln > 0) wackeln -= dt;
   if (fertigT > 0) { fertigT -= dt; if (fertigT <= 0) stern(); }
+}
+function leuteUpdate(l, dt) {
+  if (l.art === 'wald') { l.pupsT -= dt; l.pups -= dt; if (l.pups <= 0) pupsen(l); }
+  if (l.still) { l.blick = P.x < l.x ? -1 : 1; return; }
+  if (l.tx == null || Math.hypot(l.tx - l.x, l.ty - l.y) < 6 || l.warte > 0) { l.warte = (l.warte || 0) - dt; if (l.warte <= 0 && (l.tx == null || Math.hypot(l.tx - l.x, l.ty - l.y) < 6)) { const gz = grenze(); l.tx = Math.max(gz.l, Math.min(gz.r, l.x + (Math.random() - .5) * 400)); l.ty = Math.max(gz.o + 40, Math.min(gz.u, l.y + (Math.random() - .5) * 300)); l.warte = Math.random() * 2; } l.laeuft = false; return; }
+  const dx = l.tx - l.x, dy = l.ty - l.y, d = Math.hypot(dx, dy), sp = 55 * dt, nx = l.x + dx / d * sp, ny = l.y + dy / d * sp;
+  if ((ort.blocker || []).some(([x0, y0, x1, y1]) => nx > x0 - 14 && nx < x1 + 14 && ny > y0 && ny < y1 + 6)) { l.tx = null; l.warte = .5; return; }
+  l.x = nx; l.y = ny; l.laeuft = true; if (Math.abs(dx) > 2) l.blick = Math.sign(dx);
+}
+function pupsen(l) {
+  l.pups = 3 + Math.random() * 5; l.pupsT = 1.8;
+  for (let i = 0; i < 8; i++) teilchen.push({ x: l.x - l.blick * 18, y: l.y - 30, vx: -l.blick * (20 + Math.random() * 50), vy: -20 - Math.random() * 30, leben: 1.6, farbe: pick(['#b8e07a', '#9acd5a', '#d4ee9a']), gr: 10 + Math.random() * 12, gas: true });
+  const d = Math.hypot(l.x - P.x, l.y - P.y);
+  if (d < 700) { rauschen(.5, 140, .5 * (1 - d / 700)); ton(70 + Math.random() * 30, .4, 'sawtooth', .08 * (1 - d / 700), -30); }
+  if (d < 450) ereignis('pups');
 }
 function bewege(nx, ny) {
   const gz = grenze();
@@ -634,7 +798,7 @@ function bewege(nx, ny) {
     if (d.kaputt || d === P.traegt) continue;
     if (Math.hypot(d.x - nx, d.y - ny) < d.r + br) {
       if (auto.drin && !(d.rumms > zeit)) { // mit dem Kabrio reinfahren = Chaos!
-        d.rumms = zeit + .4; d.hp -= 2; d.rueckeln = .3; wackeln = .2;
+        d.rumms = zeit + .4; d.hp -= 2; d.rueckeln = .3; wackeln = .2; ereignis('rumms');
         if (d.hp <= 0) { if (SPRUDLER[d.emo]) kleckse.push({ x: d.x, y: d.y, r: 30, farbe: '#7fd3ff', sprudel: 4 }); zerbrechen(d, d.x, d.y); }
         else { sReiss(); bruchstuecke(d, 5); text(d.x, d.y - 50, 'RUMMS!', '#ff5fa2'); if (d.hp === 1) d.r = 22; }
       }
@@ -645,12 +809,10 @@ function bewege(nx, ny) {
   P.x = nx; P.y = ny;
 }
 function stern() {
-  laeuft = false; welt[ortId].sternDa = true; stand.sterne[ortId] = (stand.sterne[ortId] || 0) + 1; stand.konto = (stand.konto || 0) + 1; speichern(); sStern(); vorschauen();
-  document.getElementById('sternTitel').textContent = 'Super Chaos!';
-  const art = { park: 'den ', kueche: 'die ' }[ortId] || 'das ';
-  document.getElementById('sternText').textContent = (stand.figur === 'oma' ? 'Die verrückte Oma' : 'Der verrückte Opa') + ' hat ' + art + ort.name + ' komplett ins Chaos gestürzt! Du bekommst einen Stern! Im Kleiderladen im Dorf kannst du damit verrückte Sachen kaufen.';
-  document.getElementById('weiter').textContent = 'Weiter Chaos machen ➜';
-  document.getElementById('stern').classList.add('on'); document.body.classList.remove('ingame');
+  welt[ortId].sternDa = true; stand.sterne[ortId] = (stand.sterne[ortId] || 0) + 1; stand.konto = (stand.konto || 0) + 1; speichern(); vorschauen();
+  const art = { park: 'den ', kueche: 'die ', wald: 'den ' }[ortId] || 'das ';
+  meldung('Super Chaos!', (stand.figur === 'oma' ? 'Die verrückte Oma' : 'Der verrückte Opa') + ' hat ' + art + ort.name + ' komplett ins Chaos gestürzt! Du bekommst einen Stern! Im Kleiderladen im Dorf kannst du damit verrückte Sachen kaufen.');
+  ereignis('chaos', ortId);
 }
 
 // ---------- Zeichnen ----------
@@ -667,6 +829,7 @@ function zeichneBoden() {
   else if (ort.muster === 'holz') { for (let y = 0; y < H; y += 30) { g.fillRect(0, y, W, 2); for (let x = (y / 30 % 2) * 90; x < W; x += 180) g.fillRect(x, y, 2, 30); } }
   else { const n = ortW() * ortH() / 2200; for (let i = 0; i < n; i++) { const x = (i * 97) % ortW(), y = (i * 61 + (i % 7) * 23) % ortH(); g.fillRect(x, y, 3, 8); } }
   if (ort.muster === 'draussen') zeichneDraussen();
+  else if (ort.muster === 'wald') {}
   else {
     // Wände
     g.fillStyle = ort.wand; g.fillRect(0, 0, W, RAND + 20); g.fillRect(0, 0, RAND, H); g.fillRect(W - RAND, 0, RAND, H); g.fillRect(0, H - RAND + 20, W, RAND);
@@ -675,6 +838,8 @@ function zeichneBoden() {
     for (const t of ort.tueren) zeichneTuer(t);
   }
   if (ort.bett) zeichneBett();
+  if (ort.krippe) zeichneStall();
+  if (ort.muster === 'wald') zeichneWald();
   // Kleckse und Splitter
   for (const k of kleckse) {
     g.fillStyle = k.farbe;
@@ -780,6 +945,60 @@ function zeichneAuto(x, y, blick, mitFahrer) {
   g.fillStyle = '#fff'; g.font = 'bold 13px sans-serif'; g.textAlign = 'center'; g.fillText('♥', -6, -18);
   g.restore();
 }
+function zeichneWald() {
+  g.fillStyle = '#c9a66b'; g.beginPath(); g.moveTo(0, 570); g.bezierCurveTo(400, 560, 600, 700, 1000, 640); g.bezierCurveTo(1400, 580, 1600, 760, 1920, 700); g.lineTo(1920, 760); g.bezierCurveTo(1600, 820, 1400, 640, 1000, 700); g.bezierCurveTo(600, 760, 400, 620, 0, 630); g.closePath(); g.fill();
+  g.fillStyle = '#5a3a1a'; g.fillRect(4, 560, 12, 120); schild('⬅ ins Dorf', 100, 545);
+  for (let i = 0; i < 40; i++) emoji(g, i % 3 ? '🌿' : '🍂', 60 + (i * 211) % 1800, 90 + (i * 137) % 1080, 26);
+}
+function zeichneStall() {
+  const [x, y] = ort.krippe, ink = '#23324a'; g.strokeStyle = ink; g.lineWidth = 4; g.lineJoin = 'round';
+  g.fillStyle = '#8a5a2a'; g.fillRect(x - 170, y - 90, 340, 150); g.strokeRect(x - 170, y - 90, 340, 150);
+  g.fillStyle = '#c98b4a'; for (let i = 0; i < 8; i++) { g.fillRect(x - 168 + i * 42, y - 88, 38, 146); }
+  g.fillStyle = '#5a3a1a'; g.beginPath(); g.moveTo(x - 200, y - 86); g.lineTo(x, y - 160); g.lineTo(x + 200, y - 86); g.closePath(); g.fill(); g.stroke();
+  emoji(g, '⭐', x, y - 178, 40);
+  g.fillStyle = '#ffd84a'; g.fillRect(x - 160, y + 30, 320, 30); // Stroh
+  g.fillStyle = '#b7793f'; g.beginPath(); g.moveTo(x - 40, y + 10); g.lineTo(x + 40, y + 10); g.lineTo(x + 30, y + 44); g.lineTo(x - 30, y + 44); g.closePath(); g.fill(); g.stroke();
+  emoji(g, '👶', x, y + 10, 34);
+  const plaetze = [[-130, 20], [130, 20], [-90, 30], [90, 30], [-55, -40], [0, -95], [-140, -40], [140, -40], [60, -40]];
+  for (const d of dinge) if (d.platziert) { const [px, py] = plaetze[(d.platziert - 1) % plaetze.length]; emoji(g, d.emo, x + px, y + py, 46); }
+  const n = dinge.filter(d => d.platziert).length; schild('Krippe: ' + n + ' von ' + dinge.length, x, y + 82);
+}
+function zeichneLeute(l) {
+  if (l.art === 'wald') zeichneWaldi(l); else zeichneFigur(g, l.art, l.x, l.y, .9, zeit + l.x, l.blick || 1, l.laeuft, false, l.kl);
+}
+function zeichneWaldi(l) {
+  const ink = '#23324a', bob = l.laeuft ? Math.sin(zeit * 14 + l.x) : 0;
+  g.save(); g.translate(l.x, l.y); g.scale((l.blick || 1) < 0 ? -.95 : .95, .95); g.strokeStyle = ink; g.lineWidth = 3; g.lineCap = 'round'; g.lineJoin = 'round';
+  g.fillStyle = '#0003'; g.beginPath(); g.ellipse(0, 0, 24, 7, 0, 0, 7); g.fill();
+  g.fillStyle = '#c98b4a'; g.fillRect(-11, -24 + bob * 3, 8, 22); g.strokeRect(-11, -24 + bob * 3, 8, 22); g.fillRect(3, -24 - bob * 3, 8, 22); g.strokeRect(3, -24 - bob * 3, 8, 22);
+  // Blätterkleid
+  g.fillStyle = '#3f8f4a'; g.beginPath(); g.moveTo(-14, -64); g.lineTo(14, -64); g.lineTo(24, -18); g.lineTo(-24, -18); g.closePath(); g.fill(); g.stroke();
+  for (const [bx, by, c] of [[-12, -26, '#7fd35a'], [0, -22, '#5cbf4f'], [12, -27, '#9ae06a'], [-8, -40, '#9ae06a'], [8, -42, '#7fd35a'], [0, -55, '#5cbf4f'], [-16, -20, '#ffcf3f']]) {
+    g.fillStyle = c; g.beginPath(); g.ellipse(bx, by, 7, 4, bx * .1, 0, 7); g.fill(); g.lineWidth = 1.5; g.stroke(); g.lineWidth = 3; }
+  g.lineWidth = 7; g.beginPath(); g.moveTo(-14, -58); g.lineTo(-24, -36 + bob * 2); g.moveTo(14, -58); g.lineTo(24, -36 - bob * 2); g.stroke(); g.lineWidth = 3;
+  // Kopf mit zerzausten Haaren
+  const ky = -82; g.strokeStyle = '#6b4a2a'; g.lineWidth = 4;
+  for (let i = 0; i < 16; i++) { const a = Math.PI + i / 15 * Math.PI + Math.sin(i * 7) * .2, r2 = 26 + (i * 13 % 9); g.beginPath(); g.moveTo(Math.cos(a) * 12, ky + Math.sin(a) * 12); g.lineTo(Math.cos(a) * r2 + Math.sin(zeit * 3 + i) * 2, ky + Math.sin(a) * r2); g.stroke(); }
+  g.strokeStyle = '#5cbf4f'; for (const a of [3.6, 4.6, 5.6]) { g.beginPath(); g.moveTo(Math.cos(a) * 14, ky + Math.sin(a) * 14); g.lineTo(Math.cos(a) * 28, ky + Math.sin(a) * 28); g.stroke(); }
+  g.strokeStyle = ink; g.lineWidth = 3; g.fillStyle = '#f5d0b0'; g.beginPath(); g.arc(0, ky, 17, 0, 7); g.fill(); g.stroke();
+  emoji(g, '🍃', 10, ky - 18, 16);
+  g.fillStyle = ink; g.beginPath(); g.arc(-6, ky - 2, 2.4, 0, 7); g.arc(6, ky - 2, 2.4, 0, 7); g.fill();
+  if (l.pupsT > 0) { g.fillStyle = '#ff9ad5'; g.beginPath(); g.arc(-10, ky + 5, 4, 0, 7); g.arc(10, ky + 5, 4, 0, 7); g.fill(); g.fillStyle = ink; g.beginPath(); g.arc(0, ky + 8, 4, 0, 7); g.fill(); }
+  else { g.beginPath(); g.arc(0, ky + 5, 6, .2, Math.PI - .2); g.stroke(); }
+  g.restore();
+}
+function sprechblase(l, immer) {
+  const nah = immer || Math.hypot(l.x - P.x, l.y - P.y) < (ort.w ? 220 : 190);
+  let t = null;
+  if (l.art === 'wald' && l.pupsT > 0) t = 'Upsi Pupsi! 💨'; else if (nah) t = l.saetze[Math.floor((zeit + l.x / 100) / 3) % l.saetze.length];
+  if (!t) return;
+  g.font = 'bold 19px "Comic Sans MS","Chalkboard SE",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const w = Math.min(320, g.measureText(t).width + 24), x = l.x, y = l.y - 150;
+  g.fillStyle = '#fff'; g.strokeStyle = '#23324a'; g.lineWidth = 3;
+  g.beginPath(); g.roundRect ? g.roundRect(x - w / 2, y - 20, w, 40, 14) : g.rect(x - w / 2, y - 20, w, 40); g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(x - 8, y + 19); g.lineTo(x, y + 34); g.lineTo(x + 8, y + 19); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#fff'; g.fillRect(x - 7, y + 15, 14, 5);
+  g.fillStyle = '#23324a'; g.fillText(t, x, y + 1, 300);
+}
 function zeichneBett() {
   const [x, y] = ort.bett, ink = '#23324a';
   g.strokeStyle = ink; g.lineWidth = 4;
@@ -802,14 +1021,20 @@ function render() {
   // Dinge + Figur nach Tiefe sortiert
   const liste = dinge.filter(d => !d.kaputt && d !== P.traegt).map(d => ({ y: d.y, f: () => zeichneDing(d) }));
   liste.push({ y: P.y, f: zeichneSpieler });
+  for (const l of ort.leute || []) liste.push({ y: l.y, f: () => zeichneLeute(l) });
+  if (polizei) liste.push({ y: polizei.y, f: () => zeichneFigur(g, 'opa', polizei.x, polizei.y, 1, zeit, polizei.blick, true, false, { hut: 'polizei', oben: '#2a4d8f', unten: '#1f3566', brille: 'std' }) });
+  if (ortId === 'wald') for (const [x, y, k] of WALD_BAEUME) liste.push({ y, f: () => { g.fillStyle = '#0003'; g.beginPath(); g.ellipse(x, y, 34, 10, 0, 0, 7); g.fill(); emoji(g, k === 1 ? '🌳' : '🌲', x, y - 52, 112); } });
   if (ortId === 'draussen') { for (const hs of HAEUSER) liste.push({ y: hs.y1 - 2, f: () => zeichneHaus(hs) }); if (!auto.drin) liste.push({ y: auto.y, f: () => zeichneAuto(auto.x, auto.y, auto.blick, false) }); }
   liste.sort((a, b) => a.y - b.y).forEach(o => o.f());
   if (schlafT > 0) { g.fillStyle = '#141838'; g.globalAlpha = Math.min(.65, (4.5 - schlafT) * .5, schlafT * .5); g.fillRect(camX, camY, W, H); g.globalAlpha = 1; }
   for (const f of flieger) { g.fillStyle = '#0003'; g.beginPath(); g.ellipse(f.x, f.y + 100, 16, 5, 0, 0, 7); g.fill(); emoji(g, f.d.emo, f.x, f.y, f.d.max > 1 ? 56 : 42, f.dreh); }
   for (const t of teilchen) {
     if (t.emo) emoji(g, t.emo, t.x, t.y, 20, t.dreh);
-    else { g.fillStyle = t.farbe; g.globalAlpha = Math.min(1, t.leben * 2); if (t.wasser) { g.beginPath(); g.arc(t.x, t.y, t.gr, 0, 7); g.fill(); } else { g.save(); g.translate(t.x, t.y); g.rotate(t.dreh); g.fillRect(-t.gr / 2, -t.gr / 2, t.gr, t.gr); g.restore(); } g.globalAlpha = 1; }
+    else { g.fillStyle = t.farbe; g.globalAlpha = Math.min(1, t.leben * 2); if (t.wasser || t.gas) { if (t.gas) g.globalAlpha = Math.min(.7, t.leben * .5); g.beginPath(); g.arc(t.x, t.y, t.gr, 0, 7); g.fill(); } else { g.save(); g.translate(t.x, t.y); g.rotate(t.dreh); g.fillRect(-t.gr / 2, -t.gr / 2, t.gr, t.gr); g.restore(); } g.globalAlpha = 1; }
   }
+  for (const l of ort.leute || []) sprechblase(l);
+  if (polizei) sprechblase({ x: polizei.x, y: polizei.y, art: 'polizei', saetze: ['Halt! Polizei!', 'Stehen bleiben, Chaos-' + (stand.figur === 'oma' ? 'Oma!' : 'Opa!')] }, true);
+  if (ort.fremd && hausZeit > 14) { g.globalAlpha = .18 + .12 * Math.sin(zeit * 12); g.fillStyle = Math.sin(zeit * 6) > 0 ? '#ff3a3a' : '#3a6aff'; g.fillRect(camX, camY, W, 22); g.fillRect(camX, camY + H - 22, W, 22); g.fillRect(camX, camY, 22, H); g.fillRect(camX + W - 22, camY, 22, H); g.globalAlpha = 1; }
   g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
   for (const t of texte) {
     g.globalAlpha = Math.min(1, t.leben * 2); g.font = 'bold 30px "Comic Sans MS","Chalkboard SE",sans-serif';
