@@ -120,7 +120,7 @@ button:focus-visible{outline:3px solid #fff;outline-offset:3px}
   </div>
 </div>
 <div class="pill" id="cagebox" hidden>
-  <div>Oh nein, Mauli ist im Käfig! <b>Zappel ganz schnell</b>, dann fällt der Käfig runter.</div>
+  <div id="cageTxt">Oh nein, Mauli ist im Käfig! <b>Zappel ganz schnell</b>, dann fällt der Käfig runter.</div>
   <div id="cagebar"><div id="cagefill"></div></div>
   <button class="big" id="wiggle">Zappeln! 💪</button>
   <div style="font-size:15px;opacity:.8;margin-top:6px">Tastatur: Leertaste oder Pfeiltasten ganz oft drücken</div>
@@ -153,7 +153,7 @@ button:focus-visible{outline:3px solid #fff;outline-offset:3px}
     <h1>Der kleine Maulwurf Mauli</h1>
     <h2>Unter dem Bauernhof wartet ein Abenteuer</h2>
     <p>Mauli wohnt in der Erde. Grabe Gänge, finde <b>alle Kristalle</b> und bau eine <b>große Höhle</b>! Oben kannst du laufen und springen. Aber Vorsicht: Der Bauer mag keine Maulwurfshügel und will dich fangen. Unter der Erde und im Stall bist du sicher.</p>
-    <p><b>Neu:</b> Die geheime Maulwurf-Zentrale schickt dir Aufträge auf deine Agenten-Uhr ⌚. Und zu Hause hast du eine Überwachungszentrale mit getarnten Vogel-Kameras 🐦📺!</p>
+    <p><b>Neu:</b> Wer alle 10 Aufträge der Geheimzentrale ⌚ schafft, fliegt mit dem Agenten-Flugzeug ✈️ zur Flohmarkt-Insel. Dort warten Lichterketten zum Balancieren, eine Unterwasserwelt und 10 neue Aufträge!</p>
     <div class="keys">
       <span><kbd>←↑↓→</kbd> / <kbd>WASD</kbd></span><span>Laufen und graben</span>
       <span><kbd>Leertaste</kbd></span><span>Springen (oben)</span>
@@ -256,13 +256,13 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const SAVE_KEY = 'mauli-v1';
 let saved = null;
 try { saved = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) {}
-const st = {gems: 0, owned: ['schoko'], fur: 'schoko', wear: {hat: null, body: null, eyes: null}, caveDone: false, won: false, missions: [], cageGone: false};
-if (saved && saved.v === 1){ Object.assign(st, {gems: saved.gems|0, owned: saved.owned || ['schoko'], fur: saved.fur || 'schoko', wear: saved.wear || {hat:null, body:null}, caveDone: !!saved.caveDone, missions: saved.missions || [], cageGone: !!saved.cageGone, won: !!saved.won}); }
+const st = {gems: 0, owned: ['schoko'], fur: 'schoko', wear: {hat: null, body: null, eyes: null}, caveDone: false, won: false, missions: [], cageGone: false, isMissions: [], hasKey: false, molesFree: false};
+if (saved && saved.v === 1){ Object.assign(st, {gems: saved.gems|0, owned: saved.owned || ['schoko'], fur: saved.fur || 'schoko', wear: saved.wear || {hat:null, body:null}, caveDone: !!saved.caveDone, missions: saved.missions || [], cageGone: !!saved.cageGone, won: !!saved.won, isMissions: saved.isMissions || [], hasKey: !!saved.hasKey, molesFree: !!saved.molesFree}); }
 let dirty = false, saveT = 0;
 function persist(){
   dirty = false;
   let dug = ''; for (let k = 0; k < N*N; k++) dug += cell[k] === 0 ? '0' : '1';
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({v:1, gems: st.gems, owned: st.owned, fur: st.fur, wear: st.wear, caveDone: st.caveDone, won: st.won, missions: st.missions, cageGone: st.cageGone, dug})); } catch (e) {}
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({v:1, gems: st.gems, owned: st.owned, fur: st.fur, wear: st.wear, caveDone: st.caveDone, won: st.won, missions: st.missions, cageGone: st.cageGone, isMissions: st.isMissions, hasKey: st.hasKey, molesFree: st.molesFree, dug})); } catch (e) {}
 }
 
 // ---------- Renderer ----------
@@ -387,9 +387,9 @@ const HX = cx(HOLE.i), HZ = cx(HOLE.j);
 beam(HX, HZ, .5);
 
 // Schilder
-function label(text, x, y, z, parent, size = 1){ const c = document.createElement('canvas'); const g = c.getContext('2d'); g.font = '700 54px Fredoka, sans-serif';
+function label(text, x, y, z, parent, size = 1, bg = 'rgba(46,28,16,.85)', fg = '#fff4e2'){ const c = document.createElement('canvas'); const g = c.getContext('2d'); g.font = '700 54px Fredoka, sans-serif';
   const w = Math.ceil(g.measureText(text).width) + 50; c.width = w; c.height = 84; g.font = '700 54px Fredoka, sans-serif';
-  g.fillStyle = 'rgba(46,28,16,.85)'; rr(g, 2, 2, w-4, 80, 36); g.fill(); g.fillStyle = '#fff4e2'; g.textBaseline = 'middle'; g.fillText(text, 25, 44);
+  g.fillStyle = bg; rr(g, 2, 2, w-4, 80, 36); g.fill(); g.fillStyle = fg; g.textBaseline = 'middle'; g.fillText(text, 25, 44);
   const sp = new T.Sprite(new T.SpriteMaterial({map: new T.CanvasTexture(c), depthTest: false, transparent: true})); sp.renderOrder = 20;
   sp.scale.set(w/84*.9*size, .9*size, 1); sp.position.set(x, y, z); parent.add(sp); return sp; }
 function rr(g, x, y, w, h, r){ g.beginPath(); g.moveTo(x+r, y); g.arcTo(x+w, y, x+w, y+h, r); g.arcTo(x+w, y+h, x, y+h, r); g.arcTo(x, y+h, x, y, r); g.arcTo(x, y, x+w, y, r); g.closePath(); }
@@ -705,8 +705,9 @@ function shell(col){ const g = new T.Group(); const m = mesh(new T.SphereGeometr
   for (const x of [-.095, .095]){ const l = cyl(.072, .072, .025, blk, x, .085, .24, g, 16); l.rotation.x = Math.PI/2; }
   box(.08, .022, .022, blk, 0, .1, .25, g); for (const x of [-1, 1]) box(.02, .02, .22, blk, x*.17, .09, .14, g);
   wearMeshes.agentenbrille = g; }
+let disguised = false;
 function applyLook(){ const f = FURS.find(f => f.id === st.fur) || FURS[0]; furMat.color.setHex(f.c); bellyMat.color.setHex(f.c).lerp(new T.Color(0xd8c0a8), .3);
-  for (const c of CLOTHES) wearMeshes[c.id].visible = st.wear[c.slot] === c.id; }
+  for (const c of CLOTHES) wearMeshes[c.id].visible = st.wear[c.slot] === c.id && !(disguised && c.slot === 'hat'); }
 applyLook();
 
 // Sprechblasen
@@ -843,8 +844,8 @@ function buildShop(){
   function nope(b, p){ b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); sfx.no(); toast('Dafür brauchst du noch ' + (p - st.gems) + ' 💎'); }
   function done(){ applyLook(); dirty = true; updHud(); const id = document.activeElement && document.activeElement.id; buildShop(); if (id && $(id)) $(id).focus(); }
 }
-function openShop(){ if (mode === 'kitchen' || busy || survOpen) return;
-  if (mode === 'top' && !inBarn(P.x, P.z) && !inFriends(P.x, P.z)){ toast('Den Schrank gibt es nur unter der Erde, im Stall oder bei den Nachbarn.'); return; }
+function openShop(){ if (mode === 'kitchen' || busy || survOpen || IC.in) return;
+  if (mode !== 'under' && !(mode === 'top' && (inBarn(P.x, P.z) || inFriends(P.x, P.z)))){ toast(onIsle() ? 'Dein Kleiderschrank ist zu Hause auf dem Bauernhof.' : 'Den Schrank gibt es nur unter der Erde, im Stall oder bei den Nachbarn.'); return; }
   shopOpen = true; buildShop(); $('shop').hidden = false; }
 function closeShop(){ shopOpen = false; $('shop').hidden = true; }
 $('shopBtn').onclick = () => shopOpen ? closeShop() : openShop(); $('shopClose').onclick = closeShop;
@@ -862,7 +863,7 @@ addEventListener('keydown', e => {
   if (survOpen){ if (k === 'escape' || k === 'e' || k === 'enter'){ closeSurv(); e.preventDefault(); } return; }
   if (paused && !shopOpen) return;
   if (shopOpen){ if (k === 'escape' || k === 'k') closeShop(); return; }
-  if (mode === 'kitchen'){ if ([' ', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'a', 'd', 'w', 's', 'e'].includes(k)){ wiggle(); e.preventDefault(); } return; }
+  if (mode === 'kitchen' || IC.in){ if ([' ', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'a', 'd', 'w', 's', 'e'].includes(k)){ wiggle(); e.preventDefault(); } return; }
   if (k === ' '){ jump(); e.preventDefault(); }
   if (k === 'e' || k === 'enter'){ if (ctx) ctx.fn(); }
   if (k === 'k') openShop();
@@ -894,8 +895,8 @@ function blockedU(x, z){ const r = CFG.r, i0 = toC(x - r), i1 = toC(x + r), j0 =
   for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++){ if (inMap(i, j) && cell[idx(i, j)] === 0) continue;
     const rx = (i - N/2)*S, rz = (j - N/2)*S, px = clamp(x, rx, rx + S), pz = clamp(z, rz, rz + S); if ((px - x)**2 + (pz - z)**2 < r*r) return true; }
   return false; }
-function blockedTop(x, z, r, isFarmer){ for (const s of solids){ if (s.who === 'farmer' && !isFarmer) continue; const px = clamp(x, s.x0, s.x1), pz = clamp(z, s.z0, s.z1); if ((px - x)**2 + (pz - z)**2 < r*r) return true; } return false; }
-function pushOut(e, r, isFarmer, y){ for (const s of solids){ if (s.who === 'farmer' && !isFarmer) continue; if (!isFarmer && y >= s.h - .3) continue;
+function blockedTop(x, z, r, isFarmer){ for (const s of solids){ if ((s.who === 'farmer' && !isFarmer) || s.y0 !== undefined) continue; const px = clamp(x, s.x0, s.x1), pz = clamp(z, s.z0, s.z1); if ((px - x)**2 + (pz - z)**2 < r*r) return true; } return false; }
+function pushOut(e, r, isFarmer, y){ for (const s of solids){ if ((s.who === 'farmer' && !isFarmer) || s.y0 !== undefined) continue; if (!isFarmer && y >= s.h - .3) continue;
     const px = clamp(e.x, s.x0, s.x1), pz = clamp(e.z, s.z0, s.z1); let dx = e.x - px, dz = e.z - pz; const d = Math.hypot(dx, dz);
     if (d >= r) continue;
     if (d < 1e-5){ const l = e.x - s.x0, rr2 = s.x1 - e.x, f = e.z - s.z0, b = s.z1 - e.z, m = Math.min(l, rr2, f, b);
@@ -913,13 +914,13 @@ function dig(i, j){ const k = idx(i, j); if (cell[k] !== 1) return; cell[k] = 0;
 const FOG_UNDER = new T.Fog(0x140c07, 16, 34), FOG_TOP = new T.Fog(0xd6ecff, 45, 120), KITCHEN_BG = new T.Color(0xf6e7c8);
 function setMode(m){ mode = m; applyEnv(m); updHint(); snapCam = true; }
 function applyEnv(m){
-  top.visible = m === 'top'; under.visible = m === 'under'; kitchen.visible = m === 'kitchen';
-  farmer.visible = m === 'top' || (m === 'kitchen' && F.kitchen);
-  const u = m === 'under';
-  scene.background = u ? UNDER_BG : m === 'kitchen' ? KITCHEN_BG : skyTex;
-  scene.fog = u ? FOG_UNDER : m === 'top' ? FOG_TOP : null;
-  hemi.intensity = u ? .5 : .65; hemi.color.setHex(u ? 0xc8a07a : 0xfff6dd); hemi.groundColor.setHex(u ? 0x2a1a0e : 0x3a5a2a);
-  sun.intensity = u ? 0 : .9; moleLight.intensity = u ? 1.3 : 0; }
+  top.visible = m === 'top'; under.visible = m === 'under'; kitchen.visible = m === 'kitchen'; island.visible = m === 'island'; sea.visible = m === 'sea';
+  farmer.visible = m === 'top' || (m === 'kitchen' && F.kitchen); slg.visible = m === 'island'; diveHelmet.visible = m === 'sea'; if (m === 'sea') wearMeshes.weihnacht.visible = false; else applyLook();
+  const u = m === 'under', w = m === 'sea';
+  scene.background = u ? UNDER_BG : m === 'kitchen' ? KITCHEN_BG : w ? SEA_BG : skyTex;
+  scene.fog = u ? FOG_UNDER : m === 'top' || m === 'island' ? FOG_TOP : w ? FOG_SEA : null;
+  hemi.intensity = u ? .5 : w ? .75 : .65; hemi.color.setHex(u ? 0xc8a07a : w ? 0xbfe8ff : 0xfff6dd); hemi.groundColor.setHex(u ? 0x2a1a0e : w ? 0x1a4a6a : 0x3a5a2a);
+  sun.intensity = u ? 0 : w ? .55 : .9; moleLight.intensity = u ? 1.3 : 0; }
 function fadeTo(fn){ busy = true; $('fade').classList.add('on'); setTimeout(() => { fn(); setTimeout(() => { $('fade').classList.remove('on'); busy = false; }, 90); }, 320); }
 
 function goUp(){ const i = toC(P.x), j = toC(P.z);
@@ -930,7 +931,9 @@ function goUp(){ const i = toC(P.x), j = toC(P.z);
   fadeTo(() => { setMode('top'); P.x = h.x; P.z = h.z; P.y = .3; P.vy = 6; sfx.pop(); burst(h.x, .5, h.z, 0x6e4528, 12);
     if (fresh && F.state !== 'chase'){ farmerSay.show(hills.length > 3 ? 'Schon WIEDER ein Hügel! Grrr!' : 'Was? Ein Maulwurfshügel! 😠'); sfx.hey(); } }); }
 function goDown(target){ fadeTo(() => { P.tree = false; setMode('under'); P.x = target.x; P.z = target.z; P.y = 0; P.vy = 0; sfx.down(); }); }
-function jump(){ if (mode !== 'top' || busy || paused || P.tree) return; if (P.onGround){ P.vy = CFG.jump; P.onGround = false; sfx.jump(); } }
+function jump(){ if (!(mode === 'top' || mode === 'island' || mode === 'sea') || busy || paused || P.tree || IC.in) return;
+  if (mode === 'sea'){ if (P.buried) return; if (P.y < 6.5){ P.vy = 4.2; P.onGround = false; sfx.blub(); } return; }
+  if (P.onGround){ P.vy = CFG.jump; P.onGround = false; sfx.jump(); } }
 
 function climb(up){ if (busy) return; busy = true; sfx.jump();
   P.climb = {up, t: 0, a: {x: P.x, y: P.y, z: P.z}, b: up ? {x: TREE.x + 1.45, y: 3.14, z: TREE.z + .05} : {x: TREE.x + .2, y: 0, z: TREE.z + 1.4}}; if (!up) P.tree = false; }
@@ -956,8 +959,8 @@ function caught(){ busy = true; F.state = 'caught'; sfx.hey(); P.vy = 0; if (MS.
     K.fly.forEach(f => kitchen.remove(f.m)); K.fly = [];
     farmer.position.set(KO.x - 2.4, 0, KO.z - .2); farmer.rotation.y = Math.PI/2; F.x = farmer.position.x; F.z = farmer.position.z;
     farmerSay.show('Ab in den Käfig! Hier in der Küche bleibst du!', 3);
-    $('cagebox').hidden = false; $('cagefill').style.width = '0%'; $('touch').hidden = true; $('hint').hidden = true; busy = false; }), 900); }
-function wiggle(){ if (mode !== 'kitchen' || K.phase !== 'in') return; K.wig = Math.min(1, K.wig + CFG.wigglePerPress); sfx.wiggle(); if (Math.random() < .25) moleSay.show(['Lass mich raus!', 'Zappel, zappel!', 'Hilfe!', 'Ich will nach Hause!'][Math.random()*4|0], 1.2);
+    $('cageTxt').innerHTML = CAGE_TXT; $('cagebox').hidden = false; $('cagefill').style.width = '0%'; $('touch').hidden = true; $('hint').hidden = true; busy = false; }), 900); }
+function wiggle(){ if (IC.in) return iWiggle(); if (mode !== 'kitchen' || K.phase !== 'in') return; K.wig = Math.min(1, K.wig + CFG.wigglePerPress); sfx.wiggle(); if (Math.random() < .25) moleSay.show(['Lass mich raus!', 'Zappel, zappel!', 'Hilfe!', 'Ich will nach Hause!'][Math.random()*4|0], 1.2);
   if (K.wig >= 1){ K.phase = 'fall'; K.t = 0; $('cagebox').hidden = true; } }
 function updateKitchen(dt){ K.t += dt; const wx = KO.x, wz = KO.z; if (K.phase === 'heist'){ heistUpdate(dt); return; }
   if (K.phase === 'in'){ K.wig = Math.max(0, K.wig - CFG.wiggleDecay*dt); $('cagefill').style.width = (K.wig*100) + '%';
@@ -990,7 +993,7 @@ function angLerp(a, b, t){ let d = b - a; while (d > Math.PI) d -= Math.PI*2; wh
 function angDiff(a, b){ let d = b - a; while (d > Math.PI) d -= Math.PI*2; while (d < -Math.PI) d += Math.PI*2; return d; }
 function losBlocked(ax, az, bx, bz, py){ const d = Math.hypot(bx - ax, bz - az), n = Math.ceil(d/.35);
   for (let k = 1; k < n; k++){ const t = k/n, x = ax + (bx - ax)*t, z = az + (bz - az)*t;
-    for (const s of solids){ if (s.who === 'farmer' || s.h < .9 || py >= s.h - .1) continue; if (x > s.x0 && x < s.x1 && z > s.z0 && z < s.z1) return true; } }
+    for (const s of solids){ if (s.who === 'farmer' || s.h < .9 || py >= s.h - .1 || s.y0 !== undefined) continue; if (x > s.x0 && x < s.x1 && z > s.z0 && z < s.z1) return true; } }
   return false; }
 function farmerSees(){ if (mode !== 'top' || safeTop() || F.grace > 0 || busy) return false;
   const dx = P.x - F.x, dz = P.z - F.z, d = Math.hypot(dx, dz);
@@ -1018,8 +1021,14 @@ function updateFarmer(dt){ if (mode === 'kitchen' || busy || F.state === 'caught
   if (dd < .3 || F.stuck > 1.5){ F.stuck = 0; pickWaypoint(); F.timer = 1 + Math.random()*2; } }
 
 // ---------- Kontext-Aktion ----------
-function computeCtx(){ if (busy || paused) return null;
+function computeCtx(){ if (busy || paused || IC.in || FL) return null;
   const mc = MS.act && MS.act.def.ctx ? MS.act.def.ctx(MS.act) : null; if (mc) return mc;
+  if (mode === 'island'){ if (P.y < .6 && dXZ(P, islePlane.home) < 3.6) return {label: 'Nach Hause fliegen ✈️', fn: () => fly('top')};
+    if (P.y < .6 && dXZ(P, DIVE) < 2.2) return {label: 'Abtauchen 🤿', fn: dive}; return null; }
+  if (mode === 'sea'){ if (P.buried) return {label: 'Ausbuddeln ⬆', fn: () => bury(false)};
+    const cl = clams.find(c => !c.open && dXZ(P, c) < 1.5 && P.y < 1.2); if (cl) return {label: 'Muschel öffnen 🐚', fn: () => openClam(cl)};
+    if (dXZ(P, ROPE) < 1.8) return {label: 'Auftauchen ⬆', fn: surface};
+    if (P.onGround) return {label: 'Einbuddeln ⏬', fn: () => bury(true)}; return null; }
   if (mode === 'under'){ const i = toC(P.x), j = toC(P.z);
     if (Math.hypot(P.x - STATION.x, P.z - STATION.z) < 1.7) return {label: 'Überwachung 📺', fn: openSurv};
     if (i === HOLE.i && j === HOLE.j) return {label: 'Hoch in den Stall ⬆', fn: goUp};
@@ -1027,13 +1036,15 @@ function computeCtx(){ if (busy || paused) return null;
     return {label: 'Nach oben ⬆', fn: goUp}; }
   if (mode === 'top' && P.tree) return {label: 'Runterklettern ⬇', fn: () => climb(false)};
   if (mode === 'top' && P.y < .6 && Math.hypot(P.x - TREE.x, P.z - TREE.z) < 1.7) return {label: 'Hochklettern 🌳', fn: () => climb(true)};
+  if (mode === 'top' && P.y < .6 && !P.tree && dXZ(P, farmPlane.home) < 3.6) return st.missions.length >= MISSIONS.length ? {label: 'Zur Insel fliegen ✈️', fn: () => fly('island')}
+    : {label: 'Flugzeug 🔒', fn: () => { sfx.no(); toast(`✈️ Das Agenten-Flugzeug fliegt nur für Super-Agenten. Erledige erst alle Aufträge der Zentrale (${st.missions.length}/${MISSIONS.length}).`, 4.5); }};
   if (mode === 'top' && P.y < .6){ if (Math.hypot(P.x - HX, P.z - HZ) < 1.2) return {label: 'Runter ins Loch ⬇', fn: () => goDown({x: HX, z: HZ})};
     for (const h of hills) if (Math.hypot(P.x - h.x, P.z - h.z) < 1.2) return {label: 'Runter in den Hügel ⬇', fn: () => goDown(h)}; }
   return null; }
 let lastCtx = '';
 function updHint(){ const key = (ctx ? ctx.label : '') + mode; if (key === lastCtx) return; lastCtx = key;
   const ta = $('tAct'); if (ctx){ ta.hidden = false; ta.textContent = ctx.label; } else ta.hidden = true;
-  $('tJump').hidden = mode !== 'top';
+  $('tJump').hidden = !(mode === 'top' || mode === 'island' || mode === 'sea'); $('tJump').textContent = mode === 'sea' ? 'Schwimmen' : 'Springen';
   const h = $('hint'); if (touchMode || !ctx){ h.hidden = true; return; } h.hidden = false; h.innerHTML = '<kbd>E</kbd>' + ctx.label; }
 
 // =====================================================================
@@ -1045,9 +1056,9 @@ const rectDist = (R, x, z) => Math.hypot(Math.max(R.x0 - x, 0, x - R.x1), Math.m
 const DOORP = {x: -16, z: HR.z1 + .9};
 function photoFlash(){ const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); sfx.click(); }
 function farSpot(){ let best = null, bd = -1; for (let n = 0; n < 12; n++){ const s = randomSpot(true), d = Math.hypot(s[0] - F.x, s[1] - F.z); if (d > bd){ bd = d; best = s; } } return best; }
-function makeKey(x, z){ const g = new T.Group(); const gold = M(0xffd447, {emissive: 0xc08a10, emissiveIntensity: .6, metalness: .6, roughness: .3});
+function makeKey(x, z, parent = top){ const g = new T.Group(); const gold = M(0xffd447, {emissive: 0xc08a10, emissiveIntensity: .6, metalness: .6, roughness: .3});
   const ring = new T.Mesh(new T.TorusGeometry(.18, .06, 8, 18), gold); g.add(ring); box(.08, .5, .06, gold, 0, -.42, 0, g); box(.16, .06, .06, gold, .08, -.6, 0, g); box(.12, .06, .06, gold, .06, -.48, 0, g);
-  g.position.set(x, .6, z); g.scale.setScalar(1.5); top.add(g); return g; }
+  g.position.set(x, .6, z); g.scale.setScalar(1.5); parent.add(g); return g; }
 function openCell(i, j){ const k = idx(i, j); if (cell[k] !== 1) return; cell[k] = 0; dirt.setMatrixAt(dirtIdx[k], ZERO); dirt.instanceMatrix.needsUpdate = true; dirty = true; checkCave(); }
 function makeWorm(x, z){ const g = new T.Group(); under.add(g); const segs = [];
   for (let s = 0; s < 6; s++) segs.push(sph(.075 - s*.006, s % 2 ? 0xe07888 : 0xf08a9a, 0, .08, -s*.11, g, 8));
@@ -1158,15 +1169,16 @@ const MISSIONS = [
 ];
 const MS = {act: null, offerT: CFG.firstMission, pending: null};
 let msgOpen = false;
-function rankName(){ const n = st.missions.length; return n >= 10 ? 'Super-Agent' : n >= 7 ? 'Geheimagent' : n >= 4 ? 'Agent' : n >= 2 ? 'Junior-Agent' : 'Neuling'; }
-function nextMission(){ const left = MISSIONS.filter(m => !st.missions.includes(m.id)); if (left.length) return left[0];
-  const pool = MISSIONS.filter(m => m.id !== 'coup'); return pool[Math.random()*pool.length|0]; }
-function showMsg(o){ msgOpen = true; $('msgTitle').textContent = o.title; $('msgText').textContent = o.text; $('msgInfo').textContent = o.info || ''; const b = $('msgBtns'); b.innerHTML = '';
+function rankName(){ const n = st.missions.length + st.isMissions.length; return n >= 20 ? 'Meister-Agent' : n >= 15 ? 'Insel-Agent' : n >= 10 ? 'Super-Agent' : n >= 7 ? 'Geheimagent' : n >= 4 ? 'Agent' : n >= 2 ? 'Junior-Agent' : 'Neuling'; }
+const doneOf = d => d.island ? st.isMissions : st.missions, listOf = d => d.island ? IMISSIONS : MISSIONS;
+function nextMission(){ const L = onIsle() ? IMISSIONS : MISSIONS, done = onIsle() ? st.isMissions : st.missions, left = L.filter(m => !done.includes(m.id)); if (left.length) return left[0];
+  const pool = L.filter(m => m.id !== 'coup' && m.id !== 'befreien'); return pool[Math.random()*pool.length|0]; }
+function showMsg(o){ msgOpen = true; $('msgCard').querySelector('.spyhead').textContent = onIsle() ? '📡 AUSSENSTELLE INSEL AN AGENT MAULI' : '📡 GEHEIMZENTRALE AN AGENT MAULI'; $('msgTitle').textContent = o.title; $('msgText').textContent = o.text; $('msgInfo').textContent = o.info || ''; const b = $('msgBtns'); b.innerHTML = '';
   for (const x of o.buttons){ const e = document.createElement('button'); e.className = 'big' + (x.alt ? ' alt' : ''); e.textContent = x.label; e.onclick = x.fn; b.appendChild(e); }
   $('msg').hidden = false; for (const k in keys) keys[k] = false; setTimeout(() => { const f = b.querySelector('button'); if (f) f.focus(); }, 60); }
 function closeMsg(){ msgOpen = false; $('msg').hidden = true; }
-function offerCard(){ const d = MS.pending; if (!d) return; const replay = st.missions.includes(d.id);
-  showMsg({title: d.title, text: 'Agent Mauli, dein Auftrag, falls du ihn annimmst: ' + d.brief, info: `⏱ ${d.time} Sekunden · Belohnung: ${replay ? Math.ceil(d.reward/2) : d.reward} 💎 · Auftrag ${MISSIONS.indexOf(d) + 1} von ${MISSIONS.length}`,
+function offerCard(){ const d = MS.pending; if (!d) return; const replay = doneOf(d).includes(d.id);
+  showMsg({title: d.title, text: 'Agent Mauli, dein Auftrag, falls du ihn annimmst: ' + d.brief, info: `⏱ ${d.time} Sekunden · Belohnung: ${replay ? Math.ceil(d.reward/2) : d.reward} 💎 · ${d.island ? 'Insel-Auftrag' : 'Auftrag'} ${listOf(d).indexOf(d) + 1} von ${listOf(d).length}`,
     buttons: [{label: 'Auftrag annehmen', fn: acceptMission}, {label: 'Später', alt: true, fn: () => { closeMsg(); MS.offerT = CFG.laterMission; }}]}); }
 function acceptMission(){ const d = MS.pending; MS.pending = null; $('watch').classList.remove('ping'); $('msgBtns').innerHTML = ''; $('msgInfo').textContent = ''; sfx.spy();
   let n = 3; $('msgText').textContent = 'Diese Nachricht zerstört sich selbst in 3 …';
@@ -1174,12 +1186,14 @@ function acceptMission(){ const d = MS.pending; MS.pending = null; $('watch').cl
     else { clearInterval(iv); $('msgCard').classList.add('boom'); sfx.puff(); setTimeout(() => { $('msgCard').classList.remove('boom'); closeMsg(); startMission(d); }, 620); } }, 700); }
 function startMission(d){ MS.act = {def: d, t: d.time, lastSec: 99}; if (d.start) d.start(MS.act); $('mission').hidden = false; updMissionHud(); toast('🕵️ Auftrag läuft! Viel Glück, Agent Mauli!'); }
 function endMission(){ const a = MS.act; if (!a) return; if (a.def.end) a.def.end(a); MS.act = null; $('mission').hidden = true; setCarry(null); marker.visible = false; cage.visible = !st.cageGone; }
-function missionWin(){ const a = MS.act, d = a.def, replay = st.missions.includes(d.id), rw = replay ? Math.ceil(d.reward/2) : d.reward, oldRank = rankName();
-  if (d.id === 'coup') st.cageGone = true;
-  endMission(); if (!replay) st.missions.push(d.id); st.gems += rw; dirty = true; updHud(); sfx.buy(); MS.offerT = CFG.nextMission;
+function missionWin(){ const a = MS.act, d = a.def, replay = doneOf(d).includes(d.id), rw = replay ? Math.ceil(d.reward/2) : d.reward, oldRank = rankName();
+  if (d.id === 'coup') st.cageGone = true; if (d.id === 'tauchen') st.hasKey = true;
+  if (d.id === 'befreien' && !st.molesFree){ st.molesFree = true; spawnHomeMoles(); reformSeller(); }
+  endMission(); if (!replay) doneOf(d).push(d.id); st.gems += rw; dirty = true; updHud(); sfx.buy(); MS.offerT = CFG.nextMission;
   const nr = rankName(); let info = `+${rw} 💎 · Dein Rang: ${nr}`; if (nr !== oldRank) info += ' 🎖️ Beförderung!';
-  if (!replay && st.missions.length === 3) info += ' · Neu im Schrank: die Agentenbrille 🕶️';
-  if (!replay && st.missions.length === MISSIONS.length) info += ' · Alle Aufträge erfüllt!';
+  if (!replay && !d.island && st.missions.length === 3) info += ' · Neu im Schrank: die Agentenbrille 🕶️';
+  if (!replay && !d.island && st.missions.length === MISSIONS.length) info += ' · Alle Aufträge erfüllt! Auf der Wiese wartet jetzt das Agenten-Flugzeug ✈️';
+  if (!replay && d.island && st.isMissions.length === IMISSIONS.length) info += ' · Alle Insel-Aufträge erfüllt! 🏆';
   showMsg({title: 'Auftrag erfüllt! 🎉', text: d.win, info, buttons: [{label: 'Super!', fn: closeMsg}]}); }
 function missionFail(why, quiet){ const a = MS.act; if (!a) return; endMission(); MS.offerT = 30; sfx.fail();
   if (quiet){ toast(why + ' Der Auftrag ist gescheitert.', 3.5); return; }
@@ -1194,14 +1208,14 @@ function updateMissions(dt){
     if (a.t <= 0) return missionFail('Die Zeit ist um!' + (a.def.timeout || ''));
     const sec = Math.ceil(a.t); if (sec <= 5 && sec !== a.lastSec){ a.lastSec = sec; sfx.tick(); }
     updMissionHud(); return; }
-  if (mode === 'kitchen' || busy || shopOpen) return;
+  if (mode === 'kitchen' || busy || shopOpen || IC.in || FL) return;
   MS.offerT -= dt;
-  if (MS.offerT <= 0){ MS.offerT = CFG.laterMission; if (!MS.pending) MS.pending = nextMission(); sfx.watch(); $('watch').classList.add('ping'); toast('⌚ Piep, piep! Eine Nachricht von der Geheimzentrale!');
-    if (mode === 'under' || safeTop()) setTimeout(() => { if (MS.pending && !MS.act && !msgOpen && !shopOpen && !survOpen && !busy && mode !== 'kitchen') offerCard(); }, 1200); } }
-$('watch').onclick = () => { if (msgOpen || mode === 'kitchen' || paused) return;
+  if (MS.offerT <= 0){ MS.offerT = CFG.laterMission; if (!MS.pending || !!MS.pending.island !== onIsle()) MS.pending = nextMission(); sfx.watch(); $('watch').classList.add('ping'); toast('⌚ Piep, piep! Eine Nachricht von der Geheimzentrale!');
+    if (mode === 'under' || safeTop() || (mode === 'island' && SL.state !== 'chase')) setTimeout(() => { if (MS.pending && !MS.act && !msgOpen && !shopOpen && !survOpen && !busy && !IC.in && !FL && mode !== 'kitchen') offerCard(); }, 1200); } }
+$('watch').onclick = () => { if (msgOpen || mode === 'kitchen' || paused || IC.in || FL) return;
   if (MS.act){ const a = MS.act; showMsg({title: a.def.title, text: a.def.brief, info: `⏱ Noch ${Math.ceil(a.t)} Sekunden · Rang: ${rankName()}`,
     buttons: [{label: 'Weiter', fn: closeMsg}, {label: 'Abbrechen', alt: true, fn: () => { closeMsg(); missionFail('Du hast den Auftrag abgebrochen.'); }}]}); return; }
-  if (!MS.pending) MS.pending = nextMission(); offerCard(); };
+  if (!MS.pending || !!MS.pending.island !== onIsle()) MS.pending = nextMission(); offerCard(); };
 
 // Zielpfeil + Tragen
 const marker = new T.Group();
@@ -1267,6 +1281,486 @@ function closeSurv(){ survOpen = false; $('surv').hidden = true; $('mission').st
 $('survClose').onclick = closeSurv;
 if (st.cageGone) cage.visible = false;
 
+// =====================================================================
+// FLOHMARKT-INSEL, MEER UND AGENTEN-FLUGZEUG
+// =====================================================================
+const IO = 1000, SO = 2000, I = x => x + IO;
+const island = new T.Group(), sea = new T.Group(); scene.add(island, sea);
+const onIsle = () => mode === 'island' || mode === 'sea';
+const addFloat = (x0, x1, z0, z1, h) => { const s = addSolid(x0, x1, z0, z1, h); s.y0 = h - .3; return s; };
+const SEA_BG = new T.Color(0x1d6fa5), FOG_SEA = new T.Fog(0x1d6fa5, 9, 34);
+const DIVE = {x: I(0), z: -43.4}, ROPE = {x: SO, z: 0};
+Object.assign(sfx, {
+  plane: () => { tone(80, 2.6, 'sawtooth', .05, 150); noise(2.6, .12, 250); },
+  blub: () => tone(300, .15, 'sine', .1, 700),
+  key: () => [784, 988, 1175, 1568].forEach((f, n) => setTimeout(() => tone(f, .18, 'triangle', .1), n*90)),
+});
+
+// ---------- Menschen (Händler + Krallmann) ----------
+function person(o){ const g = new T.Group(); const skin = M(o.skin || 0xf1c9a5), sh = M(o.shirt), pa = M(o.pants || 0x3d4a6a);
+  const legs = [-1, 1].map(s => { const l = new T.Group(); l.position.set(s*.15, .8, 0); g.add(l); box(.22, .8, .24, pa, 0, -.4, 0, l); box(.24, .12, .32, 0x3a2a20, 0, -.76, .04, l); return l; });
+  box(.6, .7, .36, sh, 0, 1.15, 0, g);
+  const arms = [-1, 1].map(s => { const a = new T.Group(); a.position.set(s*.4, 1.45, 0); g.add(a); box(.16, .6, .18, sh, 0, -.3, 0, a); sph(.09, skin, 0, -.64, 0, a, 8); return a; });
+  const hd = new T.Group(); hd.position.y = 1.75; g.add(hd); sph(.25, skin, 0, 0, 0, hd, 14);
+  for (const x of [-.08, .08]) sph(.03, 0x111111, x, .05, .22, hd, 6);
+  if (o.hair){ const hr = sph(.27, o.hair, 0, .07, -.05, hd, 12); hr.scale.set(1, .85, 1); }
+  if (o.bun) sph(.12, o.hair, 0, .22, -.2, hd, 10);
+  if (o.glasses) for (const x of [-.08, .08]){ const l = new T.Mesh(new T.TorusGeometry(.055, .012, 6, 12), M(0x333333)); l.position.set(x, .05, .23); hd.add(l); }
+  if (o.hat === 'beret'){ const b = sph(.22, o.hatC, 0, .2, 0, hd, 12); b.scale.y = .4; }
+  if (o.hat === 'sun'){ cyl(.42, .42, .03, o.hatC, 0, .17, 0, hd, 18); cyl(.2, .22, .16, o.hatC, 0, .26, 0, hd, 14); }
+  if (o.hat === 'phones'){ const p = new T.Mesh(new T.TorusGeometry(.27, .03, 6, 16, Math.PI), M(0x222222)); p.position.y = .02; hd.add(p); for (const x of [-.26, .26]) sph(.08, 0xd8443a, x, 0, 0, hd, 8); }
+  if (!o.evil){ const sm = new T.Mesh(new T.TorusGeometry(.07, .015, 6, 12, Math.PI), M(0xc0504a)); sm.position.set(0, -.07, .23); sm.rotation.z = Math.PI; hd.add(sm); }
+  return {g, legs, arms, head: hd}; }
+
+// ---------- Mini-Maulwürfe (gefangen beim Verkäufer, später bei Mauli zu Hause) ----------
+const MINI_COLS = [0x5b3a29, 0x8a5a3b, 0x3a3a40, 0xb07a4a, 0x272222];
+function makeMini(col){ const g = new T.Group(); g.scale.setScalar(.62); const fm = M(col);
+  const t = sph(.36, fm, 0, .34, 0, g, 14); t.scale.set(1, .82, 1.3);
+  const h = new T.Group(); h.position.set(0, .42, .42); g.add(h); sph(.25, fm, 0, 0, 0, h, 14);
+  const sn = sph(.12, fm, 0, -.02, .24, h, 10); sn.scale.set(1, .8, 1.6); sph(.065, pink, 0, 0, .41, h, 8);
+  for (const x of [-.09, .09]) sph(.03, 0x0b0b0b, x, .08, .19, h, 6);
+  for (const s of [-1, 1]){ const p = sph(.13, pink, s*.27, .14, .36, g, 8); p.scale.set(1.15, .35, 1); }
+  g.userData = {h, t: Math.random()*6}; return g; }
+
+// ---------- Mauli-Extras: Taucherhelm + Verkleidung ----------
+const diveHelmet = new T.Group(); head.add(diveHelmet); diveHelmet.visible = false;
+{ const glass = new T.Mesh(new T.SphereGeometry(.4, 20, 14), new T.MeshStandardMaterial({color: 0xcff0ff, transparent: true, opacity: .28, roughness: .05, metalness: .2, depthWrite: false}));
+  glass.position.set(0, .03, .12); diveHelmet.add(glass);
+  const rim = new T.Mesh(new T.TorusGeometry(.33, .05, 8, 20), M(0xd8a040, {metalness: .6, roughness: .35})); rim.position.set(0, -.12, -.05); rim.rotation.x = Math.PI/2 - .3; diveHelmet.add(rim);
+  const tube = cyl(.03, .03, .5, 0x333333, 0, .28, -.32, diveHelmet, 6); tube.rotation.x = -.6; }
+const disg = new T.Group(); head.add(disg); disg.visible = false;
+{ const dk = M(0x2a1a10); for (const s of [-1, 1]){ const m = sph(.075, dk, s*.075, -.075, .35, disg, 10); m.scale.set(1.6, .55, .7); m.rotation.z = s*.35; }
+  const hm = M(0x3a2a20); cyl(.3, .3, .03, hm, 0, .2, 0, disg, 18); cyl(.17, .19, .24, hm, 0, .33, 0, disg, 16); cyl(.195, .195, .06, 0xd8443a, 0, .25, 0, disg, 16); }
+function setDisguise(on){ disguised = on; disg.visible = on; applyLook(); }
+
+// ---------- Flugzeuge ----------
+function makePlane(parent, x, z){ const g = new T.Group(); g.position.set(x, 0, z); parent.add(g);
+  const yel = M(0xffd447), red = M(0xd8443a);
+  const body = cyl(.7, .5, 6, yel, 0, 1.3, 0, g, 18); body.rotation.z = -Math.PI/2;
+  const nose = sph(.7, yel, 3, 1.3, 0, g, 16); nose.scale.set(.6, 1, 1);
+  box(1.7, .12, 8, red, .6, 1.0, 0, g); box(1.0, 1.2, .1, red, -2.6, 2.0, 0, g); box(.9, .08, 2.8, red, -2.7, 1.45, 0, g);
+  box(1.0, .06, .8, 0x2a2018, .8, 1.98, 0, g); const ws = box(.06, .35, .9, M(0xbfe9ff, {transparent: true, opacity: .6}), 1.45, 2.12, 0, g); ws.castShadow = false;
+  for (const s of [-1, 1]){ const w = cyl(.35, .35, .2, 0x222222, .9, .35, s*1.2, g, 14); w.rotation.x = Math.PI/2; box(.08, .7, .08, 0x666666, .9, .75, s*1.0, g); }
+  sph(.15, 0x222222, -2.7, .2, 0, g, 8);
+  for (const s of [-1, 1]) box(.9, .13, .02, 0xffffff, .5, 1.07, s*2.6, g).castShadow = false;
+  const prop = new T.Group(); prop.position.set(3.48, 1.3, 0); g.add(prop); sph(.14, 0x444444, 0, 0, 0, prop, 8);
+  box(.06, 2.2, .2, 0x5a3a20, 0, 0, 0, prop); box(.06, .2, 2.2, 0x5a3a20, 0, 0, 0, prop);
+  addSolid(x - 3, x + 3.5, z - .75, z + .75, 99);
+  return {g, prop, home: {x, z}}; }
+const farmPlane = makePlane(top, 17, 14);
+label('✈️ Agenten-Flugzeug', 17, 3.6, 14, top, .7);
+
+// ---------- Insel ----------
+let foam;
+{ const sand = new T.Mesh(new T.CircleGeometry(36, 56), M(0xf0d9a0)); sand.rotation.x = -Math.PI/2; sand.position.set(IO, 0, 0); sand.receiveShadow = true; island.add(sand);
+  const gr = new T.Mesh(new T.CircleGeometry(27, 56), M(0x8fcf6a)); gr.rotation.x = -Math.PI/2; gr.position.set(IO, .01, 0); gr.receiveShadow = true; island.add(gr);
+  const mk = box(44, .03, 6.6, 0xd9c09a, I(-4), .02, 0, island); mk.castShadow = false;
+  const ocean = new T.Mesh(new T.PlaneGeometry(420, 420), new T.MeshStandardMaterial({color: 0x2a9fd8, roughness: .3, metalness: .1})); ocean.rotation.x = -Math.PI/2; ocean.position.set(IO, -.08, 0); island.add(ocean);
+  foam = new T.Mesh(new T.RingGeometry(35.4, 36.8, 72), new T.MeshBasicMaterial({color: 0xffffff, transparent: true, opacity: .6})); foam.rotation.x = -Math.PI/2; foam.position.set(IO, -.03, 0); island.add(foam);
+  // Landebahn
+  box(46, .04, 4.4, 0x55585f, IO, .03, 25, island).castShadow = false;
+  for (let x = -20; x <= 20; x += 4) box(2, .05, .25, 0xffffff, I(x), .05, 25, island).castShadow = false;
+  // Steg
+  box(2.6, .14, 15, 0xa0754a, IO, 0, -38, island).castShadow = false;
+  for (let z = -31; z >= -45; z -= .9) box(2.6, .02, .08, 0x7a5434, IO, .08, z, island).castShadow = false;
+  for (const x of [-1.25, 1.25]) for (let z = -32; z >= -45; z -= 3.2) cyl(.12, .12, 1.4, 0x7a5434, I(x), -.3, z, island, 8);
+  label('🤿 Hier abtauchen', DIVE.x, 2.2, DIVE.z, island, .7);
+  label('🎪 FLOHMARKT', I(-21), 4.6, 0, island, 1.1);
+  // Palmen
+  const palm = (x, z) => { const g = new T.Group(); g.position.set(I(x), 0, z); island.add(g);
+    for (let k = 0; k < 6; k++) cyl(.22 - .02*k, .25 - .02*k, .72, 0x9a7048, k*k*.02, .36 + k*.68, 0, g, 8);
+    const tp = new T.Group(); tp.position.set(.5, 4.3, 0); g.add(tp);
+    for (let k = 0; k < 7; k++){ const p = new T.Group(); p.rotation.y = k/7*Math.PI*2; tp.add(p); const l = box(.55, .06, 2.4, k % 2 ? 0x3f9f4a : 0x4fb05a, 0, -.3, 1.1, p); l.rotation.x = .35; }
+    for (let k = 0; k < 3; k++) sph(.16, 0x6a4a20, .5 + Math.cos(k*2)*.2, 4.05, Math.sin(k*2)*.2, g, 8);
+    addSolid(I(x) - .3, I(x) + .3, z - .3, z + .3, 99); occ(g); };
+  for (const [x, z] of [[29, 6], [27, -12], [18, -24], [-12, -27], [-25, -15], [-30, 2], [-26, 18], [27, 17], [9, -29], [-6, -29.5], [-24, -6], [14, 12], [-14, 13]]) palm(x, z);
+}
+const islePlane = makePlane(island, I(0), 25);
+label('✈️ Nach Hause', I(0), 3.6, 25, island, .7);
+
+// Marktstände
+const STALLS = [
+  {x: -16, s: -1, who: 'Theo', e: '🎭', name: 'Kostüme', shirt: 0x6a4fd8, cover: 0xd84a6a, hair: 0x3a2414, hat: 'beret', hatC: 0xd84a6a, hi: 'Hallo! Verkleiden macht Spaß! 🎭'},
+  {x: -8, s: -1, who: 'Lotte', e: '🧦', name: 'Socken', shirt: 0x2ea4e0, cover: 0x46b06a, hair: 0xe0a040, hi: 'Bunte Socken! Ganz weich! 🧦'},
+  {x: 0, s: -1, who: 'Herr Bommel', e: '🧸', name: 'Spielzeug', shirt: 0xe08a2e, cover: 0xf0c040, hair: 0x8a8a8a, glasses: true, hi: 'Hallo, kleiner Maulwurf! 🧸'},
+  {x: 8, s: -1, who: 'Herr Blatt', e: '📚', name: 'Bücher', shirt: 0x4a8a5a, cover: 0x3a7fd0, hair: 0x5a3a20, glasses: true, hi: 'Psst … hier wird gelesen. 📚'},
+  {x: -16, s: 1, who: 'Frau Grün', e: '🌵', name: 'Pflanzen', shirt: 0x7ab04a, cover: 0x2f9a52, hair: 0x7a2a1a, hat: 'sun', hatC: 0xe8d29a, hi: 'Meine Kakteen pieksen nicht! 🌵'},
+  {x: -8, s: 1, who: 'Frau Kiwi', e: '🍌', name: 'Obst', shirt: 0xffd447, cover: 0xff8a3d, hair: 0x2a1a10, hi: 'Frisches Obst! Mmmh! 🍌'},
+  {x: 0, s: 1, who: 'DJ Rudi', e: '🎵', name: 'Schallplatten', shirt: 0x26262a, cover: 0xb38bff, hair: 0x111111, hat: 'phones', hi: 'Yeah! Hörst du die Musik? 🎵'},
+  {x: 8, s: 1, who: 'Oma Erna', e: '⏰', name: 'Antiquitäten', shirt: 0xb05a8a, cover: 0x8a5a3b, hair: 0xdddddd, bun: true, glasses: true, hi: 'Hallo, mein Schätzchen! ⏰'},
+];
+const vendor = who => STALLS.find(s => s.who === who);
+const vpos = s => ({x: s.v.g.position.x, z: s.v.g.position.z});
+const GOODS = [0xff6fa0, 0x5ad1ff, 0xffd447, 0x9bd46a, 0xb38bff, 0xff8a3d, 0xffffff];
+for (const o of STALLS){ const X = I(o.x), s = o.s, tz = s*4.6, wood = M(0x9a6a3e);
+  box(3.4, .1, 1.2, wood, X, .85, tz, island);
+  for (const lx of [-1.55, 1.55]) for (const lz of [-.5, .5]) box(.1, .8, .1, wood, X + lx, .4, tz + lz, island);
+  box(3.45, .5, .02, o.cover, X, .6, tz - s*.61, island);
+  addSolid(X - 1.7, X + 1.7, tz - .6, tz + .6, .9);
+  for (let k = 0; k < 5; k++){ const c = GOODS[((k + o.x) % 7 + 7) % 7], gx = X - 1.2 + k*.6;
+    if (k % 3 === 0) box(.32, .3, .32, c, gx, 1.05, tz, island); else if (k % 3 === 1) sph(.17, c, gx, 1.07, tz, island, 10); else cyl(.12, .14, .36, c, gx, 1.08, tz, island, 10); }
+  const ag = new T.Group(); island.add(ag);
+  for (const px of [-1.8, 1.8]) for (const pz of [3.6, 7.4]) cyl(.06, .06, 2.3, 0xdddddd, X + px, 1.15, s*pz, ag, 6);
+  for (let k = 0; k < 6; k++) box(.62, .08, 3.8, k % 2 ? 0xffffff : o.cover, X - 1.55 + k*.62, 2.2, s*5.5, ag);
+  occ(ag); Object.assign(occluders[occluders.length - 1], {zmin: Math.min(s*3.6, s*7.4), ox: X});
+  addFloat(X - 1.9, X + 1.9, Math.min(s*3.6, s*7.4), Math.max(s*3.6, s*7.4), 2.25);
+  const v = person(o); v.g.position.set(X, 0, s*6.3); v.g.rotation.y = s > 0 ? Math.PI : 0; island.add(v.g); o.v = v; o.b = bubble(v.g, 2.6); o.cd = 0;
+  addSolid(X - .35, X + .35, s*6.3 - .35, s*6.3 + .35, 99);
+  label(o.e + ' ' + o.name, X, 3.9, s*5.8, island, .55); }
+
+// Lichterketten
+const bulbGeo = new T.SphereGeometry(.09, 8, 6);
+const bulbMats = [0xff5a5a, 0xffd447, 0x5ad1ff, 0x7dff8a, 0xff6fd8].map(c => new T.MeshStandardMaterial({color: c, emissive: c, emissiveIntensity: .8}));
+function lightString(x0, z0, x1, z1){ const h = 3, len = Math.hypot(x1 - x0, z1 - z0), alongX = Math.abs(x1 - x0) > Math.abs(z1 - z0);
+  const w = cyl(.05, .05, len, 0x3a3a3a, I((x0 + x1)/2), h - .03, (z0 + z1)/2, island, 5); if (alongX) w.rotation.z = Math.PI/2; else w.rotation.x = Math.PI/2; w.castShadow = false;
+  const n = Math.round(len/.6); for (let k = 0; k <= n; k++){ const t = k/n, b = new T.Mesh(bulbGeo, bulbMats[k % 5]); b.position.set(I(lerp(x0, x1, t)), h - .16, lerp(z0, z1, t)); island.add(b); }
+  if (alongX) addFloat(I(Math.min(x0, x1)), I(Math.max(x0, x1)), z0 - .3, z0 + .3, h); else addFloat(I(x0 - .3), I(x0 + .3), Math.min(z0, z1), Math.max(z0, z1), h); }
+for (const z of [-3.8, 3.8]) lightString(-19.5, z, 11.5, z);
+for (const x of [-19.5, -12, -4, 4, 11.5]) lightString(x, -3.8, x, 3.8);
+for (const x of [-19.5, 11.5]) for (const z of [-3.8, 3.8]) cyl(.08, .08, 3.1, 0x8a6a4a, I(x), 1.55, z, island, 6);
+
+// Stand von Herrn Krallmann
+let SSIGN;
+const icages = [];
+function makeCage(x, z, r, mini){ const g = new T.Group(); g.position.set(x, .9, z); island.add(g);
+  cyl(r, r, .06, 0x6c6c74, 0, .03, 0, g, 18);
+  const bars = new T.Group(); g.add(bars); const bm = M(0x9a9aa4, {metalness: .6, roughness: .4}); const n = Math.round(r*22);
+  for (let k = 0; k < n; k++){ const a = k/n*Math.PI*2; cyl(.016, .016, r*1.6, bm, Math.cos(a)*r*.97, r*.8, Math.sin(a)*r*.97, bars, 5); }
+  const ring = new T.Mesh(new T.TorusGeometry(r*.97, .022, 6, 22), bm); ring.rotation.x = Math.PI/2; ring.position.y = r*1.6; bars.add(ring);
+  box(.12, .14, .08, M(0xffd447, {metalness: .5}), -r, .4, 0, bars);
+  if (mini){ mini.position.set(0, .06, 0); mini.rotation.y = -Math.PI/2; g.add(mini); }
+  const c = {g, bars, r, x, z, mini, open: false, openT: 0}; icages.push(c); return c; }
+{ const X = I(18.4), wood = M(0x6a4a3a);
+  box(1.6, .1, 8.8, wood, X, .85, 0, island); for (const lx of [-.7, .7]) for (const lz of [-4.2, 4.2]) box(.1, .8, .1, wood, X + lx, .4, lz, island);
+  box(.02, .5, 8.8, 0x8a2a2a, I(17.58), .6, 0, island);
+  addSolid(I(17.6), I(19.2), -4.4, 4.4, .9);
+  box(.15, 3.2, 9.4, 0x4a2a5a, I(20.6), 1.6, 0, island); addSolid(I(20.5), I(20.7), -4.7, 4.7, 99);
+  for (let k = 0; k < 8; k++) box(3.8, .1, 1.2, k % 2 ? 0x2a1a3a : 0x6a2a6a, I(18.9), 3.1, -4.2 + k*1.2, island);
+  for (const z of [-4.6, 4.6]) cyl(.07, .07, 3.1, 0x333333, I(17.1), 1.55, z, island, 6);
+  addFloat(I(17), I(20.8), -4.8, 4.8, 3.15);
+  SSIGN = label('💰 MAULWÜRFE ZU VERKAUFEN 💰', I(18.6), 4.2, 0, island, .8, 'rgba(120,20,20,.92)', '#ffe9a0');
+  for (let k = 0; k < 5; k++) makeCage(X, -3.4 + k*1.4, .48, makeMini(MINI_COLS[k]));
+  makeCage(X, 3.58, .8, null); }
+const cageSay = bubble(icages[2].g, 1.6); let cageCd = 4;
+
+// Herr Krallmann
+const slb = person({shirt: 0x2b2b38, pants: 0x2b2b38, skin: 0xf0d0b8, evil: true}), slg = slb.g; island.add(slg);
+{ box(.66, .5, .42, 0x2b2b38, 0, .78, 0, slg); box(.2, .5, .05, 0xa02a2a, 0, 1.2, .19, slg);
+  const hd = slb.head; cyl(.34, .34, .03, 0x111111, 0, .2, 0, hd, 18); cyl(.2, .2, .46, 0x111111, 0, .44, 0, hd, 16); cyl(.205, .205, .07, 0xa02a2a, 0, .27, 0, hd, 16);
+  for (const s of [-1, 1]){ const m = sph(.09, 0x2a1a10, s*.1, -.08, .24, hd, 10); m.scale.set(1.8, .6, .8); m.rotation.z = -s*.3;
+    const br = box(.12, .035, .03, 0x2a1a10, s*.09, .14, .23, hd); br.rotation.z = s*.45; }
+  const net = new T.Group(); net.position.set(0, -.62, .05); slb.arms[1].add(net);
+  const pole = cyl(.025, .025, 1.7, 0x9a6a3e, 0, .55, .25, net, 6); pole.rotation.x = .3;
+  const ring = new T.Mesh(new T.TorusGeometry(.28, .025, 6, 18), M(0x777777)); ring.position.set(0, 1.42, .52); net.add(ring);
+  const bag = new T.Mesh(new T.ConeGeometry(.28, .5, 10, 1, true), new T.MeshBasicMaterial({color: 0xffffff, wireframe: true, transparent: true, opacity: .6})); bag.position.set(0, 1.42, .52); bag.rotation.x = Math.PI/2 + .2; net.add(bag); }
+const stars = new T.Group(); stars.position.y = 2.45; slg.add(stars); stars.visible = false;
+for (let k = 0; k < 3; k++){ const s = new T.Mesh(new T.OctahedronGeometry(.1), M(0xffd447, {emissive: 0xffc000, emissiveIntensity: 1})); s.position.set(Math.cos(k*2.1)*.35, 0, Math.sin(k*2.1)*.35); stars.add(s); }
+const slCone = new T.Mesh(new T.CircleGeometry(9, 28, -Math.PI/2 - 1.0, 2.0), new T.MeshBasicMaterial({color: 0xd08aff, transparent: true, opacity: .16, depthWrite: false}));
+slCone.rotation.x = -Math.PI/2; slCone.position.y = .06; slg.add(slCone);
+const slSay = bubble(slg, 3.0);
+const SL = {x: I(16.3), z: 0, face: -Math.PI/2, state: 'walk', tx: I(0), tz: 0, timer: 2, stuck: 0, grace: 0, walkT: 0, dizzy: 0, sayCd: 6, peel: null, home: false};
+function slPick(){ if (Math.random() < .3){ SL.home = true; SL.tx = I(16.3); SL.tz = (Math.random() - .5)*2; } else { SL.home = false; SL.tx = I(-19 + Math.random()*31); SL.tz = (Math.random() - .5)*4.4; } }
+function moveSL(tx, tz, sp, dt){ const dx = tx - SL.x, dz = tz - SL.z, d = Math.hypot(dx, dz); if (d < .05) return d; const s2 = Math.min(d, sp*dt), ox = SL.x, oz = SL.z;
+  SL.x += dx/d*s2; SL.z += dz/d*s2; pushOut(SL, .4, true, 0); const lx = SL.x - IO, r = Math.hypot(lx, SL.z); if (r > 31){ SL.x = IO + lx/r*31; SL.z = SL.z/r*31; }
+  const moved = Math.hypot(SL.x - ox, SL.z - oz); SL.stuck = moved < s2*.3 ? SL.stuck + dt : Math.max(0, SL.stuck - dt);
+  if (moved > 1e-4) SL.face = angLerp(SL.face, Math.atan2(SL.x - ox, SL.z - oz), Math.min(1, dt*8)); SL.walkT += moved*3.2; walkAnim(slb, SL.walkT, 1); return d; }
+function sellerSees(){ if (mode !== 'island' || IC.in || SL.grace > 0 || busy || st.molesFree || SL.dizzy > 0 || disguised || P.y > 1.3) return false;
+  const dx = P.x - SL.x, dz = P.z - SL.z, d = Math.hypot(dx, dz); if (d < 1.8) return true; if (d > 9) return false;
+  if (Math.abs(angDiff(SL.face, Math.atan2(dx, dz))) > 1.0) return false; return !losBlocked(SL.x, SL.z, P.x, P.z, P.y); }
+function updateSeller(dt){ SL.grace = Math.max(0, SL.grace - dt); SL.sayCd -= dt; stars.visible = SL.dizzy > 0;
+  if (IC.in){ SL.face = angLerp(SL.face, Math.atan2(P.x - SL.x, P.z - SL.z), Math.min(1, dt*5)); walkAnim(slb, 0, 0); slb.arms[0].rotation.x = -.6 + Math.sin(time*8)*.25;
+    if (SL.sayCd <= 0){ SL.sayCd = 5; slSay.show(['Hehehe! Was für ein schöner Maulwurf!', 'Den verkaufe ich für hundert Taler!', 'Da kommst du nie wieder raus! Hehehe!'][Math.random()*3|0], 2.6); } return; }
+  if (SL.dizzy > 0){ SL.dizzy -= dt; stars.rotation.y += dt*4; SL.face += dt*1.5; walkAnim(slb, 0, 0); if (SL.dizzy <= 0){ slSay.show('Uiuiui … wo bin ich?', 2); slPick(); } return; }
+  const d = dXZ(P, SL);
+  if (!st.molesFree && SL.state !== 'chase' && sellerSees()){ SL.state = 'chase'; slSay.show(['Ein Maulwurf! Der bringt viel Geld! 💰', 'Komm her, kleiner Maulwurf!', 'Dich fang ich mit meinem Netz!'][Math.random()*3|0], 2.4); sfx.hey(); }
+  if (SL.state === 'chase'){
+    if (mode !== 'island' || P.y > 1.3 || d > 14 || SL.grace > 0){ SL.state = 'walk'; slPick(); SL.timer = 1.5; if (mode === 'island') slSay.show(P.y > 1.3 ? 'Komm sofort da runter, du Frechdachs! 😠' : 'Mist! Wo ist er hin?', 2.4); return; }
+    moveSL(P.x, P.z, 3.9, dt); if (d < .9 && P.y < 1.0 && !busy) islandCaught();
+    if (SL.stuck > 1.2){ SL.state = 'walk'; slPick(); SL.stuck = 0; } return; }
+  if (SL.peel){ const pp = posOf(SL.peel); if (!SL.peelSaid){ SL.peelSaid = true; slSay.show('Oh! Liegt da etwa eine Münze? 🪙', 2.4); }
+    const dd = moveSL(pp.x, pp.z, 2.4, dt);
+    if (dd < .75){ SL.dizzy = 6; SL.peelSaid = false; slSay.show('Huiii … PLUMPS! 🍌💫', 2.6); sfx.pop(); SL.peel.scale.y = .3; SL.peel = null; if (MS.act && MS.act.def.id === 'banane') MS.act.slipped = true; }
+    else if (SL.stuck > 2){ SL.stuck = 0; SL.z += SL.z > 0 ? -.6 : .6; } return; }
+  if (SL.timer > 0){ SL.timer -= dt; walkAnim(slb, 0, 0); SL.face += Math.sin(time*.9)*dt*1.4; return; }
+  if (SL.sayCd <= 0 && mode === 'island' && d < 10){ SL.sayCd = 14; slSay.show(st.molesFree ? 'Socken! Schöne Socken! Danke, Mauli! 🧦' : 'Maulwürfe! Schöne Maulwürfe zu verkaufen! 💰', 2.8); }
+  const dd = moveSL(SL.tx, SL.tz, st.molesFree ? 1.6 : 2.1, dt);
+  if (dd < .3 || SL.stuck > 1.5){ SL.stuck = 0; const wasHome = SL.home; slPick(); SL.timer = wasHome ? 3.5 : 1 + Math.random()*2; if (wasHome) SL.face = -Math.PI/2; } }
+
+// Gefangen auf der Insel
+const IC = {in: false, wig: 0, t: 0};
+const CAGE_TXT = 'Oh nein, Mauli ist im Käfig! <b>Zappel ganz schnell</b>, dann fällt der Käfig runter.';
+function islandCaught(){ busy = true; SL.state = 'caught'; sfx.hey(); if (MS.act) missionFail('Herr Krallmann hat dich gefangen!', true); setCarry(null); setDisguise(false);
+  slSay.show('Hab ich dich! Ab in den Käfig! 💰', 2.4);
+  setTimeout(() => fadeTo(() => { const c = icages[5]; IC.in = true; IC.wig = 0; IC.t = 0; c.open = false; c.bars.position.y = 0;
+    SL.x = I(16.2); SL.z = c.z - .9; SL.state = 'gloat'; SL.sayCd = 3; P.x = c.x; P.z = c.z; P.y = .96; P.vy = 0; P.face = -Math.PI/2;
+    $('cageTxt').innerHTML = 'Oh nein, Herr Krallmann hat Mauli eingesperrt! <b>Zappel ganz schnell</b>, dann springt der Käfig auf.';
+    $('cagebox').hidden = false; $('cagefill').style.width = '0%'; $('touch').hidden = true; $('hint').hidden = true; slSay.show('Den verkaufe ich für hundert Taler! Hehehe!', 3); }), 800); }
+function iWiggle(){ IC.wig = Math.min(1, IC.wig + CFG.wigglePerPress); sfx.wiggle(); if (Math.random() < .25) moleSay.show(['Lass mich raus!', 'Zappel, zappel!', 'Hilfe!', 'Ich will nach Hause!'][Math.random()*4|0], 1.2);
+  if (IC.wig < 1) return; const c = icages[5]; IC.in = false; c.open = true; c.openT = 2.5; $('cagebox').hidden = true; sfx.crash();
+  P.x = I(17.0); P.z = c.z + 1.4; P.y = 1.0; P.vy = 5; P.onGround = false; SL.grace = 5; SL.state = 'walk'; slPick(); SL.timer = 1;
+  slSay.show('Hey! Mein Käfig! Komm sofort zurück!', 2.4); moleSay.show('Juhu, frei!', 1.6); if (touchMode) $('touch').hidden = false; lastCtx = '';
+  toast('Frei! Schnell weg! Auf den Lichterketten und Dächern kann Krallmann dich nicht fangen. 🎪', 4.5); }
+function updateCageMole(dt){ IC.t += dt; IC.wig = Math.max(0, IC.wig - CFG.wiggleDecay*dt); $('cagefill').style.width = (IC.wig*100) + '%';
+  const c = icages[5]; P.x = c.x; P.z = c.z; P.y = .96; c.g.rotation.z = Math.sin(IC.t*34)*.06*IC.wig;
+  mole.position.set(c.x + Math.sin(IC.t*30)*.04*IC.wig, .96 + Math.max(0, Math.sin(IC.t*28))*.05*IC.wig, c.z); mole.rotation.set(0, -Math.PI/2 + Math.sin(IC.t*25)*.4*IC.wig, 0); P.walk += dt*IC.wig*20; }
+
+// Befreite Maulwürfe
+const runners = [];
+function openCage(c){ c.open = true; sfx.click(); sfx.key(); const m = c.mini; c.mini = null; c.g.remove(m); m.position.set(c.x, .96, c.z); m.rotation.y = -Math.PI/2; island.add(m);
+  const b = m.userData.b || (m.userData.b = bubble(m, 2.2)); b.show(['Danke, Mauli! 💖', 'Frei! Juhuu!', 'Du bist ein Held!', 'Danke, danke!', 'Endlich frei! 🥳'][runners.length % 5], 2.4);
+  burst(c.x, 1.3, c.z, 0xffd447, 10); runners.push({m, b, t: 0, c}); }
+function relockCages(){ for (const r of runners){ island.remove(r.m); r.c.mini = r.m; r.c.g.add(r.m); r.m.position.set(0, .06, 0); r.m.rotation.y = -Math.PI/2; r.c.open = false; r.b.sp.visible = false; } runners.length = 0; }
+function updateRunners(dt){ for (const r of runners){ if (r.done) continue; r.t += dt; r.b.update(dt); const m = r.m;
+  if (r.t < .5){ m.position.x -= dt*3.2; m.position.y = .96*(1 - r.t/.5) + Math.sin(r.t/.5*Math.PI)*.5; }
+  else { const dx = islePlane.home.x - m.position.x, dz = islePlane.home.z - 1.5 - m.position.z, d = Math.hypot(dx, dz); m.rotation.y = Math.atan2(dx, dz);
+    m.position.x += dx/d*3.6*dt; m.position.z += dz/d*3.6*dt; m.position.y = Math.abs(Math.sin(r.t*14))*.08; if (d < 1.2 || r.t > 12){ island.remove(m); r.done = true; } } } }
+function reformSeller(){ island.remove(SSIGN); SSIGN = label('🧦 Socken & Krimskrams 🧦', I(18.6), 4.2, 0, island, .8); slCone.visible = false; }
+
+// Zuhause: befreite Maulwürfe wohnen bei Mauli
+const homeMoles = [];
+function spawnHomeMoles(){ if (homeMoles.length) return; [[-1.2, 11.4], [1.2, 11.6], [1.5, 13.7], [-.7, 14.0], [.8, 14.4]].forEach(([x, z], n) => {
+  const m = makeMini(MINI_COLS[n]); m.position.set(x, 0, z); under.add(m); homeMoles.push({m, b: bubble(m, 2.0), cd: 2 + n*4}); }); }
+function updateHomeMoles(dt){ if (mode !== 'under' || !homeMoles.length) return;
+  for (const h of homeMoles){ h.cd -= dt; h.b.update(dt); const m = h.m; m.userData.t += dt; m.position.y = Math.abs(Math.sin(m.userData.t*2.5))*.04;
+    const d = Math.hypot(P.x - m.position.x, P.z - m.position.z); if (d < 5) m.rotation.y = angLerp(m.rotation.y, Math.atan2(P.x - m.position.x, P.z - m.position.z), Math.min(1, dt*4));
+    if (d < 1.6 && h.cd <= 0){ h.cd = 25; h.b.show(['Danke für die Rettung, Mauli! 💖', 'Hier wohnt es sich super!', 'Mauli ist der Beste!', 'Wollen wir zusammen graben?', 'Nie wieder Käfig! 🥳'][homeMoles.indexOf(h)], 2.6); sfx.hi(); } } }
+
+// ---------- Unterwasserwelt ----------
+const fishes = [], clams = [], weeds = [], seaBubbles = [], crabs = [];
+{ const fl = new T.Mesh(new T.CircleGeometry(44, 48), M(0xe3cf98)); fl.rotation.x = -Math.PI/2; fl.position.set(SO, 0, 0); fl.receiveShadow = true; sea.add(fl);
+  for (let k = 0; k < 40; k++){ const p = new T.Mesh(new T.CircleGeometry(.5 + Math.random()*1.4, 12), M(0xd4bd85)); p.rotation.x = -Math.PI/2; p.position.set(SO + (Math.random() - .5)*60, .01, (Math.random() - .5)*60); sea.add(p); }
+  for (let k = 0; k < 34; k++){ const a = Math.random()*Math.PI*2, r = 4 + Math.random()*20, g = new T.Group(); g.position.set(SO + Math.cos(a)*r, 0, Math.sin(a)*r); g.userData.o = Math.random()*6; sea.add(g); weeds.push(g);
+    const n = 3 + (Math.random()*4|0); for (let s = 0; s < n; s++){ const b = box(.14, .7, .05, [0x2f9a52, 0x3fb05a, 0x2a7a44][s % 3], 0, .35 + s*.62, 0, g); b.rotation.z = s % 2 ? .12 : -.12; } }
+  for (let k = 0; k < 18; k++){ const a = Math.random()*Math.PI*2, r = 5 + Math.random()*17, x = SO + Math.cos(a)*r, z = Math.sin(a)*r, c = [0xff6fa0, 0xff8a3d, 0xb38bff, 0xffd447][k % 4];
+    if (k % 2){ for (let s = 0; s < 4; s++){ const br = cyl(.07, .1, .8 + Math.random()*.6, c, x + (Math.random() - .5)*.6, .4, z + (Math.random() - .5)*.6, sea, 6); br.rotation.z = (Math.random() - .5)*.8; } }
+    else { const b = sph(.45 + Math.random()*.3, c, x, .2, z, sea, 10); b.scale.y = .7; } }
+  for (let k = 0; k < 10; k++){ const a = Math.random()*Math.PI*2, r = 6 + Math.random()*15, x = SO + Math.cos(a)*r, z = Math.sin(a)*r;
+    mesh(new T.DodecahedronGeometry(.7 + Math.random()*.5, 0), M(0x7a8a90), x, .35, z, sea); addSolid(x - .5, x + .5, z - .5, z + .5, .9); }
+  const rayMat = new T.MeshBasicMaterial({color: 0xbfefff, transparent: true, opacity: .12, depthWrite: false, blending: T.AdditiveBlending});
+  for (let k = 0; k < 7; k++){ const m = new T.Mesh(new T.CylinderGeometry(.6, 1.6, 16, 10, 1, true), rayMat); m.position.set(SO + (Math.random() - .5)*30, 7, (Math.random() - .5)*30); m.rotation.z = .25; sea.add(m); }
+  const sf = new T.Mesh(new T.PlaneGeometry(140, 140), new T.MeshBasicMaterial({color: 0x8fd6ff, transparent: true, opacity: .35, side: T.DoubleSide, depthWrite: false})); sf.rotation.x = Math.PI/2; sf.position.set(SO, 11, 0); sea.add(sf);
+  cyl(.06, .06, 11, 0xc8a46a, ROPE.x, 5.5, ROPE.z, sea, 6);
+  const anc = new T.Mesh(new T.TorusGeometry(.35, .08, 6, 14), M(0x6a6a72, {metalness: .6})); anc.position.set(ROPE.x, .35, ROPE.z); sea.add(anc);
+  label('⬆ Auftauchen', ROPE.x, 2.6, ROPE.z, sea, .7);
+  const bm = new T.MeshStandardMaterial({color: 0xdff6ff, transparent: true, opacity: .5, roughness: .1});
+  for (let k = 0; k < 24; k++){ const b = new T.Mesh(new T.SphereGeometry(.06 + Math.random()*.08, 8, 6), bm); b.position.set(SO + (Math.random() - .5)*36, Math.random()*11, (Math.random() - .5)*36); sea.add(b); seaBubbles.push(b); } }
+const mound = sph(.9, 0xe3cf98, 0, 0, 0, sea, 14); mound.scale.y = .6; mound.visible = false;
+function makeFish(col, hx, hz){ const g = new T.Group(); sea.add(g); const body = sph(.5, col, 0, 0, 0, g, 14); body.scale.set(.7, .9, 1.3);
+  const tail = mesh(new T.ConeGeometry(.35, .6, 4), M(col), 0, 0, -.85, g); tail.rotation.x = Math.PI/2;
+  box(.05, .35, .5, col, 0, .45, -.05, g);
+  for (const s of [-1, 1]){ sph(.13, 0xffffff, s*.24, .18, .45, g, 10); sph(.06, 0x111111, s*.27, .18, .56, g, 6); const br = box(.2, .05, .05, 0x222222, s*.22, .34, .5, g); br.rotation.z = -s*.5; }
+  box(.36, .05, .05, 0x3a1010, 0, -.1, .6, g);
+  for (let k = -2; k <= 2; k++){ const t = mesh(new T.ConeGeometry(.035, .1, 4), M(0xffffff), k*.07, -.15, .62, g); t.rotation.x = Math.PI; }
+  const f = {g, tail, hx, hz, x: hx, y: 1.5, z: hz, tx: hx, ty: 1.5, tz: hz, state: 'swim', cd: 0, t: Math.random()*5, b: bubble(g, 1.4)};
+  f.pick = () => { f.tx = f.hx + (Math.random() - .5)*10; f.tz = f.hz + (Math.random() - .5)*10; f.ty = .8 + Math.random()*2; };
+  fishes.push(f); return f; }
+[[0xd8443a, -9, -4], [0x8a4fd8, 10, -6], [0x3aa86a, 8, 10], [0xf08a2e, -8, 10]].forEach(([c, x, z]) => makeFish(c, SO + x, z));
+function makeClam(x, z){ const g = new T.Group(); g.position.set(x, 0, z); sea.add(g); const sh = M(0xf4b4c4, {roughness: .5});
+  const bot = mesh(new T.SphereGeometry(.6, 18, 8, 0, Math.PI*2, Math.PI/2, Math.PI/2), sh, 0, .22, 0, g); bot.scale.y = .4;
+  const lid = new T.Group(); lid.position.set(0, .22, -.6); g.add(lid);
+  const tp = mesh(new T.SphereGeometry(.6, 18, 8, 0, Math.PI*2, 0, Math.PI/2), sh, 0, 0, .6, lid); tp.scale.y = .4;
+  const inner = new T.Mesh(new T.CircleGeometry(.58, 18), M(0xffe4ec)); inner.rotation.x = -Math.PI/2; inner.position.y = .23; g.add(inner);
+  const pearl = sph(.14, M(0xffffff, {emissive: 0xddeeff, emissiveIntensity: .5, roughness: .2}), 0, .38, .05, g, 12); pearl.visible = false;
+  const key = makeKey(0, 0, g); key.position.set(0, .7, .05); key.scale.setScalar(.9); key.visible = false;
+  const c = {g, lid, pearl, key, x, z, open: false, a: 0, item: 'pearl'}; clams.push(c); return c; }
+[[-6, -9], [9, -11], [14, 3], [-14, 6], [3, 13]].forEach(([x, z]) => makeClam(SO + x, z));
+function seaSetup(){ const a = MS.act && MS.act.def.id === 'tauchen' && !MS.act.got ? MS.act : null, ki = Math.random()*clams.length|0;
+  clams.forEach((c, n) => { c.open = false; c.a = 0; c.lid.rotation.x = 0; c.item = a && n === ki ? 'key' : (n + ki) % 2 ? 'pearl' : 'crab'; c.pearl.visible = c.key.visible = false; });
+  fishes.forEach(f => { f.x = f.hx; f.z = f.hz; f.y = 1.5; f.state = 'swim'; f.cd = 2; f.pick(); }); bury(false); }
+function openClam(c){ c.open = true; sfx.pop(); burst(c.x, .5, c.z, 0xffffff, 6);
+  if (c.item === 'key'){ c.key.visible = true; sfx.key(); if (MS.act && MS.act.def.id === 'tauchen') MS.act.got = true; setCarry('🗝️'); moleSay.show('Der Schlüssel! 🗝️', 2); toast('🗝️ Du hast den Schlüssel! Schnell zum Seil und auftauchen!', 4); setTimeout(() => c.key.visible = false, 1500); }
+  else if (c.item === 'pearl'){ c.pearl.visible = true; st.gems++; dirty = true; updHud(); sfx.gem(); toast('🫧 Eine Perle! +1 💎'); setTimeout(() => c.pearl.visible = false, 1500); }
+  else { const g = new T.Group(); g.position.set(c.x, .3, c.z); sea.add(g); const bd = sph(.22, 0xe0402a, 0, .1, 0, g, 10); bd.scale.set(1.3, .6, 1);
+    for (const s of [-1, 1]){ sph(.09, 0xe0402a, s*.3, .15, .15, g, 8); sph(.035, 0x111111, s*.07, .25, .14, g, 6); }
+    crabs.push({g, t: 0, dir: Math.random() < .5 ? -1 : 1}); moleSay.show('Aua! Nur ein frecher Krebs! 🦀', 2); } }
+function bury(on){ if (on && !P.onGround) return; if (on === !!P.buried) return; P.buried = on; mound.visible = on;
+  if (on){ mound.position.set(P.x, 0, P.z); P.vy = 0; burst(P.x, .3, P.z, 0xe3cf98, 10); sfx.dig(); moleSay.show('Pssst … 🤫', 1.2); } else { burst(P.x, .3, P.z, 0xe3cf98, 6); } }
+function moveFish(f, tx, ty, tz, sp, dt){ const dx = tx - f.x, dy = ty - f.y, dz = tz - f.z, d = Math.hypot(dx, dy, dz); if (d < .01) return d; const s = Math.min(d, sp*dt);
+  f.x += dx/d*s; f.y = Math.max(.4, f.y + dy/d*s); f.z += dz/d*s; f.g.rotation.y = angLerp(f.g.rotation.y, Math.atan2(dx, dz), Math.min(1, dt*6)); return d; }
+function seaCaught(){ busy = true; sfx.fail(); moleSay.show('Hilfe! 😱', 1.2); if (MS.act) missionFail('Die bösen Fische haben dich geschnappt!', true); setCarry(null);
+  setTimeout(() => fadeTo(() => { bury(false); setMode('island'); P.x = DIVE.x; P.z = DIVE.z + 1.5; P.y = 0; P.vy = 3; P.face = Math.PI;
+    toast('🐟 Die Fische haben dich zurück an den Steg geschubst! Kommen sie, buddel dich mit E im Sand ein.', 5); }), 600); }
+function updateSea(dt){ for (const w of weeds) w.rotation.z = Math.sin(time*1.4 + w.userData.o)*.18;
+  for (const b of seaBubbles){ b.position.y += dt*1.2; if (b.position.y > 11) b.position.y = 0; }
+  for (const c of clams){ c.a = lerp(c.a, c.open ? 1 : 0, Math.min(1, dt*5)); c.lid.rotation.x = -c.a*1.1; c.key.rotation.y += dt*2; }
+  for (let n = crabs.length - 1; n >= 0; n--){ const cr = crabs[n]; cr.t += dt; cr.g.position.x += cr.dir*dt*1.5; cr.g.position.y = .05 + Math.abs(Math.sin(cr.t*12))*.05; if (cr.t > 3){ sea.remove(cr.g); crabs.splice(n, 1); } }
+  if (P.buried) mound.position.set(P.x, 0, P.z);
+  for (const f of fishes){ f.b.update(dt); f.cd -= dt; f.t += dt; f.tail.rotation.y = Math.sin(f.t*10)*.5;
+    const d = Math.hypot(P.x - f.x, P.z - f.z, (P.y + .3) - f.y);
+    if (f.state === 'chase'){ if (P.buried || d > 10 || busy){ f.state = 'swim'; f.cd = 3; f.pick(); if (P.buried) f.b.show('Hä? Wo ist er hin? 🐟', 2); }
+      else { moveFish(f, P.x, P.y + .3, P.z, 3.1, dt); if (d < .8 && !busy) seaCaught(); } }
+    else if (!P.buried && !busy && f.cd <= 0 && d < 6){ f.state = 'chase'; f.b.show(['Blubb! Ein Maulwurf!', 'Hab dich gleich!', 'Schnapp, schnapp!'][Math.random()*3|0], 1.8); sfx.blub(); }
+    else if (moveFish(f, f.tx, f.ty, f.tz, 1.3, dt) < .3) f.pick();
+    f.g.position.set(f.x, f.y + Math.sin(f.t*2)*.08, f.z); } }
+function dive(){ fadeTo(() => { setMode('sea'); seaSetup(); P.x = ROPE.x + 1.6; P.z = ROPE.z + 1.6; P.y = 3; P.vy = -1; P.face = 0; sfx.blub();
+  toast('🌊 Blubb! Öffne die Muscheln mit E. Kommen die bösen Fische, buddel dich mit E im Sand ein!', 5); }); }
+function surface(){ fadeTo(() => { bury(false); setMode('island'); P.x = DIVE.x; P.z = DIVE.z + 1.2; P.y = 0; P.vy = 4; P.face = Math.PI; sfx.pop(); }); }
+function boundIsle(){ if (mode === 'sea'){ const lx = P.x - SO, r = Math.hypot(lx, P.z); if (r > 21){ P.x = SO + lx/r*21; P.z = P.z/r*21; } if (P.y > 7){ P.y = 7; P.vy = Math.min(P.vy, 0); } return; }
+  const lx = P.x - IO; if (Math.abs(lx) < 1.15 && P.z < -30){ P.z = Math.max(P.z, -44.6); return; }
+  const r = Math.hypot(lx, P.z); if (r > 32.5){ P.x = IO + lx/r*32.5; P.z = P.z/r*32.5; } }
+
+// ---------- Fliegen ----------
+let FL = null;
+function fly(to){ if (busy || FL) return; if (MS.act){ toast('Erledige zuerst deinen Auftrag! 🕵️'); sfx.no(); return; }
+  if (shopOpen) closeShop(); if (MS.pending){ MS.pending = null; $('watch').classList.remove('ping'); }
+  FL = {to, t: 0, phase: 'off', pl: to === 'island' ? farmPlane : islePlane}; busy = true; P.tree = false; setDisguise(false); bury(false);
+  sfx.plane(); moleSay.show(to === 'island' ? 'Auf zur Insel! ✈️' : 'Ab nach Hause! 🏡', 2); $('hint').hidden = true; $('tAct').hidden = true; }
+function updateFlight(dt){ const f = FL, pl = f.pl, g = pl.g; f.t += dt; pl.prop.rotation.x += dt*40;
+  if (f.phase === 'off'){ const t = f.t; g.position.x = pl.home.x + 2.6*t*t; g.position.y = t > 1.2 ? (t - 1.2)**2*2.6 : 0; g.rotation.z = t > 1.2 ? Math.min(.3, (t - 1.2)*.3) : 0;
+    if (t >= 3.2 && !f.faded){ f.faded = true; $('fade').classList.add('on');
+      setTimeout(() => { g.position.set(pl.home.x, 0, pl.home.z); g.rotation.z = 0; setMode(f.to); f.pl = f.to === 'island' ? islePlane : farmPlane; f.phase = 'land'; f.t = 0; sfx.plane(); setTimeout(() => $('fade').classList.remove('on'), 120); }, 350); } }
+  else { const u = Math.min(1, f.t/3), e = 1 - (1 - u)*(1 - u); g.position.x = pl.home.x - 34*(1 - e); g.position.y = 9*(1 - u)*(1 - u); g.rotation.z = -.15*(1 - u);
+    if (u >= 1){ g.position.set(pl.home.x, 0, pl.home.z); g.rotation.z = 0; FL = null; busy = false; P.x = pl.home.x + .5; P.z = pl.home.z + 3.9; P.y = 0; P.vy = 3; P.face = f.to === 'island' ? Math.PI : 0; lastCtx = ''; arrived(f.to); return; } }
+  P.x = g.position.x + .8; P.y = g.position.y + 1.62; P.z = g.position.z; mole.position.set(P.x, P.y, P.z); mole.rotation.set(0, Math.PI/2, 0); }
+function arrived(to){ if (to === 'island'){ SL.grace = 4; MS.offerT = Math.min(MS.offerT, 8);
+    toast(st.isMissions.length ? 'Willkommen zurück auf der Flohmarkt-Insel! 🏝️' : '🏝️ Willkommen auf der Flohmarkt-Insel! Vorsicht vor Herrn Krallmann, er fängt Maulwürfe!', 5); }
+  else { F.grace = 5; toast('🏡 Wieder zu Hause auf dem Bauernhof!'); } }
+
+// ---------- Insel-Aufträge ----------
+function firefly(){ const g = new T.Group(); sph(.12, M(0xfff27a, {emissive: 0xffe040, emissiveIntensity: 1.6}), 0, 0, 0, g, 10);
+  for (const s of [-1, 1]){ const w = box(.2, .02, .1, M(0xffffff, {transparent: true, opacity: .7}), s*.13, .06, 0, g); w.castShadow = false; }
+  const halo = new T.Sprite(new T.SpriteMaterial({color: 0xfff27a, transparent: true, opacity: .45, blending: T.AdditiveBlending, depthWrite: false})); halo.scale.set(.9, .9, 1); g.add(halo); return g; }
+function mapPiece(){ const g = new T.Group(); box(.55, .03, .42, 0xf0e0b0, 0, 0, 0, g); for (const r of [-.7, .7]){ const x = box(.28, .035, .05, 0xd8262f, 0, .01, 0, g); x.rotation.y = r; } g.scale.setScalar(1.4); return g; }
+function makePeel(x, z){ const g = new T.Group(); g.position.set(x, .05, z); island.add(g);
+  for (let k = 0; k < 3; k++){ const p = new T.Group(); p.rotation.y = k*2.1; g.add(p); const l = box(.12, .04, .38, 0xffd447, 0, .02, .18, p); l.rotation.x = -.25; }
+  sph(.07, 0x6a4a20, 0, .05, 0, g, 6); g.scale.setScalar(1.6); return g; }
+function makeParrot(){ const g = new T.Group(); island.add(g); const b = sph(.18, 0xe8342a, 0, .25, 0, g, 12); b.scale.set(.9, 1.2, 1); sph(.13, 0xe8342a, 0, .48, .05, g, 10);
+  const bk = mesh(new T.ConeGeometry(.05, .12, 6), M(0xffd447), 0, .45, .18, g); bk.rotation.x = Math.PI/2 + .4;
+  for (const s of [-1, 1]) sph(.025, 0x111111, s*.07, .52, .12, g, 6);
+  const w = [-1, 1].map(s => { const p = new T.Group(); p.position.set(s*.17, .32, 0); g.add(p); box(.05, .26, .32, 0x2e7fd8, 0, -.1, 0, p); return p; });
+  const tl = box(.1, .04, .35, 0x3aa84a, 0, .12, -.25, g); tl.rotation.x = -.6; g.userData.w = w; g.scale.setScalar(1.4); return g; }
+function makeGull(){ const g = new T.Group(); island.add(g); const b = sph(.25, 0xffffff, 0, 0, 0, g, 12); b.scale.set(.8, .8, 1.4);
+  sph(.15, 0xffffff, 0, .12, .3, g, 10); const bk = mesh(new T.ConeGeometry(.05, .16, 6), M(0xffa020), 0, .1, .48, g); bk.rotation.x = Math.PI/2;
+  const w = [-1, 1].map(s => { const p = new T.Group(); p.position.set(s*.15, .05, 0); g.add(p); box(.9, .04, .3, 0xb8c0c8, s*.45, 0, 0, p); return p; });
+  g.userData.w = w; g.scale.setScalar(1.5); return g; }
+function makeRing(x, z){ const g = new T.Group(); g.position.set(x, 0, z); island.add(g);
+  const r = new T.Mesh(new T.TorusGeometry(1.15, .13, 8, 24), M(0xff7a59, {emissive: 0xff5a20, emissiveIntensity: .6})); r.position.y = 1.3; g.add(r);
+  cyl(.06, .06, .3, 0xffffff, 0, .15, 0, g, 6); return g; }
+const FIREFLY_SPOTS = [[-12, -1.5], [4, 2], [7, 3.8]];
+const KOKO = [[-16, 2.25, -5.5], [-19.5, 3, 1.5], [4, 3, 0], [-8, 2.25, 5.5], [8, 2.25, -5.5]];
+const RINGS = [[11, 19], [22, 0], [11, -19], [-11, -19], [-22, 0], [-11, 19]];
+const MAP_SPOTS = [[-4, 3, 1.2], [16.2, 0, -1.6], [0, 0, -42.5]];
+const nearestOf = (list, y) => { let b = null, bd = 1e9; for (const g of list){ if (!g.visible) continue; const d = dXZ(P, posOf(g)); if (d < bd){ bd = d; b = g; } } return b ? {mode: 'island', x: b.position.x, z: b.position.z, y} : null; };
+const IMISSIONS = [
+  {id: 'lauschen', island: true, title: 'Lauschangriff 👂', time: 70, reward: 5,
+    brief: 'Herr Krallmann, der Maulwurfverkäufer, hat ein Geheimnis. Bleib 6 Sekunden ganz nah bei ihm, ohne dass er dich sieht, und lausch! Tipp: Nach oben auf die Lichterketten schaut er nie.',
+    start: a => { a.h = 0; a.said = 0; },
+    status: a => `Bleib ganz nah bei Krallmann: ${Math.min(6, a.h|0)}/6 Sekunden`,
+    target: a => ({mode: 'island', x: SL.x, z: SL.z, y: 2.6}),
+    update: (a, dt) => { if (SL.state === 'chase') return 'fail';
+      if (mode === 'island' && dXZ(P, SL) < 4.5){ a.h += dt; if (a.h > 1 && a.said < 1){ a.said = 1; slSay.show('Hehehe … meinen Schlüssel findet keiner!', 3); } if (a.h > 3.5 && a.said < 2){ a.said = 2; slSay.show('Er liegt im Meer, in einer Muschel! Hehehe!', 3); } }
+      return a.h >= 6 ? 'win' : null; },
+    fail: 'Krallmann hat dich entdeckt!', win: 'Du hast alles gehört: Krallmann hat den Schlüssel zu seinen Maulwurf-Käfigen in einer Muschel im Meer versteckt!'},
+  {id: 'lichter', island: true, title: 'Glühwürmchen-Rettung ✨', time: 100, reward: 5,
+    brief: 'Krallmann will Glühwürmchen in Gläser sperren! Drei haben sich auf den Lichterketten versteckt. Spring auf einen Tisch, dann aufs Dach eines Standes und balancier zu ihnen!',
+    start: a => { a.f = FIREFLY_SPOTS.map(([x, z], n) => { const g = firefly(); g.position.set(I(x), 3.45, z); g.userData.n = n; island.add(g); return g; }); a.n = 0; },
+    status: a => `Gerettete Glühwürmchen: ${a.n}/3`,
+    target: a => nearestOf(a.f, 3.4),
+    update: (a, dt) => { for (const g of a.f){ if (!g.visible) continue; g.position.y = 3.45 + Math.sin(time*4 + g.userData.n)*.1; g.rotation.y += dt*3;
+        if (mode === 'island' && dXZ(P, posOf(g)) < .95 && Math.abs(P.y - 3) < .7){ g.visible = false; a.n++; sfx.gem(); burst(g.position.x, 3.4, g.position.z, 0xfff27a, 10); moleSay.show('Flieg in die Freiheit! ✨', 1.6); } }
+      return a.n >= 3 ? 'win' : null; },
+    end: a => a.f.forEach(g => island.remove(g)),
+    win: 'Alle Glühwürmchen sind frei und blinken dir zum Dank. Du balancierst wie ein Zirkus-Maulwurf!'},
+  {id: 'verkleidung', island: true, title: 'Meister der Verkleidung 🥸', time: 80, reward: 6,
+    brief: 'Hol dir bei Theo am Kostümstand eine Verkleidung mit Hut und Schnurrbart. Dann spazier ganz frech an Herrn Krallmann vorbei. Er wird dich nicht erkennen!',
+    status: a => disguised ? 'Jetzt ganz nah an Krallmann vorbeigehen (Pfeil)!' : 'Geh zum Kostümstand 🎭 (Pfeil)',
+    target: a => disguised ? {mode: 'island', x: SL.x, z: SL.z, y: 2.6} : {mode: 'island', ...vpos(vendor('Theo')), y: 2.4},
+    ctx: a => !disguised && mode === 'island' && P.y < 1.2 && dXZ(P, vpos(vendor('Theo'))) < 3.2 ? {label: 'Verkleiden 🥸', fn: () => { setDisguise(true); vendor('Theo').b.show('Toller Schnurrbart! Dich erkennt keiner! 🎩', 2.6); sfx.buy(); }} : null,
+    update: a => { if (SL.state === 'chase') return 'fail'; if (disguised && mode === 'island' && dXZ(P, SL) < 2.3){ slSay.show('Guten Tag, der Herr! Schöner Schnurrbart! 🎩', 3); return 'win'; } return null; },
+    end: a => { setDisguise(false); SL.grace = Math.max(SL.grace, 4); },
+    fail: 'Krallmann hat dich ohne Verkleidung entdeckt!', win: 'Krallmann hat „Guten Tag, der Herr!“ zu dir gesagt. Er hat keine Ahnung, dass du ein Maulwurf bist! 🤣'},
+  {id: 'banane', island: true, title: 'Der Bananen-Trick 🍌', time: 110, reward: 6,
+    brief: 'Hol dir bei Frau Kiwi am Obststand eine Banane. Iss sie auf und leg die Schale in die Marktgasse. Krallmann hält sie für eine Münze und … rutsch!',
+    status: a => a.peel ? 'Versteck dich und warte, bis Krallmann kommt!' : a.got ? 'Leg die Schale mitten in die Marktgasse (E)' : 'Hol eine Banane bei Frau Kiwi 🍌 (Pfeil)',
+    target: a => a.got ? null : {mode: 'island', ...vpos(vendor('Frau Kiwi')), y: 2.4},
+    ctx: a => { if (mode !== 'island' || P.y > 1.2) return null;
+      if (!a.got && dXZ(P, vpos(vendor('Frau Kiwi'))) < 3.2) return {label: 'Banane nehmen 🍌', fn: () => { a.got = true; setCarry('🍌'); vendor('Frau Kiwi').b.show('Lass sie dir schmecken! 🍌', 2.4); sfx.gem(); }};
+      if (a.got && !a.peel && P.onGround && Math.abs(P.z) < 3.2 && P.x < I(15) && P.x > I(-21)) return {label: 'Schale hinlegen 🍌', fn: () => { a.peel = makePeel(P.x, P.z); setCarry(null); moleSay.show('Mampf! Lecker! 😋', 1.6); SL.peel = a.peel; SL.peelSaid = false; }};
+      return null; },
+    update: a => a.slipped ? 'win' : null,
+    end: a => { if (a.peel) island.remove(a.peel); SL.peel = null; },
+    win: 'Rutsch, plumps! Krallmann ist auf der Bananenschale ausgerutscht und sieht jetzt Sterne. 🌟'},
+  {id: 'papagei', island: true, title: 'Papagei Koko 🦜', time: 110, reward: 6,
+    brief: 'Oma Ernas Papagei Koko ist weggeflogen und hüpft auf den Marktdächern und Lichterketten herum. Fang ihn und bring ihn zurück zu Oma Erna!',
+    start: a => { a.k = makeParrot(); a.p = 0; a.hops = 0; a.fly = 0; a.k.position.set(I(KOKO[0][0]), KOKO[0][1], KOKO[0][2]); },
+    status: a => a.got ? 'Bring Koko zu Oma Erna ⏰ (Pfeil)' : 'Fang Koko! Er sitzt hoch oben (Pfeil)',
+    target: a => a.got ? {mode: 'island', ...vpos(vendor('Oma Erna')), y: 2.4} : {mode: 'island', x: a.k.position.x, z: a.k.position.z, y: a.k.position.y + .4},
+    update: (a, dt) => { if (!a.got){ const [px, py, pz] = KOKO[a.p], tgt = new T.Vector3(I(px), py, pz); a.fly = Math.max(0, a.fly - dt);
+        a.k.position.lerp(tgt, Math.min(1, dt*2.5)); if (a.fly > 0) a.k.position.y += Math.sin(a.fly*Math.PI)*.05; a.k.userData.w.forEach((w, n) => w.rotation.z = (n ? -1 : 1)*(a.fly > 0 ? Math.sin(time*30)*.8 : .1));
+        a.k.rotation.y = Math.atan2(P.x - a.k.position.x, P.z - a.k.position.z);
+        if (mode === 'island' && a.fly <= 0 && a.k.position.distanceTo(tgt) < .3 && Math.hypot(P.x - a.k.position.x, P.z - a.k.position.z, P.y - a.k.position.y) < 1.3){
+          if (a.hops < 2){ a.hops++; a.p = (a.p + 2) % KOKO.length; a.fly = 1.2; moleSay.show('Warte, Koko!', 1.2); toast('🦜 Kraah! Fang mich doch! (Koko ist weitergeflogen)'); sfx.no(); }
+          else { a.got = true; island.remove(a.k); setCarry('🦜'); sfx.gem(); moleSay.show('Hab dich, Koko!', 1.6); } } return null; }
+      if (mode === 'island' && dXZ(P, vpos(vendor('Oma Erna'))) < 3.2 && P.y < 1.2){ vendor('Oma Erna').b.show('Koko! Danke, lieber Mauli! 💖', 3); return 'win'; } return null; },
+    end: a => island.remove(a.k),
+    win: 'Oma Erna drückt Koko ganz fest. Koko krächzt: „Mauli ist der Beste! Kraah!“'},
+  {id: 'rennen', island: true, title: 'Möwen-Wettrennen 🏁', time: 60, reward: 5,
+    brief: 'Möwe Maxi fordert dich heraus! Lauf rund um den Flohmarkt durch alle 6 leuchtenden Ringe, bevor die Zeit um ist. Aber lass dich nicht von Krallmann erwischen!',
+    start: a => { a.r = RINGS.map(([x, z]) => makeRing(I(x), z)); a.n = 0; a.gull = makeGull(); },
+    status: a => `Ringe: ${a.n}/6. Lauf zum nächsten Ring (Pfeil)!`,
+    target: a => a.n < 6 ? {mode: 'island', x: a.r[a.n].position.x, z: a.r[a.n].position.z, y: 1.8} : null,
+    update: (a, dt) => { a.r.forEach((r, n) => { r.rotation.y += dt*1.5; r.scale.setScalar(n === a.n ? 1 + Math.sin(time*6)*.08 : .8); });
+      const ga = time*.45; a.gull.position.set(I(Math.cos(ga)*22), 5 + Math.sin(time*2)*.4, Math.sin(ga)*22); a.gull.rotation.y = -ga; a.gull.userData.w.forEach((w, n) => w.rotation.z = (n ? 1 : -1)*Math.sin(time*9)*.5);
+      if (mode === 'island' && a.n < 6 && dXZ(P, posOf(a.r[a.n])) < 1.6 && P.y < 2.5){ a.r[a.n].visible = false; a.n++; sfx.gem(); burst(P.x, 1.3, P.z, 0xff7a59, 8); if (a.n === 3) toast('🐦 Maxi: „Schon die Hälfte! Schneller, Mauli!“'); }
+      return a.n >= 6 ? 'win' : null; },
+    end: a => { a.r.forEach(r => island.remove(r)); island.remove(a.gull); },
+    win: 'Ziel! Maxi kreischt: „Du bist ja schneller als der Wind!“ 🏁'},
+  {id: 'tausch', island: true, title: 'Großer Tauschhandel 🔄', time: 120, reward: 7,
+    brief: 'Oma Erna wünscht sich einen Teddy für ihr Enkelkind. Herr Bommel vom Spielzeugstand tauscht seinen Teddy aber nur gegen etwas Leckeres. Und Frau Kiwi vom Obststand verschenkt gern Bananen …',
+    start: a => { a.s = 0; },
+    status: a => ['Geh zu Frau Kiwi 🍌 (Pfeil)', 'Bring die Banane zu Herrn Bommel 🧸 (Pfeil)', 'Bring den Teddy zu Oma Erna ⏰ (Pfeil)'][a.s] || '',
+    target: a => ({mode: 'island', ...vpos(vendor(['Frau Kiwi', 'Herr Bommel', 'Oma Erna'][Math.min(2, a.s)])), y: 2.4}),
+    update: a => { if (mode !== 'island' || P.y > 1.2) return null; const v = vendor(['Frau Kiwi', 'Herr Bommel', 'Oma Erna'][a.s]); if (dXZ(P, vpos(v)) > 3.2) return null;
+      v.cd = 15; sfx.hi();
+      if (a.s === 0){ v.b.show('Eine Banane? Bitte schön! 🍌', 2.4); setCarry('🍌'); }
+      else if (a.s === 1){ v.b.show('Mmh, eine Banane! Hier ist der Teddy! 🧸', 2.6); setCarry('🧸'); }
+      else { v.b.show('Ein Teddy! Wie wunderbar, danke! 💖', 3); return 'win'; }
+      a.s++; return null; },
+    win: 'Oma Erna ist überglücklich! Als Dank flüstert sie: „Krallmann versteckt seine Sachen gern im Meer. Er denkt, da traut sich keiner hin!“'},
+  {id: 'karte', island: true, title: 'Die Schatzkarte 🗺️', time: 140, reward: 7,
+    brief: 'Eine alte Karte zeigt, wo Krallmann seine Sachen versteckt. Sie ist in 3 Stücke zerrissen: eins hängt an einer Lichterkette, eins liegt vor Krallmanns Stand und eins am Ende vom Steg. Sammle alle!',
+    start: a => { a.m = MAP_SPOTS.map(([x, y, z]) => { const g = mapPiece(); g.position.set(I(x), y + .35, z); g.userData.y = y; island.add(g); return g; }); a.n = 0; },
+    status: a => `Kartenstücke: ${a.n}/3`,
+    target: a => nearestOf(a.m, 1),
+    update: (a, dt) => { for (const g of a.m){ if (!g.visible) continue; g.rotation.y += dt*2; g.position.y = g.userData.y + .35 + Math.sin(time*3)*.08;
+        if (mode === 'island' && dXZ(P, posOf(g)) < 1.0 && Math.abs(P.y - g.userData.y) < .8){ g.visible = false; a.n++; sfx.gem(); moleSay.show(`Kartenstück ${a.n}! 🗺️`, 1.4); } }
+      return a.n >= 3 ? 'win' : null; },
+    end: a => a.m.forEach(g => island.remove(g)),
+    win: 'Die Karte ist komplett! Ein großes rotes X ist im Meer beim Steg eingezeichnet. Dort liegt der Schlüssel zu den Käfigen!'},
+  {id: 'tauchen', island: true, title: 'Tauchgang 🤿', time: 170, reward: 10,
+    brief: 'Jetzt wird es nass! Geh ans Ende vom Steg und tauch ab. Öffne die Muscheln am Meeresgrund und finde den Schlüssel zu Krallmanns Käfigen. Vorsicht vor den bösen Fischen! Kommen sie, buddel dich mit E im Sand ein.',
+    start: a => { if (mode === 'sea') seaSetup(); },
+    status: a => a.got ? 'Schnell zum Seil und auftauchen (Pfeil)!' : mode === 'sea' ? 'Öffne die Muscheln (E) und finde den Schlüssel' : 'Geh ans Ende vom Steg und tauch ab (Pfeil)',
+    target: a => { if (mode !== 'sea') return {mode: 'island', x: DIVE.x, z: DIVE.z, y: .8}; if (a.got) return {mode: 'sea', x: ROPE.x, z: ROPE.z, y: 1};
+      let b = null, bd = 1e9; for (const c of clams){ if (c.open) continue; const d = dXZ(P, c); if (d < bd){ bd = d; b = c; } } return b ? {mode: 'sea', x: b.x, z: b.z, y: .4} : null; },
+    update: a => a.got && mode === 'island' ? 'win' : null,
+    win: 'Der goldene Schlüssel zu Krallmanns Käfigen gehört jetzt dir! Die Außenstelle hat noch einen letzten, ganz wichtigen Auftrag …'},
+  {id: 'befreien', island: true, title: 'Die große Befreiung 🔓', time: 150, reward: 20,
+    brief: 'Der letzte Auftrag! Schleich dich mit dem goldenen Schlüssel zu Krallmanns Stand und schließ alle 5 Käfige auf. Lass dich nicht erwischen! Tipp: Mit dem Bananen-Trick oder wenn er weit weg ist, geht es leichter.',
+    start: a => { a.n = 0; setCarry('🗝️'); },
+    status: a => `Befreite Maulwürfe: ${a.n}/5`,
+    target: a => { const c = icages.slice(0, 5).find(c => !c.open); return c ? {mode: 'island', x: c.x, z: c.z, y: 1.6} : null; },
+    ctx: a => { if (mode !== 'island' || P.y > 1.4) return null; const c = icages.slice(0, 5).find(c => !c.open && dXZ(P, c) < 1.9);
+      return c ? {label: 'Käfig aufschließen 🔑', fn: () => { openCage(c); a.n++; }} : null; },
+    update: a => a.n >= 5 ? 'win' : null,
+    end: a => { if (a.n < 5) relockCages(); },
+    win: 'Alle fünf Maulwürfe sind frei! Sie fliegen mit dir nach Hause und wohnen ab jetzt in deiner Höhle unter dem Bauernhof. Und Herr Krallmann? Der verkauft ab heute nur noch Socken. 🧦'},
+];
+function updateIsle(dt){ if (!onIsle()) return;
+  bulbMats.forEach((m, n) => m.emissiveIntensity = .55 + Math.max(0, Math.sin(time*3 + n*1.3))*.9);
+  foam.material.opacity = .45 + Math.sin(time*1.5)*.2;
+  slSay.update(dt); cageSay.update(dt); STALLS.forEach(s => s.b.update(dt));
+  if (mode === 'island'){ updateSeller(dt);
+    for (const s of STALLS){ s.cd -= dt; s.v.head.rotation.y = Math.sin(time*.8 + s.x)*.3; if (s.cd <= 0 && P.y < 1.5 && !IC.in && dXZ(P, vpos(s)) < 3.2){ s.b.show(s.hi, 2.6); s.cd = 22; } }
+    cageCd -= dt; if (cageCd <= 0 && !st.molesFree && !IC.in && dXZ(P, icages[2]) < 4.5){ cageCd = 14; cageSay.show('Hilfe! Hol uns hier raus! 🥺', 2.6); } }
+  for (const c of icages){ if (c.mini){ c.mini.userData.t += dt; c.mini.position.y = .06 + Math.abs(Math.sin(c.mini.userData.t*3))*.04; }
+    if (c.openT > 0){ c.openT -= dt; if (c.openT <= 0) c.open = false; }
+    c.bars.position.y = lerp(c.bars.position.y, c.open ? 1.4 : 0, Math.min(1, dt*4)); c.bars.visible = c.bars.position.y < 1.3; }
+  updateRunners(dt);
+  slg.position.set(SL.x, 0, SL.z); slg.rotation.y = SL.face; slCone.visible = !st.molesFree && SL.dizzy <= 0 && !IC.in; slCone.material.color.setHex(SL.state === 'chase' ? 0xff5040 : 0xd08aff);
+  if (mode === 'sea') updateSea(dt); }
+if (st.molesFree){ for (const c of icages.slice(0, 5)){ c.g.remove(c.mini); c.mini = null; c.open = true; c.bars.position.y = 1.4; c.bars.visible = false; } reformSeller(); spawnHomeMoles(); }
+
 // ---------- Hauptschleife ----------
 let snapCam = true; const camLook = new T.Vector3(); const camT = new T.Vector3(); const ray = new T.Raycaster();
 let last = performance.now(), time = 0;
@@ -1292,21 +1786,25 @@ function updateMole(dt){ const [ix, iz, il] = (busy || paused || shopOpen) ? [0,
   } else if (mode === 'top' && (P.climb || P.tree)){
     if (P.climb){ const c = P.climb; c.t += dt/.9; const u = Math.min(1, c.t); P.x = lerp(c.a.x, c.b.x, u); P.z = lerp(c.a.z, c.b.z, u); P.y = lerp(c.a.y, c.b.y, u) + Math.sin(u*Math.PI)*.4; P.walk += dt*16; P.face = c.up ? Math.PI/2 : 0;
       if (u >= 1){ P.tree = c.up; P.climb = null; busy = false; P.vy = 0; P.onGround = true; P.face = 0; if (P.tree) moleSay.show('Hier oben kriegt mich keiner! 🌳', 2.2); } }
-  } else if (mode === 'top'){ const sp = CFG.speedTop*il;
+  } else { const wet = mode === 'sea', sp = (wet ? 3.6 : CFG.speedTop)*il*(P.buried ? 0 : 1);
     P.x += ix*sp*dt; P.z += iz*sp*dt; pushOut(P, CFG.r, false, P.y);
-    P.x = clamp(P.x, -HALF + 1, HALF - 1); P.z = clamp(P.z, -HALF + 1, ZMAX);
-    if (!P.roadTip && P.z > HALF - 1.5){ P.roadTip = true; toast('🚗 Vorsicht, die Straße! Geh am Zebrastreifen rüber, da halten die Autos an.', 4.5); }
-    const g = groundAt(P.x, P.z, P.y, CFG.r); P.vy -= CFG.gravity*dt; P.y += P.vy*dt; if (P.y <= g){ P.y = g; P.vy = 0; P.onGround = true; } else P.onGround = P.y - g < .02;
-    P.walk += dt*(P.moving && P.onGround ? 13 : 0);
+    if (mode === 'top'){ P.x = clamp(P.x, -HALF + 1, HALF - 1); P.z = clamp(P.z, -HALF + 1, ZMAX); } else boundIsle();
+    if (mode === 'top' && !P.roadTip && P.z > HALF - 1.5){ P.roadTip = true; toast('🚗 Vorsicht, die Straße! Geh am Zebrastreifen rüber, da halten die Autos an.', 4.5); }
+    const g = groundAt(P.x, P.z, P.y, CFG.r); P.vy -= (wet ? 7 : CFG.gravity)*dt; if (wet) P.vy = Math.max(P.vy, -2.6); P.y += P.vy*dt; if (P.y <= g){ P.y = g; P.vy = 0; P.onGround = true; } else P.onGround = P.y - g < .02;
+    if (P.buried){ P.y = 0; P.vy = 0; P.onGround = true; }
+    P.walk += dt*(P.moving && (P.onGround || wet) && !P.buried ? 13 : 0);
     paws.forEach((p, n) => { p.rotation.x = Math.sin(P.walk + n*Math.PI)*.45; });
-    for (let n = suns.length - 1; n >= 0; n--){ const s = suns[n]; s.g.rotation.y += dt*2; s.g.position.y = .7 + Math.sin(time*3 + n)*.12;
+    if (mode === 'top'){ for (let n = suns.length - 1; n >= 0; n--){ const s = suns[n]; s.g.rotation.y += dt*2; s.g.position.y = .7 + Math.sin(time*3 + n)*.12;
       if (Math.hypot(P.x - s.x, P.z - s.z) < .9 && Math.abs(P.y + .3 - s.g.position.y) < 1.2){ top.remove(s.g); suns.splice(n, 1); st.gems += CFG.sunValue; gemsCollected++; sunsCollected++; dirty = true; updHud(); sfx.gem(); burst(s.x, .8, s.z, 0xffc83a, 10); toast(`☀️ Sonnenkristall! +${CFG.sunValue} 💎`); setTimeout(spawnSun, CFG.sunRespawn*1000); } }
     // Freunde
-    for (const f of friends){ f.cd -= dt; const d = Math.hypot(P.x - f.g.position.x, P.z - f.g.position.z); if (d < 2.6 && f.cd <= 0){ f.b.show(f.text, 3); sfx.hi(); f.cd = 18; setTimeout(() => moleSay.show(f.reply, 2), 1100); } }
+    for (const f of friends){ f.cd -= dt; const d = Math.hypot(P.x - f.g.position.x, P.z - f.g.position.z); if (d < 2.6 && f.cd <= 0){ f.b.show(f.text, 3); sfx.hi(); f.cd = 18; setTimeout(() => moleSay.show(f.reply, 2), 1100); } } }
   }
-  if (mode !== 'kitchen'){ mole.position.set(P.x, P.y, P.z); mole.rotation.set(0, P.face, 0); }
+  if (mode !== 'kitchen'){ mole.position.set(P.x, P.y - (P.buried ? .45 : 0), P.z); mole.rotation.set(0, P.face, 0); }
   feet.forEach((f, n) => f.position.y = .07 + Math.max(0, Math.sin(P.walk + n*Math.PI))*.05);
   mb.position.y = Math.abs(Math.sin(P.walk))*.04; mb.rotation.z = Math.sin(P.walk*.5)*.05;
+  const onRope = mode === 'island' && P.onGround && P.y > 2.7;
+  if (onRope){ mb.rotation.z = Math.sin(time*5)*.16; if (!P.ropeTip){ P.ropeTip = true; moleSay.show('Ich balanciere! 🎪', 2); toast('🎪 Auf den Lichterketten und Dächern kann Herr Krallmann dich nicht fangen!', 4.5); } }
+  paws.forEach((p, n) => p.rotation.z = (n ? 1 : -1)*(onRope ? 1.0 : .35));
   head.rotation.x = Math.sin(time*2.2)*.05;
 }
 function updateWorms(dt){ if (mode !== 'under') return;
@@ -1326,6 +1824,7 @@ function updateCamera(dt){ const portrait = camera.aspect < 1 ? 1.25 : 1;
   const sh = shopOpen;
   if (sh){ camT.set(P.x + 1.2, P.y + 1.4, P.z + 2.6); mole.rotation.y = angLerp(mole.rotation.y, .3, 1); P.face = .3; }
   else if (mode === 'under') camT.set(P.x, 10*portrait, P.z + 5.8*portrait);
+  else if (mode === 'sea') camT.set(P.x, P.y + 4.4*portrait, P.z + 7.4*portrait);
   else camT.set(P.x, P.y + 5.8*portrait, P.z + 8.8*portrait);
   const look = new T.Vector3(P.x, P.y + (sh ? .45 : .5), P.z + (sh ? 0 : mode === 'under' ? .4 : 0));
   const k = snapCam ? 1 : 1 - Math.exp(-dt*(sh ? 4 : 5)); camera.position.lerp(camT, k); camLook.lerp(look, k); camera.lookAt(camLook); snapCam = false;
@@ -1333,18 +1832,22 @@ function updateCamera(dt){ const portrait = camera.aspect < 1 ? 1.25 : 1;
   moleLight.position.set(P.x, 2.2, P.z + .6);
   // Verdeckung ausblenden
   for (const o of occluders){ o.hit = false; }
-  if (mode === 'top'){ const dir = new T.Vector3(P.x, P.y + .4, P.z).sub(camera.position); const dist = dir.length(); ray.set(camera.position, dir.normalize()); ray.far = dist - .3;
+  if (mode === 'top' || mode === 'island'){ const dir = new T.Vector3(P.x, P.y + .4, P.z).sub(camera.position); const dist = dir.length(); ray.set(camera.position, dir.normalize()); ray.far = dist - .3;
     for (const o of occluders){ if (!o.group.visible) continue; if (ray.intersectObjects(o.meshes, false).length) o.hit = true; } }
+  if (mode === 'island') for (const o of occluders) if (o.zmin !== undefined && P.z < o.zmin && P.z > o.zmin - 10 && Math.abs(P.x - o.ox) < 6.5 && P.y < 2.6) o.hit = true;
   for (const o of occluders){ const t = o.hit ? .22 : 1; if (Math.abs(o.a - t) < .01 && o.a === t) continue; o.a = lerp(o.a, t, Math.min(1, dt*8)); if (Math.abs(o.a - t) < .01) o.a = t;
     for (const m of o.meshes){ m.material.opacity = o.a; m.material.transparent = o.a < 1; m.material.depthWrite = o.a >= 1; } } }
 function updateWhere(){ const el = $('where'); let t, c;
   if (mode === 'under'){ t = '🕳️ Unter der Erde – sicher'; c = 'safe'; } else if (mode === 'kitchen'){ t = K.phase === 'heist' ? '🤫 In der Küche – psst!' : '🔒 Im Käfig!'; c = 'danger'; }
+  else if (FL){ t = '✈️ Im Flugzeug'; c = 'safe'; }
+  else if (mode === 'sea'){ const ch = fishes.some(f => f.state === 'chase'); t = P.buried ? '🏖️ Im Sand versteckt – sicher' : ch ? '🐟 Die Fische kommen! Einbuddeln!' : '🌊 Unter Wasser'; c = P.buried ? 'safe' : ch ? 'danger' : ''; }
+  else if (mode === 'island'){ if (IC.in){ t = '🔒 In Krallmanns Käfig!'; c = 'danger'; } else if (P.y > 1.3){ t = '🎪 Hoch oben – sicher'; c = 'safe'; } else if (SL.state === 'chase'){ t = '😱 Krallmann kommt!'; c = 'danger'; } else { t = '🏝️ Flohmarkt – pass auf!'; c = ''; } }
   else if (inBarn(P.x, P.z)){ t = '🐴 Im Stall – sicher'; c = 'safe'; } else if (P.tree){ t = '🌳 Auf dem Baum – sicher'; c = 'safe'; } else if (inFriends(P.x, P.z)){ t = '🏡 Bei den Nachbarn – sicher'; c = 'safe'; } else if (F.state === 'chase'){ t = '😱 Der Bauer kommt!'; c = 'danger'; } else { t = '🌞 Oben – pass auf!'; c = ''; }
   if (el.textContent !== t){ el.textContent = t; el.className = 'pill ' + c; } }
 
 function frame(now){ requestAnimationFrame(frame); const dt = Math.min(.05, (now - last)/1000); last = now; time += dt;
   if (!paused && !msgOpen){
-    if (mode === 'kitchen') updateKitchen(dt); else { if (!survOpen) updateMole(dt); updateFarmer(dt); updateWorms(dt); updateCars(dt); }
+    if (mode === 'kitchen') updateKitchen(dt); else { if (FL) updateFlight(dt); else if (IC.in) updateCageMole(dt); else if (!survOpen) updateMole(dt); updateFarmer(dt); updateWorms(dt); updateCars(dt); updateIsle(dt); updateHomeMoles(dt); }
     if (!shopOpen) updateMissions(dt);
     ctx = computeCtx(); updHint(); updateWhere();
     saveT += dt; if (dirty && saveT > 2){ saveT = 0; persist(); }
@@ -1372,7 +1875,7 @@ $('reset').onclick = () => { if (!resetArm){ resetArm = true; $('reset').textCon
 $('play').onclick = () => { ac(); $('start').hidden = true; $('hud').hidden = false; if (touchMode) $('touch').hidden = false; paused = false;
   setTimeout(() => { if (found === 0) toast('Lauf gegen die Erde, dann gräbst du! Sammle die leuchtenden Kristalle 💎', 5); else toast('Willkommen zurück, Mauli!'); }, 400); };
 setMode('under'); checkCave(); updHud();
-window.__mauli = {P, F, cars, MS, MISSIONS, startMission, openSurv, closeSurv, get hillsMade(){ return hillsMade; }, get mode(){ return mode; }, caught, goUp, st, hills};
+window.__mauli = {IMISSIONS, SL, IC, icages, clams, fishes, STALLS, fly, dive, surface, setMode, bury, islandCaught, get FL(){ return FL; }, P, F, cars, MS, MISSIONS, startMission, openSurv, closeSurv, get hillsMade(){ return hillsMade; }, get mode(){ return mode; }, caught, goUp, st, hills};
 requestAnimationFrame(t => { last = t; frame(t); });
 addEventListener('beforeunload', () => { if (dirty) persist(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && dirty) persist(); });
