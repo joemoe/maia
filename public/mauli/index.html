@@ -172,6 +172,7 @@ const CFG = {
   farmerWalk: 2.3, farmerChase: 4.0, farmerSee: 10, farmerGiveUp: 16,
   wigglePerPress: 0.085, wiggleDecay: 0.14,
   worms: 9,
+  carSpeed: 7.5,        // Autos auf der Straße
 };
 const FURS = [
   {id:'schoko', name:'Schokobraun', c:0x5b3a29, p:0},
@@ -253,6 +254,8 @@ let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 214748364
 const cell = new Uint8Array(N*N).fill(1);   // 0 = frei, 1 = Erde, 2 = Stein
 const water = new Uint8Array(N*N);
 const HOUSE = {i0:5, i1:12, j0:5, j1:11}, BARN = {i0:26, i1:36, j0:6, j1:15}, HOME = {i0:20, i1:23, j0:30, j1:33}, HOLE = {i:33, j:9};
+const ROAD = {z0: 30.6, z1: 37.4}, LANES = [32.3, 35.7], ZEB = {x0: -1.8, x1: 1.8}, GATE = {x0: -3, x1: 3}, ZMAX = 46;
+const TREE = {x: 9, z: 42.5}, FH = {x0: -17, x1: -7, z0: 39.6, z1: 45.4, DX0: -13.2, DX1: -10.8};
 const inRect = (R, i, j) => i >= R.i0 && i <= R.i1 && j >= R.j0 && j <= R.j1;
 for (let j = 0; j < N; j++) for (let i = 0; i < N; i++){ if (i === 0 || j === 0 || i === N-1 || j === N-1 || inRect(HOUSE, i, j)) cell[idx(i, j)] = 2; }
 for (let k = 0; k < 42; k++){ let i = 2 + (rnd()*(N-4)|0), j = 2 + (rnd()*(N-4)|0); const n = 1 + (rnd()*3|0);
@@ -342,6 +345,7 @@ function rr(g, x, y, w, h, r){ g.beginPath(); g.moveTo(x+r, y); g.arcTo(x+w, y, 
 label('🐴 Stall', HX, 3.2, HZ, under);
 label('🏠 Bauernhaus', cx(8.5), 3, cx(8), under);
 label('🛏️ Zuhause', cx(21.5), 2.2, cx(28.6), under, .8);
+label('🚗 Straße – hier geht es unten nicht weiter', 0, 2.2, cx(N - 1), under, .8);
 
 // Zuhause-Deko: Blätterbett + Pilzlampe
 { const bx = cx(20), bz = cx(33);
@@ -449,9 +453,89 @@ for (const [x, z] of trees){ const g = new T.Group(); top.add(g); g.position.set
 }
 // Zaun
 { const post = new T.InstancedMesh(new T.BoxGeometry(.18, 1.1, .18), M(0xf4ead8), 200); const m4 = new T.Matrix4(); let c = 0; const e = HALF - .4;
-  for (let v = -e; v <= e; v += 2.5){ for (const [x, z] of [[v, -e], [v, e], [-e, v], [e, v]]){ m4.makeTranslation(x, .55, z); post.setMatrixAt(c++, m4); } }
+  for (let v = -e; v <= e; v += 2.5){ for (const [x, z] of [[v, -e], [v, e], [-e, v], [e, v]]){ if (z === e && x > GATE.x0 - .2 && x < GATE.x1 + .2) continue; m4.makeTranslation(x, .55, z); post.setMatrixAt(c++, m4); } }
+  for (const x of [GATE.x0, GATE.x1]){ m4.makeScale(1.6, 1.3, 1.6).setPosition(x, .7, e); post.setMatrixAt(c++, m4); }
   post.count = c; post.frustumCulled = false; top.add(post);
-  for (const y of [.45, .85]){ box(2*e, .1, .08, 0xf4ead8, 0, y, -e, top); box(2*e, .1, .08, 0xf4ead8, 0, y, e, top); box(.08, .1, 2*e, 0xf4ead8, -e, y, 0, top); box(.08, .1, 2*e, 0xf4ead8, e, y, 0, top); }
+  const sw = (e - GATE.x1);
+  for (const y of [.45, .85]){ box(2*e, .1, .08, 0xf4ead8, 0, y, -e, top); box(sw, .1, .08, 0xf4ead8, -e + sw/2, y, e, top); box(sw, .1, .08, 0xf4ead8, e - sw/2, y, e, top); box(.08, .1, 2*e, 0xf4ead8, -e, y, 0, top); box(.08, .1, 2*e, 0xf4ead8, e, y, 0, top); }
+  addSolid(-e, GATE.x0, e - .12, e + .12, .95); addSolid(GATE.x1, e, e - .12, e + .12, .95);
+}
+
+// ---------- Straße vor dem Bauernhof ----------
+{ const mz = (ROAD.z0 + ROAD.z1)/2;
+  box(140, .05, ROAD.z1 - ROAD.z0, 0x4a4d55, 0, .025, mz, top).castShadow = false;
+  for (const z of [ROAD.z0 - .6, ROAD.z1 + .6]) box(140, .12, 1.2, 0xc9c4bb, 0, .06, z, top).castShadow = false;
+  for (let x = -68; x < 68; x += 4){ if (x > ZEB.x0 - 2 && x < ZEB.x1) continue; box(2, .06, .16, 0xf2f2f2, x, .055, mz, top).castShadow = false; }
+  for (let x = ZEB.x0 + .25; x < ZEB.x1; x += .72) box(.42, .06, ROAD.z1 - ROAD.z0 - .4, 0xffffff, x, .058, mz, top).castShadow = false;
+  // Schild
+  cyl(.06, .06, 2.4, 0x888888, ZEB.x1 + .8, 1.2, ROAD.z0 - .9, top, 6);
+  const sg = box(.7, .7, .06, 0x2a6fd8, ZEB.x1 + .8, 2.3, ROAD.z0 - .9, top); box(.5, .08, .07, 0xffffff, ZEB.x1 + .8, 2.15, ROAD.z0 - .87, top); box(.08, .4, .07, 0xffffff, ZEB.x1 + .8, 2.35, ROAD.z0 - .87, top);
+}
+// Autos
+const cars = [];
+function makeCar(col, lane, dir, x){ const g = new T.Group(); top.add(g);
+  box(3.4, .7, 1.6, col, 0, .65, 0, g); box(1.9, .6, 1.45, 0xbfe9ff, -.2, 1.28, 0, g); box(2.0, .1, 1.55, col, -.2, 1.62, 0, g);
+  for (const [wx, wz] of [[1.1, .8], [-1.1, .8], [1.1, -.8], [-1.1, -.8]]){ const w = cyl(.36, .36, .25, 0x222222, wx, .36, wz, g, 14); w.rotation.x = Math.PI/2; }
+  for (const wz of [-.5, .5]){ box(.06, .2, .3, 0xfff2a0, 1.72, .75, wz, g); box(.06, .18, .3, 0xff4040, -1.72, .75, wz, g); }
+  g.rotation.y = dir > 0 ? 0 : Math.PI; const c = {g, lane, dir, x, v: CFG.carSpeed, honk: 0}; g.position.set(x, 0, lane); cars.push(c); return c; }
+makeCar(0x2ea4e0, LANES[0], 1, -40); makeCar(0xffc83a, LANES[0], 1, 5); makeCar(0x8a5ad8, LANES[1], -1, 25); makeCar(0x4fb05a, LANES[1], -1, 55);
+
+// ---------- Kletterbaum ----------
+{ const g = new T.Group(); top.add(g); g.position.set(TREE.x, 0, TREE.z);
+  cyl(.5, .7, 5, 0x7a4a26, 0, 2.5, 0, g, 12);
+  const br = cyl(.22, .28, 2.2, 0x7a4a26, 1.0, 3.0, 0, g, 8); br.rotation.z = Math.PI/2 - .12;
+  box(1.0, .12, .8, 0x6a3e20, 1.45, 3.08, .05, g);
+  for (const [x, y, z, r, c] of [[0, 5.6, 0, 2.2, 0x3f8f3f], [1.3, 5.2, .6, 1.5, 0x4fa34a], [-1.2, 5.3, -.4, 1.5, 0x2f7a34], [.2, 6.6, -.3, 1.4, 0x4fa34a], [2.3, 3.9, -.2, .7, 0x4fa34a]]) sph(r, c, x, y, z, g, 12);
+  for (let n = 0; n < 6; n++) sph(.13, 0xff5a4a, Math.cos(n)*1.8, 4.8 + (n % 3)*.6, Math.sin(n)*1.8 + .6, g, 8);
+  addSolid(TREE.x - .55, TREE.x + .55, TREE.z - .55, TREE.z + .55, 99); occ(g); }
+for (const [x, z] of [[-25, 42], [24, 44], [0, 46]]){ const g = new T.Group(); top.add(g); g.position.set(x, 0, z); cyl(.25, .32, 2.2, 0x7a4a26, 0, 1.1, 0, g, 10); sph(1.4, 0x3f8f3f, 0, 3.0, 0, g, 12); sph(1.0, 0x4fa34a, .7, 3.5, .3, g, 12); addSolid(x - .3, x + .3, z - .3, z + .3, 99); occ(g); }
+
+// ---------- Haus der Nachbarn (Freunde von Mauli) ----------
+const FIN = {x0: FH.x0 + .3, x1: FH.x1 - .3, z0: FH.z0 + .3, z1: FH.z1 - .3};
+const inFriends = (x, z) => x > FIN.x0 && x < FIN.x1 && z > FIN.z0 && z < FIN.z1;
+const neighbor = new T.Group();
+{ const g = new T.Group(); top.add(g);
+  const wallM = M(0xffe7a8), t = .3, h = 3, mx = (FH.x0 + FH.x1)/2, mz = (FH.z0 + FH.z1)/2, w = FH.x1 - FH.x0, d = FH.z1 - FH.z0;
+  const wall = (x0, x1, z0, z1) => { box(x1 - x0, h, z1 - z0, wallM, (x0 + x1)/2, h/2, (z0 + z1)/2, g); addSolid(x0, x1, z0, z1, 99); };
+  wall(FH.x0, FH.DX0, FH.z0, FH.z0 + t); wall(FH.DX1, FH.x1, FH.z0, FH.z0 + t);
+  box(FH.DX1 - FH.DX0, .6, t, wallM, (FH.DX0 + FH.DX1)/2, h - .3, FH.z0 + t/2, g);
+  wall(FH.x0, FH.x0 + t, FH.z0, FH.z1); wall(FH.x1 - t, FH.x1, FH.z0, FH.z1); wall(FH.x0, FH.x1, FH.z1 - t, FH.z1);
+  // Dach
+  const roofM = M(0x3b8fd0), half = d/2 + .5, ang = .55, len = half/Math.cos(ang);
+  for (const sgn of [-1, 1]){ const r = box(w + .6, .2, len, roofM, mx, h + Math.tan(ang)*half/2, mz + sgn*half/2, g); r.rotation.x = sgn*ang; }
+  const gable = new T.Shape(); gable.moveTo(-d/2, 0); gable.lineTo(d/2, 0); gable.lineTo(0, Math.tan(ang)*d/2); gable.lineTo(-d/2, 0);
+  for (const x of [FH.x0 + .05, FH.x1 - .05]){ const gm = mesh(new T.ShapeGeometry(gable), M(0xffe7a8, {side: T.DoubleSide}), x, h, mz, g); gm.rotation.y = Math.PI/2; }
+  // Fenster + Blumen an der Straßenseite
+  for (const x of [FH.x0 + 1.6, FH.x1 - 1.6]){ box(1.3, 1.1, .08, 0xaee0ff, x, 1.8, FH.z0 - .02, g); box(1.5, .12, .14, 0xffffff, x, 1.2, FH.z0 - .06, g);
+    for (let k = 0; k < 4; k++) sph(.18, [0xff6fa0, 0xffd447, 0xb38bff][k % 3], x - .5 + k*.33, 1.35, FH.z0 - .2, g, 8); }
+  occ(g);
+  // innen: Teppich, Maulis Körbchen, Wasserschale, Bild
+  const rug = new T.Mesh(new T.CircleGeometry(2, 28), M(0xe86a6a)); rug.rotation.x = -Math.PI/2; rug.position.set(mx, .03, mz + .5); top.add(rug);
+  const fl = box(w - .6, .02, d - .6, 0xd9b48a, mx, .01, mz, top); fl.castShadow = false;
+  const bx = FH.x1 - 1.4, bz = FH.z1 - 1.3;
+  const basket = new T.Mesh(new T.TorusGeometry(.65, .2, 10, 22), M(0xc08a4a)); basket.rotation.x = Math.PI/2; basket.position.set(bx, .2, bz); top.add(basket);
+  const pillow = cyl(.62, .62, .14, 0x7ec8ff, bx, .14, bz, top, 20);
+  const blanket = box(.7, .05, .5, 0xffd447, bx + .1, .24, bz + .15, top); blanket.rotation.y = .4;
+  label('🛏️ Maulis Bett', bx, 1.6, bz, top, .7);
+  cyl(.3, .25, .12, 0x5ad1ff, FH.x0 + 1.2, .06, FH.z1 - 1.0, top, 16);
+  box(1.6, .9, .6, 0x9a6a3e, FH.x0 + 1.4, .45, mz - .2, top); addSolid(FH.x0 + .6, FH.x0 + 2.2, mz - .5, mz + .1, .9);
+  for (let k = 0; k < 3; k++) sph(.12, [0xff6fa0, 0xffd447, 0x9bd46a][k], FH.x0 + 1.0 + k*.4, 1.0, mz - .2, top, 8);
+  addSolid(FIN.x0, FIN.x1, FIN.z0, FIN.z1, 99, 'farmer');
+  // Nachbarin
+  neighbor.position.set(FH.x0 + 2.6, 0, FH.z0 + 1.6); neighbor.rotation.y = .6; top.add(neighbor);
+  const skin = M(0xf1c9a5);
+  for (const sx of [-.12, .12]) box(.16, .7, .18, skin, sx, .35, 0, neighbor);
+  const dress = mesh(new T.ConeGeometry(.5, 1.0, 14), M(0x9b6fd8), 0, 1.05, 0, neighbor);
+  box(.5, .5, .32, 0x9b6fd8, 0, 1.55, 0, neighbor);
+  for (const sx of [-.33, .33]){ const a = box(.14, .55, .16, 0x9b6fd8, sx, 1.45, 0, neighbor); a.rotation.z = sx > 0 ? -.25 : .25; sph(.09, skin, sx*1.25, 1.15, 0, neighbor, 8); }
+  const nh = new T.Group(); nh.position.y = 2.05; neighbor.add(nh);
+  sph(.25, skin, 0, 0, 0, nh, 16); const hair = sph(.27, 0xe0a040, 0, .06, -.04, nh, 14); hair.scale.set(1, .9, 1);
+  sph(.13, 0xe0a040, 0, .2, -.22, nh, 10);
+  for (const x of [-.08, .08]) sph(.03, 0x111111, x, .03, .23, nh, 6);
+  const smile = new T.Mesh(new T.TorusGeometry(.07, .015, 6, 12, Math.PI), M(0xc0504a)); smile.position.set(0, -.07, .23); smile.rotation.z = Math.PI; nh.add(smile);
+  for (const x of [-.14, .14]) sph(.04, 0xffa0a0, x, -.04, .2, nh, 6);
+  neighbor.userData = {head: nh, tail: new T.Object3D()};
+  addSolid(neighbor.position.x - .4, neighbor.position.x + .4, neighbor.position.z - .4, neighbor.position.z + .4, 99);
 }
 
 // ---------- Freunde: Pferd & Esel ----------
@@ -472,7 +556,7 @@ horse.position.set(7.6, 0, -15.6); horse.rotation.y = Math.PI/2.4; top.add(horse
 const donkey = quadruped({c: 0x8d8a87, mane: 0x4a4644, muzzle: 0xe8e2da, ear: .36, s: .85});
 donkey.position.set(7.4, 0, -11.2); donkey.rotation.y = Math.PI/1.8; top.add(donkey);
 addSolid(6.9, 8.3, -16.4, -14.8, 1.22); addSolid(6.9, 7.9, -11.9, -10.5, 1.0);
-const friends = [{g: horse, name: 'Pferd', text: 'Hallo Mauli! Hier im Stall bist du sicher. 🐴', cd: 0}, {g: donkey, name: 'Esel', text: 'I-aah! Schön, dass du da bist! 💛', cd: 0}];
+const friends = [{g: horse, reply: 'Hallo, liebes Pferd!', text: 'Hallo Mauli! Hier im Stall bist du sicher. 🐴', cd: 0}, {g: donkey, reply: 'Hallo, lieber Esel!', text: 'I-aah! Schön, dass du da bist! 💛', cd: 0}];
 
 // =====================================================================
 // KÜCHE (für den Käfig)
@@ -546,10 +630,24 @@ function shell(col){ const g = new T.Group(); const m = mesh(new T.SphereGeometr
   box(.05, .02, .9, 0xffd447, 0, .645, -.02, g).castShadow = false;
   for (const z of [.15, -.15]) for (const s of [-1, 1]) sph(.035, 0xffd447, s*.3, .5, z, g, 8);
   wearMeshes.jacke = g; }
-{ const g = shell(0x24242c); mb.add(g);
-  const shirt = sph(.13, 0xffffff, 0, .3, .43, g, 12); shirt.scale.set(1, 1.15, .5);
-  for (const s of [-1, 1]){ const c = mesh(new T.ConeGeometry(.05, .1, 8), M(0xd8262f), s*.05, .36, .5, g); c.rotation.z = s*Math.PI/2; }
-  sph(.025, 0xd8262f, 0, .36, .51, g, 8);
+{ const suit = 0x2f9a52, dark = 0x1d6b36; const g = new T.Group(); mb.add(g);
+  // Sakko: liegt eng am Körper an und reicht an den Seiten weit herunter
+  const coat = mesh(new T.SphereGeometry(.37, 28, 16, 0, Math.PI*2, 0, Math.PI*.6), M(suit, {side: T.DoubleSide, roughness: .7}), 0, .33, -.03, g); coat.scale.set(1.04, .86, 1.3);
+  // Rückennaht und Taschenklappen
+  box(.025, .015, .62, dark, 0, .64, -.12, g).castShadow = false;
+  // weißer Hemdkragen + grüne Revers um den Hals
+  const collar = new T.Mesh(new T.TorusGeometry(.19, .04, 8, 22), M(0xffffff)); collar.position.set(0, .5, .26); collar.rotation.x = Math.PI/2.6; g.add(collar);
+  const rev = new T.Mesh(new T.TorusGeometry(.23, .055, 8, 22), M(dark)); rev.position.set(0, .47, .22); rev.rotation.x = Math.PI/2.6; g.add(rev);
+  // goldene Fliege unterm Kinn
+  for (const sx of [-1, 1]){ const c = mesh(new T.ConeGeometry(.06, .13, 8), M(0xffd447), sx*.065, .2, .55, g); c.rotation.z = sx*Math.PI/2; }
+  sph(.035, 0xffd447, 0, .2, .56, g, 8);
+  // goldene Knöpfe an den Seiten
+  for (const sx of [-1, 1]) for (const z of [.12, -.08]) sph(.035, 0xffd447, sx*.36, .3, z, g, 8);
+  // Ärmel mit weißen Manschetten an den Vorderbeinen
+  for (const sx of [-1, 1]){ const sl = cyl(.1, .11, .24, suit, sx*.29, .2, .27, g, 12); sl.rotation.x = 1.1; sl.rotation.z = sx*.35;
+    const cuff = cyl(.1, .1, .045, 0xffffff, sx*.31, .15, .36, g, 12); cuff.rotation.x = 1.1; cuff.rotation.z = sx*.35; }
+  // Frackschöße hinten
+  for (const sx of [-1, 1]){ const tl = box(.13, .03, .36, suit, sx*.08, .2, -.56, g); tl.rotation.x = .9; tl.rotation.y = sx*.12; }
   wearMeshes.anzug = g; }
 function applyLook(){ const f = FURS.find(f => f.id === st.fur) || FURS[0]; furMat.color.setHex(f.c); bellyMat.color.setHex(f.c).lerp(new T.Color(0xd8c0a8), .3);
   for (const c of CLOTHES) wearMeshes[c.id].visible = st.wear[c.slot] === c.id; }
@@ -568,6 +666,7 @@ function bubble(parent, y){ const c = document.createElement('canvas'); c.width 
     update(dt){ if (b.t > 0){ b.t -= dt; if (b.t <= 0) sp.visible = false; } } };
   return b; }
 const moleSay = bubble(mole, 1.0);
+friends.push({g: neighbor, reply: 'Danke, liebe Nachbarin! 💛', text: 'Hallo Mauli! Komm rein, hier darfst du wohnen! 🏡', cd: 0});
 friends.forEach(f => f.b = bubble(f.g, 2.7));
 
 // =====================================================================
@@ -592,8 +691,10 @@ const fb = {};
 }
 const farmerSay = bubble(farmer, 2.9);
 const F = {x: -10, z: -6, face: 0, state: 'walk', tx: 0, tz: 0, timer: 0, stuck: 0, grace: 0, hill: null, walkT: 0, kitchen: false};
-function randomSpot(){ for (let n = 0; n < 60; n++){ const x = (Math.random()*2 - 1)*(HALF - 3), z = (Math.random()*2 - 1)*(HALF - 3); if (!blockedTop(x, z, .8, true) && !inBarn(x, z)) return [x, z]; } return [0, 0]; }
-function pickWaypoint(){ [F.tx, F.tz] = randomSpot(); }
+function randomSpot(farmOnly){ for (let n = 0; n < 80; n++){ const x = (Math.random()*2 - 1)*(HALF - 3), z = -(HALF - 3) + Math.random()*((farmOnly ? HALF - 3 : ZMAX - 1) + HALF - 3);
+    if (z > ROAD.z0 - 1.6 && z < ROAD.z1 + 1.6) continue; if (!blockedTop(x, z, .8, true) && !inBarn(x, z) && !inFriends(x, z)) return [x, z]; } return [0, 0]; }
+const safeTop = () => inBarn(P.x, P.z) || inFriends(P.x, P.z) || P.tree;
+function pickWaypoint(){ [F.tx, F.tz] = randomSpot(true); }
 
 // =====================================================================
 // HÜGEL, SONNENKRISTALLE, WÜRMER, PARTIKEL
@@ -642,6 +743,7 @@ const sfx = {
   hey: () => { tone(170, .3, 'sawtooth', .06, 130); }, drink: () => { for (let n = 0; n < 4; n++) setTimeout(() => tone(500 + Math.random()*300, .08, 'sine', .1, 900), n*110); },
   buy: () => [523, 659, 784, 1046].forEach((f, n) => setTimeout(() => tone(f, .15, 'triangle', .1), n*80)),
   hi: () => { tone(660, .12, 'sine', .1); setTimeout(() => tone(880, .15, 'sine', .1), 120); }, crash: () => { noise(.5, .4, 2200); noise(.3, .3, 600); },
+  honk: () => { tone(392, .28, 'square', .05); setTimeout(() => tone(330, .35, 'square', .05), 280); },
   wiggle: () => tone(260 + Math.random()*120, .06, 'square', .03), no: () => tone(200, .15, 'square', .04, 150),
 };
 
@@ -649,7 +751,8 @@ const sfx = {
 // UI
 // =====================================================================
 let toastT = 0;
-function toast(t, d = 2.8){ const el = $('toast'); el.textContent = t; el.classList.add('show'); toastT = d; }
+let toastTimer = 0;
+function toast(t, d = 2.8){ const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), d*1000); }
 function updHud(){ $('gems').textContent = '💎 ' + st.gems; $('shopGems').textContent = '💎 ' + st.gems; $('found').textContent = '🔎 ' + found + '/' + TOTAL; $('cave').textContent = '🏠 ' + caveN + '×' + caveN + ' / ' + CFG.caveSize + '×' + CFG.caveSize; }
 let caveN = 0;
 function checkCave(){ const dp = new Uint8Array(N*N); let best = 0;
@@ -678,7 +781,7 @@ function buildShop(){
   function done(){ applyLook(); dirty = true; updHud(); const id = document.activeElement && document.activeElement.id; buildShop(); if (id && $(id)) $(id).focus(); }
 }
 function openShop(){ if (mode === 'kitchen' || busy) return;
-  if (mode === 'top' && !inBarn(P.x, P.z)){ toast('Den Schrank gibt es nur an sicheren Orten: unter der Erde oder im Stall.'); return; }
+  if (mode === 'top' && !inBarn(P.x, P.z) && !inFriends(P.x, P.z)){ toast('Den Schrank gibt es nur unter der Erde, im Stall oder bei den Nachbarn.'); return; }
   shopOpen = true; buildShop(); $('shop').hidden = false; }
 function closeShop(){ shopOpen = false; $('shop').hidden = true; }
 $('shopBtn').onclick = () => shopOpen ? closeShop() : openShop(); $('shopClose').onclick = closeShop;
@@ -758,9 +861,21 @@ function goUp(){ const i = toC(P.x), j = toC(P.z);
   let h = hills.find(h => h.i === i && h.j === j); const fresh = !h; if (!h) h = makeHill(i, j);
   fadeTo(() => { setMode('top'); P.x = h.x; P.z = h.z; P.y = .3; P.vy = 6; sfx.pop(); burst(h.x, .5, h.z, 0x6e4528, 12);
     if (fresh && F.state !== 'chase'){ farmerSay.show(hills.length > 3 ? 'Schon WIEDER ein Hügel! Grrr!' : 'Was? Ein Maulwurfshügel! 😠'); sfx.hey(); } }); }
-function goDown(target){ fadeTo(() => { setMode('under'); P.x = target.x; P.z = target.z; P.y = 0; P.vy = 0; sfx.down(); }); }
-function jump(){ if (mode !== 'top' || busy || paused) return; if (P.onGround){ P.vy = CFG.jump; P.onGround = false; sfx.jump(); } }
+function goDown(target){ fadeTo(() => { P.tree = false; setMode('under'); P.x = target.x; P.z = target.z; P.y = 0; P.vy = 0; sfx.down(); }); }
+function jump(){ if (mode !== 'top' || busy || paused || P.tree) return; if (P.onGround){ P.vy = CFG.jump; P.onGround = false; sfx.jump(); } }
 
+function climb(up){ if (busy) return; busy = true; sfx.jump();
+  P.climb = {up, t: 0, a: {x: P.x, y: P.y, z: P.z}, b: up ? {x: TREE.x + 1.45, y: 3.14, z: TREE.z + .05} : {x: TREE.x + .2, y: 0, z: TREE.z + 1.4}}; if (!up) P.tree = false; }
+// Autos
+function updateCars(dt){ const onCross = (x, z) => x > ZEB.x0 - .6 && x < ZEB.x1 + .6 && z > ROAD.z0 - .8 && z < ROAD.z1 + .8;
+  const crossing = (onCross(P.x, P.z) && !P.tree) || onCross(F.x, F.z);
+  for (const c of cars){ const front = c.x + c.dir*1.8, dist = c.dir > 0 ? (ZEB.x0 - .8) - front : front - (ZEB.x1 + .8);
+    const stop = crossing && dist > -.5 && dist < 7;
+    c.v = lerp(c.v, stop ? 0 : CFG.carSpeed, Math.min(1, dt*(stop ? 4 : 1.2)));
+    c.x += c.dir*c.v*dt; if (c.x > 66) c.x = -66; if (c.x < -66) c.x = 66; c.g.position.x = c.x; c.honk -= dt;
+    if (!busy && !P.tree && P.y < 1.2 && Math.abs(P.z - c.lane) < 1.15 && Math.abs(P.x - c.x) < 2.1 && c.v > 1){
+      sfx.honk(); c.honk = 1; P.z = P.z < (ROAD.z0 + ROAD.z1)/2 ? ROAD.z0 - 1.4 : ROAD.z1 + 1.4; P.vy = 6; P.onGround = false;
+      toast('📯 Tuuut! Das Auto hat dich zurück auf den Gehsteig geschubst. Nimm lieber den Zebrastreifen!', 4); moleSay.show('Huch! 😵', 1.4); } } }
 // Fangen + Käfig
 const K = {wig: 0, phase: 'none', t: 0, fly: []};
 function caught(){ busy = true; F.state = 'caught'; farmerSay.show('Hab ich dich, du kleiner Maulwurf!'); sfx.hey(); P.vy = 0;
@@ -788,7 +903,7 @@ function updateKitchen(dt){ K.t += dt; const wx = KO.x, wz = KO.z;
   if (K.phase === 'in' || K.phase === 'fall'){ const p = cage.position; mole.position.set(wx + p.x, p.y + .07 + Math.max(0, Math.sin(K.t*30))*.05*K.wig, wz + p.z); mole.rotation.set(0, Math.PI*.15 + Math.sin(K.t*25)*.4*K.wig, cage.rotation.z); P.walk += dt*K.wig*20; }
   else if (K.phase === 'broken'){ mole.rotation.set(0, Math.PI/2, 0); mole.position.y = Math.max(0, mole.position.y - dt*3); }
   else if (K.phase === 'run'){ mole.rotation.set(0, Math.PI/2, 0); mole.position.x += 4.5*dt; mole.position.y = Math.abs(Math.sin(K.t*14))*.08; P.walk += dt*14; } }
-function escapeKitchen(){ fadeTo(() => { setMode('top'); P.x = -16; P.z = HR.z1 + 1.2; P.y = 0; P.vy = 3; P.face = 0;
+function escapeKitchen(){ fadeTo(() => { setMode('top'); P.tree = false; P.climb = null; P.x = -16; P.z = HR.z1 + 1.2; P.y = 0; P.vy = 3; P.face = 0;
   const [x, z] = [18, 18]; F.x = x; F.z = z; F.state = 'walk'; F.grace = 6; F.kitchen = false; pickWaypoint(); farmer.visible = true;
   if (touchMode) $('touch').hidden = false; toast('Geschafft! Lauf schnell zu einem Hügel oder in den Stall!', 3.5); }); }
 
@@ -796,16 +911,16 @@ function escapeKitchen(){ fadeTo(() => { setMode('top'); P.x = -16; P.z = HR.z1 
 function walkAnim(b, t, amt){ const s = Math.sin(t)*.6*amt; b.legs[0].rotation.x = s; b.legs[1].rotation.x = -s; b.arms[0].rotation.x = -s*.8; b.arms[1].rotation.x = s*.5 - .3; }
 function moveFarmer(tx, tz, sp, dt){ const dx = tx - F.x, dz = tz - F.z, d = Math.hypot(dx, dz); if (d < .05) return d; const st2 = Math.min(d, sp*dt);
   const ox = F.x, oz = F.z; F.x += dx/d*st2; F.z += dz/d*st2; pushOut(F, .4, true, 0);
-  F.x = clamp(F.x, -HALF + 1, HALF - 1); F.z = clamp(F.z, -HALF + 1, HALF - 1);
+  F.x = clamp(F.x, -HALF + 1, HALF - 1); F.z = clamp(F.z, -HALF + 1, ZMAX);
   const moved = Math.hypot(F.x - ox, F.z - oz); F.stuck = moved < st2*.3 ? F.stuck + dt : Math.max(0, F.stuck - dt);
   const want = Math.atan2(F.x - ox, F.z - oz); if (moved > 1e-4) F.face = angLerp(F.face, want, Math.min(1, dt*8)); F.walkT += moved*3.2; walkAnim(fb, F.walkT, 1); return d; }
 function angLerp(a, b, t){ let d = b - a; while (d > Math.PI) d -= Math.PI*2; while (d < -Math.PI) d += Math.PI*2; return a + d*t; }
 function updateFarmer(dt){ if (mode !== 'top' || busy || F.state === 'caught') return;
   F.grace = Math.max(0, F.grace - dt);
-  const visible = !inBarn(P.x, P.z), d = Math.hypot(P.x - F.x, P.z - F.z);
+  const visible = !safeTop(), d = Math.hypot(P.x - F.x, P.z - F.z);
   if (F.state !== 'chase' && visible && d < CFG.farmerSee && F.grace <= 0){ F.state = 'chase'; farmerSay.show(['Hey! Da ist der Maulwurf!', 'Na warte, dich krieg ich!', 'Halt, stehen bleiben!'][Math.random()*3|0]); sfx.hey(); }
   if (F.state === 'chase'){
-    if (!visible || d > CFG.farmerGiveUp){ F.state = 'walk'; pickWaypoint(); farmerSay.show(!visible ? 'Grrr! Im Stall versteckt er sich!' : 'Wo ist er hin?'); return; }
+    if (!visible || d > CFG.farmerGiveUp){ F.state = 'walk'; pickWaypoint(); farmerSay.show(P.tree ? 'Komm sofort da runter! Grrr!' : inFriends(P.x, P.z) ? 'Hmpf! Zu den Nachbarn darf ich nicht rein.' : !visible ? 'Grrr! Im Stall versteckt er sich!' : 'Wo ist er hin?'); return; }
     moveFarmer(P.x, P.z, CFG.farmerChase + Math.min(.6, hills.length*.05), dt);
     if (d < .85 && P.y < 1.0) caught();
     if (F.stuck > 1.2){ F.state = 'walk'; pickWaypoint(); F.stuck = 0; farmerSay.show('Mist, ich komm nicht durch!'); }
@@ -826,6 +941,8 @@ function computeCtx(){ if (busy || paused) return null;
     if (i === HOLE.i && j === HOLE.j) return {label: 'Hoch in den Stall ⬆', fn: goUp};
     if (inRect(BARN, i, j)) return {label: 'Unterm Stall', fn: goUp};
     return {label: 'Nach oben ⬆', fn: goUp}; }
+  if (mode === 'top' && P.tree) return {label: 'Runterklettern ⬇', fn: () => climb(false)};
+  if (mode === 'top' && P.y < .6 && Math.hypot(P.x - TREE.x, P.z - TREE.z) < 1.7) return {label: 'Hochklettern 🌳', fn: () => climb(true)};
   if (mode === 'top' && P.y < .6){ if (Math.hypot(P.x - HX, P.z - HZ) < 1.2) return {label: 'Runter ins Loch ⬇', fn: () => goDown({x: HX, z: HZ})};
     for (const h of hills) if (Math.hypot(P.x - h.x, P.z - h.z) < 1.2) return {label: 'Runter in den Hügel ⬇', fn: () => goDown(h)}; }
   return null; }
@@ -857,16 +974,20 @@ function updateMole(dt){ const [ix, iz, il] = (busy || paused || shopOpen) ? [0,
     const k = idx(toC(P.x), toC(P.z)), inW = !!water[k] && cell[k] === 0;
     P.drinkCd -= dt; if (inW && !P.inWater && P.drinkCd <= 0){ moleSay.show('Schlürf! Mmmh, lecker Wasser! 💧', 2); sfx.drink(); P.drinkCd = 6; burst(P.x, .3, P.z, 0x5ad1ff, 8); }
     P.inWater = inW; P.y = inW ? -.06 : 0;
+  } else if (mode === 'top' && (P.climb || P.tree)){
+    if (P.climb){ const c = P.climb; c.t += dt/.9; const u = Math.min(1, c.t); P.x = lerp(c.a.x, c.b.x, u); P.z = lerp(c.a.z, c.b.z, u); P.y = lerp(c.a.y, c.b.y, u) + Math.sin(u*Math.PI)*.4; P.walk += dt*16; P.face = c.up ? Math.PI/2 : 0;
+      if (u >= 1){ P.tree = c.up; P.climb = null; busy = false; P.vy = 0; P.onGround = true; P.face = 0; if (P.tree) moleSay.show('Hier oben kriegt mich keiner! 🌳', 2.2); } }
   } else if (mode === 'top'){ const sp = CFG.speedTop*il;
     P.x += ix*sp*dt; P.z += iz*sp*dt; pushOut(P, CFG.r, false, P.y);
-    P.x = clamp(P.x, -HALF + 1, HALF - 1); P.z = clamp(P.z, -HALF + 1, HALF - 1);
+    P.x = clamp(P.x, -HALF + 1, HALF - 1); P.z = clamp(P.z, -HALF + 1, ZMAX);
+    if (!P.roadTip && P.z > HALF - 1.5){ P.roadTip = true; toast('🚗 Vorsicht, die Straße! Geh am Zebrastreifen rüber, da halten die Autos an.', 4.5); }
     const g = groundAt(P.x, P.z, P.y, CFG.r); P.vy -= CFG.gravity*dt; P.y += P.vy*dt; if (P.y <= g){ P.y = g; P.vy = 0; P.onGround = true; } else P.onGround = P.y - g < .02;
     P.walk += dt*(P.moving && P.onGround ? 13 : 0);
     paws.forEach((p, n) => { p.rotation.x = Math.sin(P.walk + n*Math.PI)*.45; });
     for (let n = suns.length - 1; n >= 0; n--){ const s = suns[n]; s.g.rotation.y += dt*2; s.g.position.y = .7 + Math.sin(time*3 + n)*.12;
       if (Math.hypot(P.x - s.x, P.z - s.z) < .9 && Math.abs(P.y + .3 - s.g.position.y) < 1.2){ top.remove(s.g); suns.splice(n, 1); st.gems += CFG.sunValue; dirty = true; updHud(); sfx.gem(); burst(s.x, .8, s.z, 0xffc83a, 10); toast(`☀️ Sonnenkristall! +${CFG.sunValue} 💎`); setTimeout(spawnSun, CFG.sunRespawn*1000); } }
     // Freunde
-    for (const f of friends){ f.cd -= dt; const d = Math.hypot(P.x - f.g.position.x, P.z - f.g.position.z); if (d < 2.6 && f.cd <= 0){ f.b.show(f.text, 3); sfx.hi(); f.cd = 18; setTimeout(() => moleSay.show(f.name === 'Pferd' ? 'Hallo, liebes Pferd!' : 'Hallo, lieber Esel!', 2), 1100); } }
+    for (const f of friends){ f.cd -= dt; const d = Math.hypot(P.x - f.g.position.x, P.z - f.g.position.z); if (d < 2.6 && f.cd <= 0){ f.b.show(f.text, 3); sfx.hi(); f.cd = 18; setTimeout(() => moleSay.show(f.reply, 2), 1100); } }
   }
   if (mode !== 'kitchen'){ mole.position.set(P.x, P.y, P.z); mole.rotation.set(0, P.face, 0); }
   feet.forEach((f, n) => f.position.y = .07 + Math.max(0, Math.sin(P.walk + n*Math.PI))*.05);
@@ -903,14 +1024,13 @@ function updateCamera(dt){ const portrait = camera.aspect < 1 ? 1.25 : 1;
     for (const m of o.meshes){ m.material.opacity = o.a; m.material.transparent = o.a < 1; m.material.depthWrite = o.a >= 1; } } }
 function updateWhere(){ const el = $('where'); let t, c;
   if (mode === 'under'){ t = '🕳️ Unter der Erde – sicher'; c = 'safe'; } else if (mode === 'kitchen'){ t = '🔒 Im Käfig!'; c = 'danger'; }
-  else if (inBarn(P.x, P.z)){ t = '🐴 Im Stall – sicher'; c = 'safe'; } else if (F.state === 'chase'){ t = '😱 Der Bauer kommt!'; c = 'danger'; } else { t = '🌞 Oben – pass auf!'; c = ''; }
+  else if (inBarn(P.x, P.z)){ t = '🐴 Im Stall – sicher'; c = 'safe'; } else if (P.tree){ t = '🌳 Auf dem Baum – sicher'; c = 'safe'; } else if (inFriends(P.x, P.z)){ t = '🏡 Bei den Nachbarn – sicher'; c = 'safe'; } else if (F.state === 'chase'){ t = '😱 Der Bauer kommt!'; c = 'danger'; } else { t = '🌞 Oben – pass auf!'; c = ''; }
   if (el.textContent !== t){ el.textContent = t; el.className = 'pill ' + c; } }
 
 function frame(now){ requestAnimationFrame(frame); const dt = Math.min(.05, (now - last)/1000); last = now; time += dt;
   if (!paused){
-    if (mode === 'kitchen') updateKitchen(dt); else { updateMole(dt); updateFarmer(dt); updateWorms(dt); }
+    if (mode === 'kitchen') updateKitchen(dt); else { updateMole(dt); updateFarmer(dt); updateWorms(dt); if (mode === 'top') updateCars(dt); }
     ctx = computeCtx(); updHint(); updateWhere();
-    if (toastT > 0){ toastT -= dt; if (toastT <= 0) $('toast').classList.remove('show'); }
     saveT += dt; if (dirty && saveT > 2){ saveT = 0; persist(); }
   } else if (shopOpen) updateMole(dt);
   if (mode !== 'kitchen' && F.state !== 'caught'){ farmer.position.set(F.x, 0, F.z); farmer.rotation.y = F.face; }
@@ -930,7 +1050,7 @@ $('reset').onclick = () => { if (!resetArm){ resetArm = true; $('reset').textCon
 $('play').onclick = () => { ac(); $('start').hidden = true; $('hud').hidden = false; if (touchMode) $('touch').hidden = false; paused = false;
   setTimeout(() => { if (found === 0) toast('Lauf gegen die Erde, dann gräbst du! Sammle die leuchtenden Kristalle 💎', 5); else toast('Willkommen zurück, Mauli!'); }, 400); };
 setMode('under'); checkCave(); updHud();
-window.__mauli = {P, F, get mode(){ return mode; }, caught, goUp, st, hills};
+window.__mauli = {P, F, cars, get mode(){ return mode; }, caught, goUp, st, hills};
 requestAnimationFrame(t => { last = t; frame(t); });
 addEventListener('beforeunload', () => { if (dirty) persist(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && dirty) persist(); });
