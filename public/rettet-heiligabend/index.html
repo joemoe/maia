@@ -76,6 +76,7 @@ canvas#game{display:block;width:100%;height:100%;touch-action:none}
 .pick{display:flex;flex-direction:column;align-items:center;gap:2px;background:#f4f7fc;border:3px solid transparent;border-radius:14px;padding:4px 8px 6px;cursor:pointer;font:700 clamp(12px,1.5vw,15px) var(--display);color:var(--ink)}
 .pick[aria-pressed="true"]{border-color:var(--pine);background:#e5f5ea}
 .pick canvas{width:clamp(48px,7vw,74px);height:auto;aspect-ratio:110/130}
+.pick small{display:block;font-weight:600;font-size:.72em;opacity:.75;line-height:1.1}
 .keys{display:inline-block;background:#dfe7f5;border-radius:6px;padding:0 6px;font-weight:700}
 #pad{display:none;justify-content:space-between;align-items:center;gap:12px;user-select:none;-webkit-user-select:none}
 #pad.on{display:flex}
@@ -516,7 +517,7 @@ function createPlayers(){
   }
 }
 function placePlayer(p,x,z,face=0){if(p.carry){p.m.g.remove(p.carry);p.carry=null;}scene.add(p.m.g);p.m.g.scale.setScalar(1);p.pos.set(x,0,z);p.face=face;p.stun=0;p.frozen=0;p.hidden=false;p.sus=0;p.susL=null;p.ring.visible=true;p.ice.visible=false;p.m.g.rotation.set(0,face,0);p.m.g.position.copy(p.pos);}
-function addTags(){if(G.players<2)return;PL.forEach(p=>tag(()=>p.m.g.getWorldPosition(_t).add(_up.set(0,1.95*p.m.g.scale.y,0)),`Spieler ${p.i+1}`,'tag'+(p.i?' p2':'')));}
+function addTags(){PL.forEach(p=>tag(()=>p.m.g.getWorldPosition(_t).add(_up.set(0,1.95*p.m.g.scale.y,0)),heroName(p.i),'tag'+(p.i?' p2':'')));}
 const _t=new THREE.Vector3(),_up=new THREE.Vector3();
 function animPlayer(p,moving){
   const s=moving?Math.sin(p.walk)*.7:0;p.m.legs[0].rotation.x=s;p.m.legs[1].rotation.x=-s;p.m.arms[0].rotation.x=-s*.8;p.m.arms[1].rotation.x=s*.8;
@@ -542,7 +543,9 @@ function followCam(dt,off,bx,bz,snapNow){
   const k=snapNow?1:Math.min(1,dt*3.5);camPos.lerp(want,k);camLook.lerp(mid,k);
   cam.position.copy(camPos);cam.lookAt(camLook);return mid;
 }
-function names(){if(G.players===2)return'ihr zwei';return G.chars[0]==='elfin'?'liebe Elfin':'lieber Lebkuchenmann';}
+function heroName(i){const c=G.chars[i];let n=c==='elfin'?'Lili':'Benni';if(i===1&&G.players===2&&G.chars[0]===c)n+=' 2';return n;}
+function teamName(){return G.players===2?heroName(0)+' und '+heroName(1):heroName(0);}
+function names(){if(G.players===2)return teamName();return(G.chars[0]==='elfin'?'liebe ':'lieber ')+heroName(0);}
 function lotsOfSaid(){return G.players===2?'Ihr':'Du';}
 
 /* ================= FACTORY (hub + phase 2) ================= */
@@ -813,7 +816,7 @@ function stageHome(){
   for(const [dx,dy,ww,hh] of [[0,1.1,3.3,.22],[0,-1.1,3.3,.22],[-1.5,0,.22,2.4],[1.5,0,.22,2.4],[0,0,.1,2.2],[0,0,3,.1]])wg.add(mesh(new THREE.BoxGeometry(ww,hh,.12),ICING,dx,dy,.06,false));
   for(const sx of [-1,1])wg.add(mesh(new THREE.BoxGeometry(.6,2.6,.08),M(0xd23a3a),sx*1.85,-.05,.12));
   // family picture with both heroes
-  const pic=canvasTex(256,180,(c,w,h)=>{c.fillStyle='#fff6e0';c.fillRect(0,0,w,h);c.fillStyle='#bfe3ff';c.fillRect(10,10,w-20,h-20);drawElfin2D(c,88,168,1.15);drawGinger2D(c,172,168,1.15);c.fillStyle='#d23a3a';c.font='700 22px Fredoka, sans-serif';c.textAlign='center';c.fillText('♥',w/2,40);});
+  const pic=canvasTex(256,180,(c,w,h)=>{c.fillStyle='#fff6e0';c.fillRect(0,0,w,h);c.fillStyle='#bfe3ff';c.fillRect(10,10,w-20,h-20);drawElfin2D(c,88,168,1.15);drawGinger2D(c,172,168,1.15);c.fillStyle='#d23a3a';c.font='700 22px Fredoka, sans-serif';c.textAlign='center';c.fillText('Lili ♥ Benni',w/2,36);});
   const pf=mesh(new THREE.PlaneGeometry(2,1.4),new THREE.MeshBasicMaterial({map:pic}),-4.2,3.6,-RZ+.03,false);scene.add(pf);
   scene.add(mesh(new THREE.BoxGeometry(2.25,1.65,.06),M(0xf2c14e,{metalness:.4,roughness:.4}),-4.2,3.6,-RZ+.01,false));
   // double bed
@@ -869,7 +872,7 @@ function stageHome(){
         return;}
       movePlayers(dt,5.4,[-RX+.6,RX-.6,-RZ+.6,RZ-.6],cols);
       const nearBed=PL.some(p=>d2(p.pos,BED)<1.3);bedTag.el.style.opacity=nearBed?1:.55;
-      if(nearBed&&PL.some(p=>ctl(p.i).act&&d2(p.pos,BED)<1.6)){sleep=7;zt=1;lie();showBanner(G.players===2?'Gute Nacht, ihr zwei!':'Gute Nacht!',2);tone(523,.3,'triangle',.05);tone(392,.4,'triangle',.05,1,.25);return;}
+      if(nearBed&&PL.some(p=>ctl(p.i).act&&d2(p.pos,BED)<1.6)){sleep=7;zt=1;lie();showBanner('Gute Nacht, '+teamName()+'!',2);tone(523,.3,'triangle',.05);tone(392,.4,'triangle',.05,1,.25);return;}
       if(!leaving&&PL.some(p=>d2(p.pos,DOOR)<1)){leaving=true;SFX.bells();fadeTo(()=>stageRide('down',()=>stageHub(G.hubKind||'start',true)));}
     },
     anim(dt){rDoor.material.opacity=rBed.material.opacity=.5+Math.sin(T*5)*.3;
@@ -974,25 +977,27 @@ function buildVillage(){
   for(let k=0;k<30;k++){const x=rand(-34,34),z=pick([rand(-20,-13),rand(10,18)]);const t=makeTree(rand(1,1.7));t.position.set(x,0,z);scene.add(t);}
   return {L,houses,boxes,colliders,big,moon};
 }
-function stageP1(){
+function stageP1(res){
   clearScene();mode='play';hideOverlay();
   const d=lvl(),V=buildVillage();
-  const target=Math.min(12,4+d*2),total=Math.max(50,80-d*6);let time=total,got=0,done=false,returning=false;
+  const target=Math.min(12,4+d*2),total=Math.max(50,80-d*6);let time=res?res.time:total,got=res?res.got:0,done=false,returning=false;
   const spot=new THREE.Vector3(-27,0,-1.2);
   const sl=makeSleigh();sl.g.position.copy(spot);sl.g.rotation.y=Math.PI;scene.add(sl.g);V.colliders.push(box(spot.x-.4,spot.z,3.6,1.6));
   const ringM=mesh(new THREE.RingGeometry(1.8,2.3,40),new THREE.MeshBasicMaterial({color:0xf2c14e,transparent:true,opacity:.8,depthWrite:false}),spot.x,.05,spot.z,false);ringM.rotation.x=-Math.PI/2;ringM.visible=false;scene.add(ringM);
   const arrow=mesh(new THREE.ConeGeometry(.4,.8,12),E(0xf2c14e,.8),spot.x,3.4,spot.z,false);arrow.rotation.x=Math.PI;arrow.visible=false;scene.add(arrow);
   PL.forEach((p,i)=>placePlayer(p,-23.5,-2.5+i*1.6,Math.PI/2));addTags();
   const gm=makeGrinch();scene.add(gm.g);
-  const g={pos:new THREE.Vector3(26,0,-1),face:-Math.PI/2,walk:0,cool:3,w:new THREE.Vector3(10,0,-1),speed:1.8+d*.4,laugh:0,chase:false,stuck:0,last:new THREE.Vector3()};
+  const g={pos:new THREE.Vector3(26,0,-1),face:-Math.PI/2,walk:0,cool:res?7:3,w:new THREE.Vector3(10,0,-1),speed:1.8+d*.4,laugh:0,chase:false,stuck:0,last:new THREE.Vector3()};
   const sky0=new THREE.Color(0x0b1633),sky1=new THREE.Color(0xf2a679),tmpC=new THREE.Color();
   const wander=(far)=>{for(let k=0;k<10;k++){g.w.set(rand(-26,26),0,rand(-4.5,2.5));if(!far||PL.every(p=>d2(p.pos,g.w)>10))break;}};
   setHUD(`Runde ${G.round} · Wunschzettel`,'night','');
   const upd=()=>hudRight(`<span>${IC.letter}${got} / ${target}</span>`);upd();
   followCam(0,new THREE.Vector3(0,14,14),[-20,20],[-6,4],true);
   const guides=PL.map(p=>{const a=new THREE.Mesh(new THREE.ConeGeometry(.28,.7,3),new THREE.MeshBasicMaterial({color:p.i?0x4fe0ff:0xf2c14e,transparent:true,opacity:.8,depthWrite:false}));scene.add(a);return a;});
-  showBanner(`Sammelt ${target} Wunschzettel!`,2.4);
+  showBanner(res?'Weiter geht\'s! Sammelt die Wunschzettel!':`Sammelt ${target} Wunschzettel!`,2.4);
+  let caught=false;
   stage={update(dt){
+      if(caught)return;
       if(!returning)time-=dt;
       movePlayers(dt,6.2,[-31,31,-16,14],V.colliders);
       for(const b of V.boxes){
@@ -1013,10 +1018,10 @@ function stageP1(){
       else if(!g.chase)wander(false);
       collide(g.pos,.5,V.colliders);g.pos.x=clamp(g.pos.x,-31,31);g.pos.z=clamp(g.pos.z,-16,14);
       if(g.last.distanceTo(g.pos)<sp*dt*.3){g.stuck+=dt;if(g.stuck>.8){g.stuck=0;g.cool=Math.max(g.cool,1);wander(false);}}else g.stuck=0;g.last.copy(g.pos);
-      if(g.cool<=0&&!returning&&nd<1&&near.stun<=0){
-        near.stun=.8;g.cool=4.5;g.laugh=1.2;wander(true);
-        if(got>0){got--;upd();say(g.pos.clone().setY(2.6),'Meins!','g');SFX.steal();burst(near.pos.clone().setY(1.4),0xffffff,8,2);}
-        else say(g.pos.clone().setY(2.6),'Grrr!','g');
+      if(g.cool<=0&&!returning&&!done&&nd<1&&near.stun<=0){
+        caught=true;g.laugh=2;if(got>0){got--;upd();}near.stun=2;SFX.steal();burst(near.pos.clone().setY(1.4),0x9bd46c,12,2.5);
+        say(g.pos.clone().setY(2.6),'Hab dich! Ab in mein Versteck!','g',2);showBanner(`Oh nein! Der Grinch hat ${heroName(near.i)} gefangen!`,2);
+        const keep={got,time};setTimeout(()=>fadeTo(()=>stageJail(heroName(near.i),()=>stageP1(keep))),1300);
       }
       if(!returning&&got>=target){returning=true;G.letters=got;ringM.visible=arrow.visible=true;SFX.win();showBanner('Alle Zettel! Zurück zum Schlitten!',3);say(g.pos.clone().setY(2.6),'Nein! Grrr!','g',2);}
       if(returning&&!done&&PL.some(p=>d2(p.pos,spot)<3.2)){done=true;SFX.bells();stageFly('Nach Hause in die Fabrik!',()=>stageHub('afterP1'),'home');}
@@ -1137,9 +1142,9 @@ function stageP2(){
 }
 
 /* ---------- GRINCH CAVE: sneak in and steal the toys back ---------- */
-function stageCave(){
+function stageCave(res){
   clearScene();mode='play';hideOverlay();
-  const d=lvl(),n=Math.max(1,G.stolen||1);let recovered=0,done=false;const total=Math.max(50,70-d*5);let time=total;
+  const d=lvl(),n=Math.max(1,G.stolen||1);let recovered=res?res.recovered:0,done=false,caught=false;const total=Math.max(50,70-d*5);let time=res?res.time:total;
   const L=env({bg:0x05070f,sky:0x6a7ab0,ground:0x10141e,hemi:.65,sun:0x8fa8ff,sunI:.3,sunPos:[-10,25,15],sh:30,near:30,far:80});
   const floor=mesh(new THREE.PlaneGeometry(60,44),M(0x2c3446,{roughness:1}),0,0,0,false);floor.rotation.x=-Math.PI/2;scene.add(floor);
   const snowIn=mesh(new THREE.CircleGeometry(4.5,30),M(0xdfe9f5,{roughness:1}),-16,.02,6.5,false);snowIn.rotation.x=-Math.PI/2;scene.add(snowIn);
@@ -1166,7 +1171,7 @@ function stageCave(){
   // pile of stolen toys
   const pileC=new THREE.Vector3(12,0,-2);
   const pileRug=mesh(new THREE.CircleGeometry(1.8,30),M(0x7a4bb5),pileC.x,.02,pileC.z,false);pileRug.rotation.x=-Math.PI/2;scene.add(pileRug);
-  const pileMeshes=[];for(let i=0;i<n;i++){const t=makeToy(i%5);const a=i*2.3;t.position.set(pileC.x+Math.cos(a)*.7*(i>0),0,pileC.z+Math.sin(a)*.7*(i>0));t.rotation.y=a;scene.add(t);pileMeshes.push(t);}
+  const pileMeshes=[];for(let i=0;i<n-recovered;i++){const t=makeToy(i%5);const a=i*2.3;t.position.set(pileC.x+Math.cos(a)*.7*(i>0),0,pileC.z+Math.sin(a)*.7*(i>0));t.rotation.y=a;scene.add(t);pileMeshes.push(t);}
   const pileGlow=glow(0xffe27a,3.5,.5);pileGlow.position.set(pileC.x,1,pileC.z);scene.add(pileGlow);
   // sleigh outside the entrance
   const exitC=new THREE.Vector3(-15.5,0,6.5);
@@ -1188,10 +1193,13 @@ function stageCave(){
   showBanner('Psst! Holt die Spielzeuge zurück!',2.6);
   const awake=()=>g.nap<=0;
   const sees=p=>{if(!awake()||p.hidden||p.stun>0)return false;const dx=p.pos.x-g.pos.x,dz=p.pos.z-g.pos.z,dd=Math.hypot(dx,dz);return dd<vision&&angDiff(Math.atan2(dx,dz),g.face)<cone;};
-  const catchP=p=>{say(g.pos.clone().setY(2.8),pick(['Raus aus meiner Höhle!','Hab dich, Zwerg!','Erwischt! Raus hier!']),'g',2);SFX.steal();g.laugh=1.2;
+  const catchP=p=>{say(g.pos.clone().setY(2.8),pick(['Hab dich! Ab ins Versteck!','Erwischt! Ab ins Versteck!']),'g',2);SFX.steal();g.laugh=1.2;
     if(p.carry){p.m.g.remove(p.carry);const t=p.carry;p.carry=null;t.position.set(pileC.x+rand(-.6,.6),0,pileC.z+rand(-.6,.6));scene.add(t);pileMeshes.push(t);}
-    burst(p.pos.clone().setY(1),0x9bd46c,12,2.5);p.pos.set(exitC.x,0,exitC.z);p.stun=1.3;p.sus=0;if(p.susL){dropLabel(p.susL);p.susL=null;}say(p.pos.clone().setY(2.2),'Uff! Nochmal leiser!','b',1.8);};
+    burst(p.pos.clone().setY(1),0x9bd46c,12,2.5);p.stun=3;p.sus=0;if(p.susL){dropLabel(p.susL);p.susL=null;}
+    caught=true;showBanner(`Oh nein! Der Grinch hat ${heroName(p.i)} gefangen!`,2);const keep={recovered,time};setTimeout(()=>fadeTo(()=>stageJail(heroName(p.i),()=>stageCave(keep))),1300);};
+  if(res)showBanner('Weiter! Holt die Spielzeuge zurück!',2.4);
   stage={update(dt){
+      if(caught)return;
       time-=dt;
       movePlayers(dt,5.2,[-21,17,-11,11],colliders);
       for(const p of PL){inside(p.pos);
@@ -1201,7 +1209,7 @@ function stageCave(){
         const moving=ctl(p.i).x||ctl(p.i).z;
         let rate=0;if(sees(p))rate=1/susTime;else if(awake()&&p.carry&&moving&&!p.hidden&&d2(p.pos,g.pos)<3.2)rate=.35/susTime;
         if(rate>0){p.sus=Math.min(1,p.sus+dt*rate);if(!p.susL)p.susL=tag(()=>_t.copy(p.m.g.position).setY(2.6),'?','q');
-          if(p.sus>=1){p.susL.el.textContent='!';p.susL.el.className='bub x';SFX.alert();catchP(p);}}
+          if(p.sus>=1){p.susL.el.textContent='!';p.susL.el.className='bub x';SFX.alert();catchP(p);return;}}
         else{p.sus=Math.max(0,p.sus-dt*.5);if(p.sus<=0&&p.susL){dropLabel(p.susL);p.susL=null;}}
         if(p.susL)p.susL.el.style.opacity=.4+p.sus*.6;
       }
@@ -1230,6 +1238,66 @@ function stageCave(){
       PL.forEach(p=>{if(p.carry)p.carry.rotation.y+=dt;});
       const mid=followCam(dt,new THREE.Vector3(0,13,11),[-9,9],[-3,3]);
     }};
+}
+
+/* ---------- Grinch's hideout: find the way out ---------- */
+function stageJail(who,back){
+  clearScene();mode='play';hideOverlay();
+  const d=lvl(),C=Math.min(10,6+d),R=5,S=3.2,WH=1.3;
+  const L=env({bg:0x0b130a,sky:0x8fc890,ground:0x14200f,hemi:.7,sun:0xc8ffd0,sunI:.45,sunPos:[-6,25,10],sh:26,near:30,far:80});
+  const W=C*S,H=R*S,ox=-W/2,oz=-H/2;
+  const fl=mesh(new THREE.PlaneGeometry(W+12,H+8),M(0x37402c,{roughness:1}),0,0,0,false);fl.rotation.x=-Math.PI/2;scene.add(fl);
+  for(let i=0;i<40;i++){const pb=mesh(SPHlo,M(0x4a5a3a,{roughness:1}),rand(ox,ox+W),0,rand(oz,oz+H),false);pb.scale.set(rand(.1,.3),.05,rand(.1,.3));scene.add(pb);}
+  const cell=(c,r)=>r*C+c,EW=Array(C*R).fill(true),SW=Array(C*R).fill(true),vis=Array(C*R).fill(false);
+  const start=[0,R-1],goal=[C-1,0];
+  const st=[start];vis[cell(...start)]=true;
+  while(st.length){const [c,r]=st[st.length-1];const nb=[[c+1,r],[c-1,r],[c,r+1],[c,r-1]].filter(([a,b])=>a>=0&&a<C&&b>=0&&b<R&&!vis[cell(a,b)]);
+    if(!nb.length){st.pop();continue;}const [a,b]=pick(nb);if(a>c)EW[cell(c,r)]=false;else if(a<c)EW[cell(a,b)]=false;else if(b>r)SW[cell(c,r)]=false;else SW[cell(a,b)]=false;vis[cell(a,b)]=true;st.push([a,b]);}
+  for(let k=0;k<Math.round(C*R*.12);k++){const c=Math.floor(rand(0,C-1)),r=Math.floor(rand(0,R-1));if(Math.random()<.5)EW[cell(c,r)]=false;else SW[cell(c,r)]=false;}
+  const open=(c,r)=>{const o=[];if(c<C-1&&!EW[cell(c,r)])o.push([c+1,r]);if(c>0&&!EW[cell(c-1,r)])o.push([c-1,r]);if(r<R-1&&!SW[cell(c,r)])o.push([c,r+1]);if(r>0&&!SW[cell(c,r-1)])o.push([c,r-1]);return o;};
+  const prev={},q=[start];prev[cell(...start)]=-1;while(q.length){const [c,r]=q.shift();if(c===goal[0]&&r===goal[1])break;for(const [a,b] of open(c,r)){const k=cell(a,b);if(prev[k]===undefined){prev[k]=cell(c,r);q.push([a,b]);}}}
+  const path=[];for(let k=cell(...goal);k!==-1&&k!==undefined;k=prev[k])path.unshift(k);
+  const cx=c=>ox+(c+.5)*S,cz=r=>oz+(r+.5)*S;
+  const wallM=M(0x4c6b3c,{flatShading:true,roughness:1}),topM=M(0x6fae4a,{roughness:1}),cols=[];
+  const wall=(x,z,w,dd)=>{scene.add(mesh(new THREE.BoxGeometry(w,WH,dd),wallM,x,WH/2,z));const t=mesh(new THREE.BoxGeometry(w+.08,.12,dd+.08),topM,x,WH+.04,z,false);scene.add(t);cols.push(box(x,z,w,dd));};
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){if(c<C-1&&EW[cell(c,r)])wall(ox+(c+1)*S,cz(r),.5,S+.5);if(r<R-1&&SW[cell(c,r)])wall(cx(c),oz+(r+1)*S,S+.5,.5);}
+  wall(0,oz,W+.5,.5);wall(0,oz+H,W+.5,.5);wall(ox,0,.5,H+.5);wall(ox+W,oz+S+(H-S)/2,.5,H-S+.5);
+  // green crystals on random walls, torches
+  for(let i=0;i<8;i++){const c=Math.floor(rand(0,C)),r=Math.floor(rand(0,R));const g=new THREE.Group();g.position.set(cx(c)+rand(-1,1),0,cz(r)+rand(-1,1));
+    if(path.includes(cell(c,r))&&i%2)continue;for(let k=0;k<3;k++){const cr=mesh(new THREE.ConeGeometry(.15,rand(.5,.9),5),E(0x5dff8a,1),rand(-.25,.25),.3,rand(-.25,.25),false);cr.rotation.set(rand(-.4,.4),0,rand(-.4,.4));g.add(cr);}scene.add(g);}
+  const torches=[];for(const [c,r] of [[0,0],[C-1,R-1],[Math.floor(C/2),2]]){const tl=new THREE.PointLight(0xffb060,.8,9,1.5);tl.position.set(cx(c),2,cz(r));scene.add(tl);const fg=glow(0xffa040,1.2,.8);fg.position.copy(tl.position);scene.add(fg);torches.push(tl);}
+  // broken cage at the start
+  for(let k=0;k<7;k++){const a=-Math.PI*.15+k/6*Math.PI*.9;scene.add(mesh(new THREE.CylinderGeometry(.05,.05,1.8,6),M(0x8a95a8,{metalness:.6,roughness:.4}),cx(0)+Math.cos(a)*1.25,.9,cz(R-1)-Math.sin(a)*1.25));}
+  // the sleeping grinch in a dead end
+  const dead=[];for(let r=0;r<R;r++)for(let c=0;c<C;c++){const k=cell(c,r);if(!path.includes(k)&&open(c,r).length===1&&(c+r)>2)dead.push([c,r]);}
+  const gm=makeGrinch();const gp=dead.length?pick(dead):[Math.floor(C/2),0];gm.g.position.set(cx(gp[0]),0,cz(gp[1]));gm.g.rotation.y=rand(0,6);gm.head.rotation.x=.5;scene.add(gm.g);cols.push({x:cx(gp[0]),z:cz(gp[1]),r:.6});
+  // exit
+  const EX=new THREE.Vector3(ox+W+1.1,0,cz(0));
+  const arch=new THREE.Group();arch.position.set(ox+W,0,cz(0));scene.add(arch);
+  for(const s of [-1,1])arch.add(mesh(new THREE.BoxGeometry(.6,2.6,.6),wallM,0,1.3,s*(S/2)));
+  arch.add(mesh(new THREE.BoxGeometry(.6,.5,S+.6),wallM,0,2.7,0));
+  const sun=glow(0xfff1b0,5,.8);sun.position.set(1.6,1.2,0);arch.add(sun);const el=new THREE.PointLight(0xfff1c0,1.2,8);el.position.set(1.5,1.5,0);arch.add(el);
+  const exT=canvasTex(512,128,(x,w,h)=>{x.fillStyle='#2f9a52';x.fillRect(0,0,w,h);x.fillStyle='#fff';x.font='700 64px Fredoka, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('AUSGANG',w/2,h/2+4);});
+  const exS=new THREE.Group();exS.position.set(ox+W+.4,3.3,cz(0));exS.rotation.x=-.7;scene.add(exS);exS.add(mesh(new THREE.PlaneGeometry(2.6,.65),new THREE.MeshBasicMaterial({map:exT}),0,0,0,false));
+  const out=mesh(new THREE.PlaneGeometry(4,S),M(0xeef4fb,{roughness:1}),ox+W+2,.01,cz(0),false);out.rotation.x=-Math.PI/2;scene.add(out);
+  // hint crumbs along the way out (shown later)
+  const crumbs=[];path.forEach((k,i)=>{if(i===0)return;const c=k%C,r=Math.floor(k/C);const m=ball(.14,E(0xfff07a,1.2),cx(c),.15,cz(r),1,1,1,true);m.castShadow=false;m.visible=false;scene.add(m);crumbs.push(m);});
+  PL.forEach((p,i)=>placePlayer(p,cx(0)+(PL.length>1?(i?.6:-.6):0),cz(R-1),Math.PI/2));addTags();
+  setHUD(`Grinchs Versteck`,null,`<span>Findet den Ausgang!</span>`);
+  const off=new THREE.Vector3(0,12,8.5),bx=[Math.min(0,ox+7),Math.max(0,-ox-7)],bz=[oz+3,-oz-3];followCam(0,off,bx,bz,true);
+  showBanner(`Der Grinch hat ${who} gefangen!`,2.6);
+  setTimeout(()=>{if(stage===jail)showBanner('Findet den Weg aus dem Versteck!',2.4);},2700);
+  let t=0,hint=false,done=false;
+  const jail=stage={update(dt){t+=dt;
+      movePlayers(dt,5.6,[ox+.4,ox+W+2.6,oz+.4,oz+H-.4],cols);
+      if(!hint&&t>30){hint=true;crumbs.forEach(c=>c.visible=true);showBanner('Tipp: Folgt den goldenen Krümeln!',2.6);SFX.pick();}
+      if(!done&&PL.some(p=>p.pos.x>ox+W+.6)){done=true;SFX.win();showBanner('Geschafft! Ihr seid entkommen!',2);PL.forEach(p=>say(p.pos.clone().setY(2.3),'Frei!','g',1.6));setTimeout(()=>fadeTo(back),1400);}
+    },
+    anim(dt){torches.forEach((l,i)=>l.intensity=.7+Math.sin(T*9+i*2)*.12+Math.sin(T*13+i)*.06);
+      animGrinch(gm,0,'sneak',T);gm.head.rotation.x=.5;
+      if(Math.floor(T/1.8)!==Math.floor((T-dt)/1.8))say(gm.g.position.clone().setY(2.2),'Z z z','z',1.6);
+      crumbs.forEach((c,i)=>c.position.y=.15+Math.sin(T*4+i*.7)*.06);
+      followCam(dt,off,bx,bz);}};
 }
 
 /* ---------- PHASE 3: Christmas Eve ---------- */
@@ -1343,7 +1411,7 @@ function drawGinger2D(c,x,y,s){c.save();c.translate(x,y);c.scale(s,s);const B='#
 function showTitle(){
   hud.hidden=true;dialogOpen=false;dlg.hidden=true;
   titleScene();
-  const pl=(i)=>`<div class="pl p${i+1}" ${i===1&&G.players<2?'hidden':''}><h3>Spieler ${i+1}</h3><div class="picks">${['elfin','ginger'].map(c=>`<button class="pick" type="button" data-p="${i}" data-c="${c}" aria-pressed="${G.chars[i]===c}"><canvas width="110" height="130"></canvas>${c==='elfin'?'Elfin':'Lebkuchenmann'}</button>`).join('')}</div><p class="small">${i===0?'Laufen: <span class="keys">W A S D</span> · Aktion: <span class="keys">Leertaste</span>':'Laufen: <span class="keys">Pfeiltasten</span> · Aktion: <span class="keys">Enter</span>'}</p></div>`;
+  const pl=(i)=>`<div class="pl p${i+1}" ${i===1&&G.players<2?'hidden':''}><h3>Spieler ${i+1}</h3><div class="picks">${['elfin','ginger'].map(c=>`<button class="pick" type="button" data-p="${i}" data-c="${c}" aria-pressed="${G.chars[i]===c}"><canvas width="110" height="130"></canvas>${c==='elfin'?'Lili<small>die Elfin</small>':'Benni<small>der Lebkuchenmann</small>'}</button>`).join('')}</div><p class="small">${i===0?'Laufen: <span class="keys">W A S D</span> · Aktion: <span class="keys">Leertaste</span>':'Laufen: <span class="keys">Pfeiltasten</span> · Aktion: <span class="keys">Enter</span>'}</p></div>`;
   show(`<p class="eyebrow">Ein Weihnachtsspiel gegen den Grinch</p><h2>Rettet Heiligabend!</h2>
   <p>Der Chef Weihnachtsmann braucht Hilfe! Sammelt Wunschzettel im Dorf, beschützt nachts die Fabrik und verteilt an Heiligabend die Geschenke.</p>
   <p><b>Wie viele spielen?</b> <span class="seg" role="group"><button type="button" data-n="1" aria-pressed="${G.players===1}">1 Spieler</button><button type="button" data-n="2" aria-pressed="${G.players===2}">2 Spieler</button></span></p>
