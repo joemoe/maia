@@ -52,6 +52,7 @@ canvas#game{display:block;width:100%;height:100%;touch-action:none}
 #dialog p{margin:2px 0 8px}
 #dialog .row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 #dialog .hint{color:#5a6787;font-size:.8em}
+#flash{position:absolute;inset:0;pointer-events:none;opacity:0;box-shadow:inset 0 0 140px 50px rgba(230,30,30,.95);transition:opacity .6s}
 #fade{position:absolute;inset:0;background:#050b1d;opacity:0;pointer-events:none;transition:opacity .45s}
 #fade.on{opacity:1}
 #overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(6,12,32,.55);padding:12px;overflow:auto}
@@ -112,7 +113,7 @@ canvas#game{display:block;width:100%;height:100%;touch-action:none}
       <div class="portrait"><svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="#ffe9d6"/><path d="M22 44 Q30 6 66 10 Q86 14 84 30 L78 44Z" fill="#d23a3a"/><circle cx="86" cy="30" r="8" fill="#fff"/><rect x="18" y="40" width="64" height="12" rx="6" fill="#fff"/><circle cx="50" cy="60" r="20" fill="#f6cfa8"/><circle cx="42" cy="58" r="2.6" fill="#2a1b14"/><circle cx="58" cy="58" r="2.6" fill="#2a1b14"/><circle cx="50" cy="65" r="4.5" fill="#e98b7b"/><path d="M22 66 Q26 100 50 100 Q74 100 78 66 Q64 76 50 72 Q36 76 22 66Z" fill="#fff"/><path d="M36 71 Q44 66 50 71 Q56 66 64 71 Q56 76 50 73 Q44 76 36 71Z" fill="#fff" stroke="#e3e8f0"/></svg></div>
       <div class="dtext"><b>Chef Weihnachtsmann</b><p id="dline"></p><div class="row"><span class="hint">Leertaste oder Enter</span><button class="btn green" id="dnext" type="button">Weiter ▶</button></div></div>
     </div>
-    <div id="fade"></div>
+    <div id="fade"></div><div id="flash"></div>
     <div id="overlay" hidden></div>
   </div>
   <div id="pad">
@@ -542,6 +543,7 @@ function animPlayer(p,moving){
   const sy=p.hidden?.72:1;p.m.g.scale.set(1,sy+(1-sy)*0,1);p.m.g.scale.y=sy;
   p.ice.visible=p.frozen>0;
 }
+let shakeA=0;function scare(k=1){shakeA=Math.max(shakeA,.35*k);const f=document.getElementById('flash');if(f){f.style.transition='none';f.style.opacity=String(.85*k);requestAnimationFrame(()=>{f.style.transition='opacity .7s';f.style.opacity='0';});}}
 function hurryClock(){let last=99;return t=>{const s=Math.ceil(t);if(s<last&&s<=10&&s>0){if(last>10)showBanner('Schnell! Nur noch 10 Sekunden!',2);tone(s<=3?1100:880,.06,'square',.035);last=s;const f=hud.querySelector('.hbar');if(f)f.classList.add('hurry');}};}
 function closeCalls(){for(const p of PL){if(p.stun>0||p.frozen>0){p.near=false;continue;}if((p.sus||0)>.65)p.near=true;else if(p.near&&(p.sus||0)<=.02){p.near=false;say(p.pos.clone().setY(2.4),pick(['Puh, knapp!','Uff, das war knapp!','Glück gehabt!']),'b',1.5);}}}
 function movePlayers(dt,speed,b,cols){closeCalls();
@@ -1006,11 +1008,11 @@ function stageP1(res){
   const arrow=mesh(new THREE.ConeGeometry(.4,.8,12),E(0xf2c14e,.8),spot.x,3.4,spot.z,false);arrow.rotation.x=Math.PI;arrow.visible=false;scene.add(arrow);
   PL.forEach((p,i)=>placePlayer(p,-23.5,-2.5+i*1.6,Math.PI/2));addTags();
   const gm=makeGrinch();scene.add(gm.g);
-  const g={pos:new THREE.Vector3(26,0,-1),face:-Math.PI/2,walk:0,cool:res?7:3,w:new THREE.Vector3(10,0,-1),speed:1.8+d*.4,laugh:0,chase:false,stuck:0,last:new THREE.Vector3()};
+  const g={pos:new THREE.Vector3(26,0,-1),face:-Math.PI/2,walk:0,cool:res?4:3,w:new THREE.Vector3(10,0,-1),speed:1.8+d*.4,laugh:0,chase:false,stuck:0,last:new THREE.Vector3()};
   // villagers who sometimes come out of their houses
   const doors=[];for(const x of [-18,-6,6,18])doors.push({x,z:-6.4,f:0,busy:false});
   const VR=6.6+d*.4,VC=.5,folks=[];
-  for(let i=0;i<Math.min(3,2+d);i++){const m=makePerson(i);m.g.visible=false;scene.add(m.g);
+  for(let i=0;i<3;i++){const m=makePerson(i);m.g.visible=false;scene.add(m.g);
     const cone=new THREE.Group();const sec=mesh(new THREE.CircleGeometry(VR,28,-Math.PI/2-VC,VC*2),new THREE.MeshBasicMaterial({color:0xffa020,transparent:true,opacity:.3,depthWrite:false}),0,.04,0,false);sec.rotation.x=-Math.PI/2;cone.add(sec);cone.visible=false;scene.add(cone);
     folks.push({m,cone,sec,state:'in',t:(res?8:5)+i*rand(3,6),door:null,face:0,ph:rand(0,6),pop:0});}
   let warned=false;
@@ -1036,11 +1038,11 @@ function stageP1(res){
         if(f.state==='in'&&f.t<=0&&!returning){const free=doors.filter(o=>!o.busy&&PL.every(p=>d2(p.pos,o)>4));if(free.length){f.door=pick(free);f.door.busy=true;f.state='out';f.t=rand(8,13);f.pop=0;f.m.g.visible=f.cone.visible=true;f.m.g.position.set(f.door.x,0,f.door.z);
           tone(300,.25,'triangle',.04,1.4);say(new THREE.Vector3(f.door.x,2.6,f.door.z),pick(['Wer ist da draußen?','Hab ich was gehört?','Hmm, ein schöner Abend …']),'',1.8);
           if(!warned){warned=true;showBanner('Achtung, Dorfbewohner! Lasst euch nicht sehen!',2.6);}}else f.t=1;}
-        else if(f.state==='out'&&(f.t<=0||returning)){f.state='in';f.t=rand(6,12)*(1-.45*dk);f.door.busy=false;f.m.g.visible=f.cone.visible=false;}
+        else if(f.state==='out'&&(f.t<=0||returning)){f.state='in';f.t=rand(4,9)*(1-.45*dk);f.door.busy=false;f.m.g.visible=f.cone.visible=false;}
         if(f.state==='out'){f.face=f.door.f+Math.sin((T+f.ph)*.7)*.8;
           for(const p of PL){const dx=p.pos.x-f.door.x,dz=p.pos.z-f.door.z,dd=Math.hypot(dx,dz);if(f.pop>.6&&dd<VR&&angDiff(Math.atan2(dx,dz),f.face)<VC)p.seenBy=f;}}}
       for(const p of PL){if(p.seenBy){p.sus=Math.min(1,(p.sus||0)+dt/1.1);if(!p.susL)p.susL=tag(()=>_t.copy(p.m.g.position).setY(2.6),'?','q');
-          if(p.sus>=1&&!caught){caught=true;p.susL.el.textContent='!';p.susL.el.className='bub x';SFX.alert();const f=p.seenBy;say(new THREE.Vector3(f.door.x,2.7,f.door.z),pick(['Huch! Ein Wichtel!','Da ist jemand!','Schatz, komm schnell!']),'',2);
+          if(p.sus>=1&&!caught){caught=true;scare();p.susL.el.textContent='!';p.susL.el.className='bub x';SFX.alert();const f=p.seenBy;say(new THREE.Vector3(f.door.x,2.7,f.door.z),pick(['Huch! Ein Wichtel!','Da ist jemand!','Schatz, komm schnell!']),'',2);
             showBanner(`${heroName(p.i)} wurde gesehen! Nochmal von vorn!`,2.4);setTimeout(()=>fadeTo(()=>stageP1()),1800);return;}}
         else{p.sus=Math.max(0,(p.sus||0)-dt*.6);if(p.sus<=0&&p.susL){dropLabel(p.susL);p.susL=null;}}
         if(p.susL)p.susL.el.style.opacity=.4+p.sus*.6;p.seenBy=null;}
@@ -1058,7 +1060,7 @@ function stageP1(res){
       else if(!g.chase)wander(false);
       collide(g.pos,.5,V.colliders);g.pos.x=clamp(g.pos.x,-31,31);g.pos.z=clamp(g.pos.z,-16,14);
       if(g.last.distanceTo(g.pos)<sp*dt*.3){g.stuck+=dt;if(g.stuck>.8){g.stuck=0;g.cool=Math.max(g.cool,1);wander(false);}}else g.stuck=0;g.last.copy(g.pos);
-      if(g.cool<=0&&!returning&&!done&&nd<1&&near.stun<=0){
+      if(g.cool<=0&&!returning&&!done&&nd<1.3&&near.stun<=0){scare();
         caught=true;g.laugh=2;if(got>0){got--;upd();}near.stun=2;SFX.steal();burst(near.pos.clone().setY(1.4),0x9bd46c,12,2.5);
         say(g.pos.clone().setY(2.6),'Hab dich! Ab in mein Versteck!','g',2);showBanner(`Oh nein! Der Grinch hat ${heroName(near.i)} gefangen!`,2);
         const keep={got,time};setTimeout(()=>fadeTo(()=>stageJail(heroName(near.i),()=>stageP1(keep))),1300);
@@ -1101,7 +1103,7 @@ function stageP2(){
   const spot=new THREE.SpotLight(0xffe08a,2.2,9+d*.8,.55,.45,1);spot.position.set(0,1.2,0);gm.g.add(spot);const st=new THREE.Object3D();st.position.set(0,0,6);gm.g.add(st);spot.target=st;
   const coneM=new THREE.Mesh(new THREE.ConeGeometry(Math.tan(.55)*(8+d*.8),8+d*.8,24,1,true),new THREE.MeshBasicMaterial({color:0xffe08a,transparent:true,opacity:.07,depthWrite:false,side:THREE.DoubleSide}));
   coneM.rotation.x=-Math.PI/2;coneM.position.set(0,1,(8+d*.8)/2);gm.g.add(coneM);
-  const vision=7.5+d*.8,cone=.55,breakTime=Math.max(2,4.3-d*.6),speed=2.2+d*.35,susTime=Math.max(.7,1.6-d*.2);
+  const vision=7.5+d*.8,cone=.55,breakTime=Math.max(2,4.3-d*.6),speed=2.6+d*.35,susTime=Math.max(.7,1.6-d*.2);
   const entries=[{x:-FX+.8,z:2,kind:'door'},{x:FX-.8,z:-6,kind:'door'}];if(d>=1)entries.push({x:6,z:-1.5,kind:'chimney'});
   const g={state:'away',timer:4+rand(0,2),pos:new THREE.Vector3(-30,0,0),face:0,want:0,walk:0,target:null,look:0,lookT:3,throwCd:0,drop:0,laugh:0,visits:0};
   let balls=[];
@@ -1146,7 +1148,7 @@ function stageP2(){
             if(dd>.15){g.state='walk';g.face=lerpAng(g.face,Math.atan2(dx,dz),Math.min(1,dt*8));g.pos.x+=dx/dd*Math.min(dd,speed*dt);g.pos.z+=dz/dd*Math.min(dd,speed*dt);g.walk+=dt*8;collide(g.pos,.45,crateCols);}
             else{g.state='break';g.face=lerpAng(g.face,Math.PI,Math.min(1,dt*8));g.target.prog+=dt/breakTime;
               if(Math.random()<dt*5)burst(new THREE.Vector3(g.target.x,1.3,-3.6),0xc9b28f,2,1.5);
-              if(g.target.prog>=1){const t=g.target;t.gone=true;t.bar.visible=false;t.prog=0;gm.g.add(t.m);t.m.position.set(0,1.95,.15);t.m.rotation.set(0,0,0);g.carry=t;g.target=null;g.state='escape';g.look=0;SFX.alert();showBanner('Alarm! Der Grinch klaut ein Spielzeug!',2.4);say(g.pos.clone().setY(2.9),'Hehe, das nehm ich mit!','g');upd();}}
+              if(g.target.prog>=1){const t=g.target;t.gone=true;t.bar.visible=false;t.prog=0;gm.g.add(t.m);t.m.position.set(0,1.95,.15);t.m.rotation.set(0,0,0);g.carry=t;g.target=null;g.state='escape';g.look=0;SFX.alert();scare(.7);showBanner('Alarm! Der Grinch klaut ein Spielzeug!',2.4);say(g.pos.clone().setY(2.9),'Hehe, das nehm ich mit!','g');upd();}}
           }
           const seen=PL.find(p=>p.sus>=1&&sees(p));
           if(seen&&g.throwCd<=0){g.throwCd=1.8;g.laugh=.6;const from=g.pos.clone().add(new THREE.Vector3(0,1.4,0));const to=seen.pos.clone().setY(.8);const v=to.sub(from);const fl=v.length()/10;v.multiplyScalar(1/fl);v.y+=3*fl;
@@ -1234,7 +1236,7 @@ function stageCave(res){
   showBanner('Psst! Holt die Spielzeuge zurück!',2.6);
   const awake=()=>g.nap<=0;
   const sees=p=>{if(!awake()||p.hidden||p.stun>0)return false;const dx=p.pos.x-g.pos.x,dz=p.pos.z-g.pos.z,dd=Math.hypot(dx,dz);return dd<vision&&angDiff(Math.atan2(dx,dz),g.face)<cone;};
-  const catchP=p=>{say(g.pos.clone().setY(2.8),pick(['Hab dich! Ab ins Versteck!','Erwischt! Ab ins Versteck!']),'g',2);SFX.steal();g.laugh=1.2;
+  const catchP=p=>{scare();say(g.pos.clone().setY(2.8),pick(['Hab dich! Ab ins Versteck!','Erwischt! Ab ins Versteck!']),'g',2);SFX.steal();g.laugh=1.2;
     if(p.carry){p.m.g.remove(p.carry);const t=p.carry;p.carry=null;t.position.set(pileC.x+rand(-.6,.6),0,pileC.z+rand(-.6,.6));scene.add(t);pileMeshes.push(t);}
     burst(p.pos.clone().setY(1),0x9bd46c,12,2.5);p.stun=3;p.sus=0;if(p.susL){dropLabel(p.susL);p.susL=null;}
     caught=true;showBanner(`Oh nein! Der Grinch hat ${heroName(p.i)} gefangen!`,2);const keep={recovered,time};setTimeout(()=>fadeTo(()=>stageJail(heroName(p.i),()=>stageCave(keep))),1300);};
@@ -1259,7 +1261,8 @@ function stageCave(res){
       if(g.nap>0){g.nap-=dt;g.zz-=dt;if(g.zz<=0){g.zz=1.6;say(g.pos.clone().setY(2.2),'Z z z','z',1.6);}if(g.nap<=0){say(g.pos.clone().setY(2.6),'Hä? Was war das?','g');g.look=1.5;g.want=g.face+rand(-1.5,1.5);}}
       else if(g.look>0){g.look-=dt;g.face=lerpAng(g.face,g.want,Math.min(1,dt*3));}
       else{const w=wps[g.wp],dx=w[0]-g.pos.x,dz=w[1]-g.pos.z,dd=Math.hypot(dx,dz);
-        if(dd>.2){g.face=lerpAng(g.face,Math.atan2(dx,dz),Math.min(1,dt*5));g.pos.x+=dx/dd*Math.min(dd,gs*dt);g.pos.z+=dz/dd*Math.min(dd,gs*dt);g.walk+=dt*8;collide(g.pos,.45,colliders);}
+        if(Math.random()<dt*(.22+d*.05)){g.look=1.3;g.want=g.face+Math.PI;say(g.pos.clone().setY(2.6),pick(['Hm?!','Wer da?!','Ich hab was gehört!']),'g',1.3);}
+        else if(dd>.2){g.face=lerpAng(g.face,Math.atan2(dx,dz),Math.min(1,dt*5));g.pos.x+=dx/dd*Math.min(dd,gs*dt);g.pos.z+=dz/dd*Math.min(dd,gs*dt);g.walk+=dt*8;collide(g.pos,.45,colliders);}
         else{g.wp=(g.wp+1)%wps.length;if(w[2]==='bed'){g.nap=Math.max(2,4.5-d*.6)+rand(0,1.5);say(g.pos.clone().setY(2.6),'Ein kleines Nickerchen …','g');}else{g.look=rand(.8,1.8);g.want=g.face+rand(-2,2);}
           g.grumble-=1;if(g.grumble<=0&&Math.random()<.4){g.grumble=2;say(g.pos.clone().setY(2.6),pick(['Meine Spielzeuge! Hehe.','Weihnachten? Pah!','Ich hör doch was …']),'g');}}}
       const allHome=recovered>=n;
@@ -1313,7 +1316,7 @@ function stageJail(who,back){
   const dead=[];for(let r=0;r<R;r++)for(let c=0;c<C;c++){const k=cell(c,r);if(!path.includes(k)&&open(c,r).length===1&&c+(R-1-r)>3)dead.push([c,r]);}
   const gm=makeGrinch();const gp=dead.length?pick(dead):[Math.floor(C/2),0];const BEDP=new THREE.Vector3(cx(gp[0]),0,cz(gp[1]));gm.g.position.copy(BEDP);gm.g.rotation.y=rand(0,6);gm.head.rotation.x=.5;scene.add(gm.g);gm.lantern.visible=false;
   const gbed=mesh(new THREE.BoxGeometry(2,.3,1.3),M(0x3d7d26),BEDP.x,.15,BEDP.z);scene.add(gbed);
-  const G2={state:'sleep',pos:BEDP.clone(),face:gm.g.rotation.y,walk:0,next:null,bored:0,laugh:0,mutter:0};let noise=0;
+  const G2={selfT:rand(18,30),state:'sleep',pos:BEDP.clone(),face:gm.g.rotation.y,walk:0,next:null,bored:0,laugh:0,mutter:0};let noise=0;
   const cellOf=v=>[clamp(Math.floor((v.x-ox)/S),0,C-1),clamp(Math.floor((v.z-oz)/S),0,R-1)];
   const stepToward=(from,to)=>{const s0=cell(...from),t0=cell(...to);if(s0===t0)return to;const pv={};pv[s0]=-1;const qq=[from];
     while(qq.length){const [c,r]=qq.shift();if(cell(c,r)===t0)break;for(const [a,b] of open(c,r)){const k=cell(a,b);if(pv[k]===undefined){pv[k]=cell(c,r);qq.push([a,b]);}}}
@@ -1336,7 +1339,7 @@ function stageJail(who,back){
   const off=new THREE.Vector3(0,12,8.5),bx=[Math.min(0,ox+7),Math.max(0,-ox-7)],bz=[oz+3,-oz-3];followCam(0,off,bx,bz,true);
   showBanner(`Der Grinch hat ${who} gefangen!`,2.6);
   setTimeout(()=>{if(stage===jail)showBanner('Psst! Der Grinch schläft. Aktionstaste halten = schleichen!',3.2);},2700);
-  const backToCage=()=>{SFX.steal();say(G2.pos.clone().setY(2.8),pick(['Zurück in den Käfig!','Hab euch! Ab in den Käfig!']),'g',2.2);G2.laugh=1.5;
+  const backToCage=()=>{scare();SFX.steal();say(G2.pos.clone().setY(2.8),pick(['Zurück in den Käfig!','Hab euch! Ab in den Käfig!']),'g',2.2);G2.laugh=1.5;
     PL.forEach((p,i)=>{burst(p.pos.clone().setY(1),0x9bd46c,10,2.4);p.pos.set(cx(0)+(PL.length>1?(i?.6:-.6):0),0,cz(R-1));p.stun=1;p.sus=0;});G2.state='home';G2.next=null;noise=0;showBanner('Erwischt! Zurück in den Käfig!',2);};
   let t=0,hint=false,done=false;
   const jail=stage={update(dt){t+=dt;
@@ -1345,9 +1348,9 @@ function stageJail(who,back){
       if(G2.state==='sleep')PL.forEach(p=>collide(p.pos,.4,[{x:BEDP.x,z:BEDP.z,r:.9}]));
       // noise wakes the grinch
       if(G2.state==='sleep'){let add=0;PL.forEach(p=>{const c=ctl(p.i),mv=(c.x||c.z)&&p.stun<=0;const dd=d2(p.pos,G2.pos);if(mv&&!p.sneak&&dd<8.5)add+=(1-dd/8.5)*.9+.12;});
-        noise=add>0?noise+dt*add*.6*(1+d*.15):Math.max(0,noise-dt*.15);
+        noise=add>0?noise+dt*add*.8*(1+d*.15):Math.max(0,noise-dt*.15);
         if(noise>.5&&G2.mutter<=0){G2.mutter=4;say(G2.pos.clone().setY(2.3),pick(['Hmm …?','Mmpf … wer …?','*schnarch* … hä?']),'g',1.6);}G2.mutter-=dt;
-        if(noise>=1){G2.state='chase';G2.bored=0;G2.next=null;gm.head.rotation.x=0;gm.lantern.visible=true;SFX.alert();say(G2.pos.clone().setY(2.9),'WER IST DA?!','g',2);showBanner('Oh nein! Der Grinch ist aufgewacht! Schnell weg!',2.4);}}
+        G2.selfT-=dt;if(noise>=1||G2.selfT<=0){G2.selfT=rand(20,32);scare(.7);G2.state='chase';G2.bored=0;G2.next=null;gm.head.rotation.x=0;gm.lantern.visible=true;SFX.alert();say(G2.pos.clone().setY(2.9),'WER IST DA?!','g',2);showBanner('Oh nein! Der Grinch ist aufgewacht! Schnell weg!',2.4);}}
       else{const gc=cellOf(G2.pos);let target;
         if(G2.state==='chase'){let best=null,bd=99;PL.forEach(p=>{const dd=cellDist(gc,cellOf(p.pos));if(dd<bd){bd=dd;best=p;}});
           if(bd>4||PL.every(p=>p.sneak&&bd>1))G2.bored+=dt;else G2.bored=Math.max(0,G2.bored-dt*.5);
@@ -1392,7 +1395,7 @@ function stageP3(){
     if(wants){const e=new THREE.Group();e.add(mesh(new THREE.BoxGeometry(.7,.48,.05),M(0xffffff,{roughness:.4}),0,0,0,false));const se=mesh(new THREE.CylinderGeometry(.1,.1,.04,14),M(0xd23a3a),0,-.03,.04,false);se.rotation.x=Math.PI/2;e.add(se);e.position.set(info.chim.x,info.chim.top+1.3,info.chim.z);scene.add(e);const gl=glow(0xffe27a,2.4,.8);gl.position.copy(e.position);scene.add(gl);info.env=e;info.gl=gl;
       const ring=mesh(new THREE.RingGeometry(.55,.7,24),new THREE.MeshBasicMaterial({color:0xffe27a,transparent:true,opacity:.8,depthWrite:false,side:THREE.DoubleSide}),info.chim.x,info.chim.top+.15,info.chim.z,false);ring.rotation.x=-Math.PI/2;scene.add(ring);info.ring=ring;}
     houses.push(info);x+=rand(8,11);}
-  const gp=Math.min(.7,.35+d*.1);
+  const gp=Math.min(.75,.45+d*.1);
   houses.forEach((h,i)=>{if(i>0&&!h.wants&&Math.random()<gp){const gm=makeGrinch();gm.g.position.set(h.x-.9,h.wallH+h.roofH-.05,h.z);gm.g.rotation.y=-Math.PI/2;scene.add(gm.g);h.grinch=gm;}});
   if(!houses.some(h=>h.grinch)){const h=houses.find((h,i)=>i>0&&!h.wants);if(h){const gm=makeGrinch();gm.g.position.set(h.x-.9,h.wallH+h.roofH-.05,h.z);gm.g.rotation.y=-Math.PI/2;scene.add(gm.g);h.grinch=gm;}}
   const end=x+6;
@@ -1427,7 +1430,7 @@ function stageP3(){
           const r=roofAt(h,p.x,p.z);if(r>0&&p.y<r){scene.remove(gf.m);burst(p.clone(),0xffffff,10,2);if(h.wants&&!h.got)say(p.clone().setY(r+1.5),'Daneben!','r',1.2);return false;}}
         if(p.y<0){scene.remove(gf.m);burst(p.clone().setY(.1),0xffffff,8,1.5);return false;}return true;});
       for(const h of houses){if(!h.grinch)continue;const ahead=h.x-S.x;
-        if(ahead>4&&ahead<22){h.throwT-=dt;if(h.throwT<=0){h.throwT=Math.max(1.1,2.3-d*.3)+rand(0,.7);
+        if(ahead>4&&ahead<22){h.throwT-=dt;if(h.throwT<=0){h.throwT=Math.max(.9,1.8-d*.3)+rand(0,.6);
           const from=new THREE.Vector3(h.x-.9,h.wallH+h.roofH+1.4,h.z);const tt=(ahead)/(10+speed);const to=new THREE.Vector3(S.x+speed*tt,S.y+.5,S.z);const v=to.sub(from).multiplyScalar(1/tt);v.y+=3*tt;
           const bm=ball(.2,M(0xffffff,{roughness:.6}),from.x,from.y,from.z);scene.add(bm);balls.push({m:bm,v});if(Math.random()<.4)say(from.clone().setY(from.y+1),'Na warte!','g');}}}
       balls=balls.filter(b=>{b.v.y-=6*dt;b.m.position.addScaledVector(b.v,dt);const bp=b.m.position;
@@ -1514,6 +1517,7 @@ let T=0,last=performance.now();
 function loop(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
   if(stage){if(mode==='play'&&!dialogOpen)stage.update(dt);stage.anim(dt);}
+  if(shakeA>0){shakeA=Math.max(0,shakeA-dt*.9);cam.position.x+=(Math.random()-.5)*shakeA;cam.position.y+=(Math.random()-.5)*shakeA;}
   updParts(dt);updLabels(dt);
   if(bannerT>0){bannerT-=dt;if(bannerT<=0)banner.classList.remove('on');}
   R.render(scene,cam);hits.clear();
