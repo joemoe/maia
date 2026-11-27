@@ -382,6 +382,22 @@ function makeSleigh(){
   return {g,deer,seats:[new THREE.Vector3(.25,.55,.32),new THREE.Vector3(.25,.55,-.32)],sack};
 }
 function animDeer(sl,t,speed=1){sl.deer.forEach((r,i)=>{r.legs.forEach((l,k)=>l.rotation.z=Math.sin(t*10*speed+k*1.6+i)*.5);r.head.rotation.z=Math.sin(t*5+i)*.06;});}
+function makePerson(i){
+  const robes=[0x6a8fd0,0xd07a9a,0x8fbf6a,0xd0b06a,0x9a7ad0],skins=[0xf6cfa8,0xe0b088,0xc08a60,0xf3d9c0];
+  const g=new THREE.Group(),skin=M(skins[i%4]),robe=M(robes[i%5],{roughness:.9}),capC=M([0xd23a3a,0x2f6fd0,0x2f9a52][i%3]),white=M(0xffffff);
+  const legs=[],arms=[];
+  for(const s of [-1,1]){const pv=new THREE.Group();pv.position.set(.13*s,.45,0);pv.add(mesh(new THREE.CylinderGeometry(.08,.08,.4,8),robe,0,-.2,0));pv.add(ball(.1,M(0x7a4a2a),0,-.42,.06,1,.6,1.5));g.add(pv);legs.push(pv);}
+  g.add(mesh(new THREE.CylinderGeometry(.26,.42,1.05,14),robe,0,.95,0));
+  for(let k=0;k<3;k++)g.add(ball(.035,white,0,1.25-k*.2,.3,1,1,1,true));
+  for(const s of [-1,1]){const pv=new THREE.Group();pv.position.set(.33*s,1.35,0);pv.add(mesh(new THREE.CylinderGeometry(.07,.06,.55,8),robe,0,-.27,0));pv.add(ball(.075,skin,0,-.57,0));pv.rotation.z=.15*s;g.add(pv);arms.push(pv);}
+  const head=new THREE.Group();head.position.y=1.72;g.add(head);head.add(ball(.27,skin,0,0,0));
+  for(const s of [-1,1]){head.add(ball(.035,M(0x2a1b14),.09*s,.03,.24));head.add(ball(.05,M(0xf08a8a),.15*s,-.06,.2,1,.7,.4));}
+  head.add(ball(.05,skin,0,-.02,.27));const sm=smile(.06,.012,M(0x8a3b2a));sm.rotation.z=Math.PI;sm.position.set(0,-.1,.24);head.add(sm);
+  const cap=new THREE.Group();cap.position.set(0,.15,0);cap.rotation.z=.35;head.add(cap);cap.add(mesh(new THREE.ConeGeometry(.27,.6,14),capC,0,.28,0));cap.add(ball(.08,white,0,.6,0));
+  const candle=new THREE.Group();candle.position.set(0,-.62,.1);arms[1].add(candle);candle.add(mesh(new THREE.CylinderGeometry(.13,.13,.03,12),M(0xf2c14e,{metalness:.5}),0,0,0));candle.add(mesh(new THREE.CylinderGeometry(.04,.04,.22,8),white,0,.12,0));candle.add(ball(.04,E(0xffd060,2),0,.27,0,1,1.6,1,true));const cg=glow(0xffc860,1.1,.8);cg.position.y=.28;candle.add(cg);
+  arms[1].rotation.x=-.9;
+  return {g,legs,arms,head};
+}
 function makeElf(i){
   const cols=[0x2f9a52,0x2f6fd0,0xd23a3a,0x9a6fc9,0xe08a2f,0x2fb0b0];
   const g=new THREE.Group(),skin=M(0xf6cfa8),c=M(cols[i%6]),hatC=M(cols[(i+2)%6]),white=M(0xffffff);
@@ -988,6 +1004,13 @@ function stageP1(res){
   PL.forEach((p,i)=>placePlayer(p,-23.5,-2.5+i*1.6,Math.PI/2));addTags();
   const gm=makeGrinch();scene.add(gm.g);
   const g={pos:new THREE.Vector3(26,0,-1),face:-Math.PI/2,walk:0,cool:res?7:3,w:new THREE.Vector3(10,0,-1),speed:1.8+d*.4,laugh:0,chase:false,stuck:0,last:new THREE.Vector3()};
+  // villagers who sometimes come out of their houses
+  const doors=[];for(const x of [-18,-6,6,18])doors.push({x,z:-6.4,f:0,busy:false});
+  const VR=6.6+d*.4,VC=.5,folks=[];
+  for(let i=0;i<Math.min(3,2+d);i++){const m=makePerson(i);m.g.visible=false;scene.add(m.g);
+    const cone=new THREE.Group();const sec=mesh(new THREE.CircleGeometry(VR,28,-Math.PI/2-VC,VC*2),new THREE.MeshBasicMaterial({color:0xffa020,transparent:true,opacity:.3,depthWrite:false}),0,.04,0,false);sec.rotation.x=-Math.PI/2;cone.add(sec);cone.visible=false;scene.add(cone);
+    folks.push({m,cone,sec,state:'in',t:(res?8:5)+i*rand(3,6),door:null,face:0,ph:rand(0,6),pop:0});}
+  let warned=false;
   const sky0=new THREE.Color(0x0b1633),sky1=new THREE.Color(0xf2a679),tmpC=new THREE.Color();
   const wander=(far)=>{for(let k=0;k<10;k++){g.w.set(rand(-26,26),0,rand(-4.5,2.5));if(!far||PL.every(p=>d2(p.pos,g.w)>10))break;}};
   setHUD(`Runde ${G.round} · Wunschzettel`,'night','');
@@ -1004,6 +1027,19 @@ function stageP1(res){
         if(!b.letter){b.re-=dt;if(b.re<=0&&!returning)b.letter=true;}
         else if(!returning)for(const p of PL){if(p.stun<=0&&p.frozen<=0&&Math.hypot(p.pos.x-b.x,p.pos.z-b.z)<2.1){b.letter=false;b.re=rand(1.5,3);got++;upd();SFX.pick();burst(new THREE.Vector3(b.x,2.1,b.z),0xffe27a,14,2.5);say(new THREE.Vector3(b.x,2.6,b.z),'+1','g',1);break;}}
       }
+      // villagers
+      for(const f of folks){f.t-=dt;
+        if(f.state==='in'&&f.t<=0&&!returning){const free=doors.filter(o=>!o.busy&&PL.every(p=>d2(p.pos,o)>4));if(free.length){f.door=pick(free);f.door.busy=true;f.state='out';f.t=rand(8,13);f.pop=0;f.m.g.visible=f.cone.visible=true;f.m.g.position.set(f.door.x,0,f.door.z);
+          tone(300,.25,'triangle',.04,1.4);say(new THREE.Vector3(f.door.x,2.6,f.door.z),pick(['Wer ist da draußen?','Hab ich was gehört?','Hmm, ein schöner Abend …']),'',1.8);
+          if(!warned){warned=true;showBanner('Achtung, Dorfbewohner! Lasst euch nicht sehen!',2.6);}}else f.t=1;}
+        else if(f.state==='out'&&(f.t<=0||returning)){f.state='in';f.t=rand(6,12);f.door.busy=false;f.m.g.visible=f.cone.visible=false;}
+        if(f.state==='out'){f.face=f.door.f+Math.sin((T+f.ph)*.7)*.8;
+          for(const p of PL){const dx=p.pos.x-f.door.x,dz=p.pos.z-f.door.z,dd=Math.hypot(dx,dz);if(f.pop>.6&&dd<VR&&angDiff(Math.atan2(dx,dz),f.face)<VC)p.seenBy=f;}}}
+      for(const p of PL){if(p.seenBy){p.sus=Math.min(1,(p.sus||0)+dt/1.1);if(!p.susL)p.susL=tag(()=>_t.copy(p.m.g.position).setY(2.6),'?','q');
+          if(p.sus>=1&&!caught){caught=true;p.susL.el.textContent='!';p.susL.el.className='bub x';SFX.alert();const f=p.seenBy;say(new THREE.Vector3(f.door.x,2.7,f.door.z),pick(['Huch! Ein Wichtel!','Da ist jemand!','Schatz, komm schnell!']),'',2);
+            showBanner(`${heroName(p.i)} wurde gesehen! Nochmal von vorn!`,2.4);setTimeout(()=>fadeTo(()=>stageP1()),1800);return;}}
+        else{p.sus=Math.max(0,(p.sus||0)-dt*.6);if(p.sus<=0&&p.susL){dropLabel(p.susL);p.susL=null;}}
+        if(p.susL)p.susL.el.style.opacity=.4+p.sus*.6;p.seenBy=null;}
       // grinch
       g.cool-=dt;g.laugh-=dt;g.chase=false;
       let near=PL[0],nd=1e9;PL.forEach(p=>{const dd=d2(p.pos,g.pos);if(dd<nd&&p.stun<=0){nd=dd;near=p;}});
@@ -1035,6 +1071,7 @@ function stageP1(res){
       for(const b of V.boxes){b.env.visible=b.gl.visible=b.letter;b.env.rotation.y+=dt*2;b.env.position.y=2.15+Math.sin(T*3+b.x)*.12;b.flag.rotation.z=b.letter?0:-1.4;}
       V.big.userData.star&&(V.big.userData.star.rotation.y+=dt);
       gm.g.position.copy(g.pos);gm.g.rotation.y=g.face;animGrinch(gm,g.walk,g.laugh>0?'laugh':'sneak',T);
+      for(const f of folks)if(f.state==='out'){f.pop=Math.min(1,f.pop+dt*2);f.m.g.scale.setScalar(.3+.7*f.pop);f.m.g.rotation.y=f.face;f.m.head.rotation.y=Math.sin((T+f.ph)*1.3)*.2;f.cone.position.set(f.door.x,0,f.door.z);f.cone.rotation.y=f.face;f.sec.material.opacity=.15+.2*f.pop;f.cone.scale.setScalar(f.pop);}
       ringM.material.opacity=.5+Math.sin(T*5)*.3;arrow.position.y=3.4+Math.sin(T*4)*.25;animDeer(sl,T*.3);
       PL.forEach(p=>{if(p.stun>0){p.m.g.rotation.y=p.face+Math.sin(T*20)*.3;}});
       PL.forEach((p,i)=>{const a=guides[i];let best=null,bd=1e9;if(!returning)for(const b of V.boxes)if(b.letter){const dd=Math.hypot(b.x-p.pos.x,b.z-p.pos.z);if(dd<bd){bd=dd;best=b;}}
