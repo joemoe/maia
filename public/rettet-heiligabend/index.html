@@ -400,6 +400,8 @@ function makePerson(i){
   arms[1].rotation.x=-.9;
   return {g,legs,arms,head};
 }
+function makeElfHero(variant){const e=makeElf(variant?3:1);const g=new THREE.Group();e.g.scale.setScalar(1.42);g.add(e.g);return {g,legs:e.legs,arms:e.arms,head:e.head};}
+const ELFNAME='Flo';
 function makeElf(i){
   const cols=[0x2f9a52,0x2f6fd0,0xd23a3a,0x9a6fc9,0xe08a2f,0x2fb0b0];
   const g=new THREE.Group(),skin=M(0xf6cfa8),c=M(cols[i%6]),hatC=M(cols[(i+2)%6]),white=M(0xffffff);
@@ -528,7 +530,7 @@ function createPlayers(){
   PL=[];
   for(let i=0;i<G.players;i++){
     const ch=G.chars[i],variant=i===1&&G.players===2&&G.chars[0]===G.chars[1];
-    const m=ch==='elfin'?makeElfin(variant):makeGinger(variant);
+    const m=ch==='elfin'?makeElfin(variant):ch==='elf'?makeElfHero(variant):makeGinger(variant);
     const ring=new THREE.Mesh(new THREE.RingGeometry(.42,.54,30),new THREE.MeshBasicMaterial({color:i?0x4fe0ff:0xf2c14e,transparent:true,opacity:.9,depthWrite:false}));
     ring.rotation.x=-Math.PI/2;ring.position.y=.04;m.g.add(ring);
     const ice=mesh(new THREE.BoxGeometry(.9,1.5,.9),new THREE.MeshStandardMaterial({color:0xbfe9ff,transparent:true,opacity:.55,roughness:.1,metalness:.1}),0,.75,0,false);ice.visible=false;m.g.add(ice);
@@ -574,7 +576,7 @@ function followCam(dt,off,bx,bz,snapNow){
   const k=snapNow?1:Math.min(1,dt*3.5);camPos.lerp(want,k);camLook.lerp(mid,k);
   cam.position.copy(camPos);cam.lookAt(camLook);return mid;
 }
-function heroName(i){const c=G.chars[i];let n=c==='elfin'?'Lili':'Benni';if(i===1&&G.players===2&&G.chars[0]===c)n+=' 2';return n;}
+function heroName(i){const c=G.chars[i];let n=c==='elfin'?'Lili':c==='elf'?ELFNAME:'Benni';if(i===1&&G.players===2&&G.chars[0]===c)n+=' 2';return n;}
 function teamName(){return G.players===2?heroName(0)+' und '+heroName(1):heroName(0);}
 function names(){if(G.players===2)return teamName();return(G.chars[0]==='elfin'?'liebe ':'lieber ')+heroName(0);}
 function lotsOfSaid(){return G.players===2?'Ihr':'Du';}
@@ -1497,6 +1499,17 @@ function drawElfin2D(c,x,y,s){c.save();c.translate(x,y);c.scale(s,s);
   f('#2a1b14',()=>{c.arc(4,-47,1.5,0,TAU);c.moveTo(-2,-47);c.arc(-2,-47,1.5,0,TAU);});
   f('#d23a3a',()=>{c.moveTo(-10,-54);c.quadraticCurveTo(-6,-70,-16,-77);c.quadraticCurveTo(3,-73,10,-54);});
   f('#fff',()=>{c.arc(-16,-77,3.8,0,TAU);});c.fillStyle='#fff';c.fillRect(-11.5,-57,23,5);c.restore();}
+function drawElf2D(c,x,y,s){c.save();c.translate(x,y);c.scale(s,s);
+  const f=(col,fn)=>{c.fillStyle=col;c.beginPath();fn();c.fill();};
+  c.fillStyle='#fff';c.fillRect(-7,-15,5,13);c.fillRect(2,-15,5,13);c.fillStyle='#2f6fd0';for(let i=0;i<3;i++){c.fillRect(-7,-15+i*4.5,5,2.2);c.fillRect(2,-15+i*4.5,5,2.2);}
+  f('#5a3a22',()=>{c.ellipse(-4,-2,5.5,3,0,0,TAU);c.ellipse(5,-2,5.5,3,0,0,TAU);});
+  f('#2f6fd0',()=>{c.moveTo(-9,-38);c.lineTo(9,-38);c.lineTo(12,-14);c.lineTo(-12,-14);});
+  c.fillStyle='#3a2414';c.fillRect(-12,-22,24,4);c.fillStyle='#f2c14e';c.fillRect(-2.5,-22.5,5,5);
+  f('#f6cfa8',()=>{c.moveTo(8,-50);c.lineTo(19,-57);c.lineTo(9,-43);c.moveTo(-8,-50);c.lineTo(-17,-56);c.lineTo(-9,-43);});
+  f('#f6cfa8',()=>c.arc(0,-47,10.5,0,TAU));f('#8a5a32',()=>c.ellipse(0,-54,9,3,0,0,Math.PI));
+  f('#2a1b14',()=>{c.arc(4,-47,1.5,0,TAU);c.moveTo(-2,-47);c.arc(-2,-47,1.5,0,TAU);});
+  f('#9a6fc9',()=>{c.moveTo(-10,-54);c.quadraticCurveTo(-4,-72,8,-78);c.quadraticCurveTo(6,-66,10,-54);});
+  f('#fff',()=>{c.arc(8,-78,3.8,0,TAU);});c.fillStyle='#fff';c.fillRect(-11.5,-57,23,5);c.restore();}
 function drawGinger2D(c,x,y,s){c.save();c.translate(x,y);c.scale(s,s);const B='#c07a3c',D='#7d4a22';c.lineCap='round';
   for(const [col,w] of [[D,11],[B,8]]){c.strokeStyle=col;c.lineWidth=w;c.beginPath();c.moveTo(-5,-22);c.lineTo(-7,-5);c.moveTo(5,-22);c.lineTo(7,-5);c.moveTo(-8,-36);c.lineTo(-18,-28);c.moveTo(8,-36);c.lineTo(18,-28);c.stroke();}
   c.fillStyle=B;c.strokeStyle=D;c.lineWidth=2;c.beginPath();c.ellipse(0,-30,11,13,0,0,TAU);c.fill();c.stroke();c.beginPath();c.arc(0,-51,11.5,0,TAU);c.fill();c.stroke();
@@ -1505,13 +1518,13 @@ function drawGinger2D(c,x,y,s){c.save();c.translate(x,y);c.scale(s,s);const B='#
 function showTitle(){
   hud.hidden=true;dialogOpen=false;dlg.hidden=true;
   titleScene();
-  const pl=(i)=>`<div class="pl p${i+1}" ${i===1&&G.players<2?'hidden':''}><h3>Spieler ${i+1}</h3><div class="picks">${['elfin','ginger'].map(c=>`<button class="pick" type="button" data-p="${i}" data-c="${c}" aria-pressed="${G.chars[i]===c}"><canvas width="110" height="130"></canvas>${c==='elfin'?'Lili<small>die Elfin</small>':'Benni<small>der Lebkuchenmann</small>'}</button>`).join('')}</div><p class="small">${i===0?'Laufen: <span class="keys">W A S D</span> · Aktion: <span class="keys">Leertaste</span>':'Laufen: <span class="keys">Pfeiltasten</span> · Aktion: <span class="keys">Enter</span>'}</p></div>`;
+  const pl=(i)=>`<div class="pl p${i+1}" ${i===1&&G.players<2?'hidden':''}><h3>Spieler ${i+1}</h3><div class="picks">${['elfin','elf','ginger'].map(c=>`<button class="pick" type="button" data-p="${i}" data-c="${c}" aria-pressed="${G.chars[i]===c}"><canvas width="110" height="130"></canvas>${c==='elfin'?'Lili<small>die Elfin</small>':c==='elf'?ELFNAME+'<small>der Elf</small>':'Benni<small>der Lebkuchenmann</small>'}</button>`).join('')}</div><p class="small">${i===0?'Laufen: <span class="keys">W A S D</span> · Aktion: <span class="keys">Leertaste</span>':'Laufen: <span class="keys">Pfeiltasten</span> · Aktion: <span class="keys">Enter</span>'}</p></div>`;
   show(`<p class="eyebrow">Ein Weihnachtsspiel gegen den Grinch</p><h2>Rettet Heiligabend!</h2>
   <p>Der Chef Weihnachtsmann braucht Hilfe! Sammelt Wunschzettel im Dorf, beschützt nachts die Fabrik und verteilt an Heiligabend die Geschenke.</p>
   <p><b>Wie viele spielen?</b> <span class="seg" role="group"><button type="button" data-n="1" aria-pressed="${G.players===1}">1 Spieler</button><button type="button" data-n="2" aria-pressed="${G.players===2}">2 Spieler</button></span></p>
   <div class="cols">${pl(0)}${pl(1)}</div>
   <div class="btns"><button class="btn green" type="button" data-primary>Los geht's!</button></div>`);
-  overlay.querySelectorAll('.pick').forEach(b=>{const cx=b.querySelector('canvas').getContext('2d');(b.dataset.c==='elfin'?drawElfin2D:drawGinger2D)(cx,55,124,1.45);
+  overlay.querySelectorAll('.pick').forEach(b=>{const cx=b.querySelector('canvas').getContext('2d');(b.dataset.c==='elfin'?drawElfin2D:b.dataset.c==='elf'?drawElf2D:drawGinger2D)(cx,55,124,1.45);
     b.onclick=()=>{const i=+b.dataset.p;G.chars[i]=b.dataset.c;overlay.querySelectorAll(`.pick[data-p="${i}"]`).forEach(x=>x.setAttribute('aria-pressed',x.dataset.c===b.dataset.c));};});
   overlay.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{G.players=+b.dataset.n;overlay.querySelectorAll('[data-n]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.n===b.dataset.n));overlay.querySelector('.pl.p2').hidden=G.players<2;});
   overlay.querySelector('[data-primary]').onclick=()=>{G.round=1;G.stars=0;G.letters=0;G.toys=0;createPlayers();hideOverlay();fadeTo(()=>stageHub('start'));};
@@ -1520,7 +1533,7 @@ function titleScene(){
   clearScene();const V=buildVillage();
   const gm=makeGrinch();gm.g.position.set(3,0,3.5);gm.g.rotation.y=-.4;scene.add(gm.g);
   const e=makeElfin(false);e.g.position.set(-2.2,0,3.5);e.g.rotation.y=.5;scene.add(e.g);
-  const gi=makeGinger(false);gi.g.position.set(-.8,0,4.2);gi.g.rotation.y=.3;scene.add(gi.g);
+  const gi=makeGinger(false);gi.g.position.set(-.8,0,4.2);gi.g.rotation.y=.3;scene.add(gi.g);const eh=makeElfHero(false);eh.g.position.set(.9,0,4.4);eh.g.rotation.y=-.1;scene.add(eh.g);
   const s=makeSanta();s.g.position.set(-4,0,2.4);s.g.rotation.y=.6;scene.add(s.g);
   V.boxes.forEach(b=>b.letter=true);
   stage={update(){},anim(dt){const a=T*.08;cam.position.set(Math.sin(a)*14,6.5,Math.cos(a)*14+2);cam.lookAt(0,1.8,1);animGrinch(gm,0,'laugh',T);s.arms[1].rotation.z=-2.3+Math.sin(T*5)*.3;
