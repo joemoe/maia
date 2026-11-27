@@ -462,7 +462,7 @@ function ctl(i){
   const k=i===0?KEYS.p1:KEYS.p2,o=KEYS.p2,one=G.players===1&&i===0;
   const has=n=>k[n].some(c=>down.has(c))||(one&&o[n].some(c=>down.has(c)));
   const hit=n=>k[n].some(c=>hits.has(c))||(one&&o[n].some(c=>hits.has(c)));
-  return {x:(has('right')?1:0)-(has('left')?1:0),z:(has('down')?1:0)-(has('up')?1:0),act:hit('act')};
+  return {x:(has('right')?1:0)-(has('left')?1:0),z:(has('down')?1:0)-(has('up')?1:0),act:hit('act'),hold:has('act')};
 }
 const pad=document.getElementById('pad');
 try{if(matchMedia('(pointer: coarse)').matches||'ontouchstart' in window)pad.classList.add('on');}catch(e){}
@@ -516,7 +516,7 @@ function createPlayers(){
     PL.push({i,ch,m,ring,ice,pos:new THREE.Vector3(),face:0,walk:0,stun:0,frozen:0,hidden:false,sus:0,susL:null});
   }
 }
-function placePlayer(p,x,z,face=0){if(p.carry){p.m.g.remove(p.carry);p.carry=null;}scene.add(p.m.g);p.m.g.scale.setScalar(1);p.pos.set(x,0,z);p.face=face;p.stun=0;p.frozen=0;p.hidden=false;p.sus=0;p.susL=null;p.ring.visible=true;p.ice.visible=false;p.m.g.rotation.set(0,face,0);p.m.g.position.copy(p.pos);}
+function placePlayer(p,x,z,face=0){if(p.carry){p.m.g.remove(p.carry);p.carry=null;}scene.add(p.m.g);p.m.g.scale.setScalar(1);p.pos.set(x,0,z);p.face=face;p.stun=0;p.frozen=0;p.hidden=false;p.sneak=false;p.sus=0;p.susL=null;p.ring.visible=true;p.ice.visible=false;p.m.g.rotation.set(0,face,0);p.m.g.position.copy(p.pos);}
 function addTags(){PL.forEach(p=>tag(()=>p.m.g.getWorldPosition(_t).add(_up.set(0,1.95*p.m.g.scale.y,0)),heroName(p.i),'tag'+(p.i?' p2':'')));}
 const _t=new THREE.Vector3(),_up=new THREE.Vector3();
 function animPlayer(p,moving){
@@ -529,7 +529,7 @@ function movePlayers(dt,speed,b,cols){
   for(const p of PL){let moving=false;
     if(p.stun>0)p.stun-=dt;if(p.frozen>0)p.frozen-=dt;
     if(p.stun<=0&&p.frozen<=0){const c=ctl(p.i);let x=c.x,z=c.z;const l=Math.hypot(x,z);
-      if(l>0){x/=l;z/=l;moving=true;const sp=speed*(p.carry?.78:1);p.pos.x+=x*sp*dt;p.pos.z+=z*sp*dt;p.face=lerpAng(p.face,Math.atan2(x,z),Math.min(1,dt*14));p.walk+=dt*11;}}
+      if(l>0){x/=l;z/=l;moving=true;const sp=speed*(p.carry?.78:1)*(p.sneak?.45:1);p.pos.x+=x*sp*dt;p.pos.z+=z*sp*dt;p.face=lerpAng(p.face,Math.atan2(x,z),Math.min(1,dt*14));p.walk+=dt*11;}}
     collide(p.pos,.4,cols);p.pos.x=clamp(p.pos.x,b[0],b[1]);p.pos.z=clamp(p.pos.z,b[2],b[3]);
     animPlayer(p,moving);}
   if(PL.length===2){const a=PL[0].pos,c=PL[1].pos,dd=d2(a,c);if(dd<.8&&dd>1e-3){const k=(.8-dd)/2/dd;const dx=(a.x-c.x)*k,dz=(a.z-c.z)*k;a.x+=dx;a.z+=dz;c.x-=dx;c.z-=dz;}}
@@ -1269,8 +1269,15 @@ function stageJail(who,back){
   // broken cage at the start
   for(let k=0;k<7;k++){const a=-Math.PI*.15+k/6*Math.PI*.9;scene.add(mesh(new THREE.CylinderGeometry(.05,.05,1.8,6),M(0x8a95a8,{metalness:.6,roughness:.4}),cx(0)+Math.cos(a)*1.25,.9,cz(R-1)-Math.sin(a)*1.25));}
   // the sleeping grinch in a dead end
-  const dead=[];for(let r=0;r<R;r++)for(let c=0;c<C;c++){const k=cell(c,r);if(!path.includes(k)&&open(c,r).length===1&&(c+r)>2)dead.push([c,r]);}
-  const gm=makeGrinch();const gp=dead.length?pick(dead):[Math.floor(C/2),0];gm.g.position.set(cx(gp[0]),0,cz(gp[1]));gm.g.rotation.y=rand(0,6);gm.head.rotation.x=.5;scene.add(gm.g);cols.push({x:cx(gp[0]),z:cz(gp[1]),r:.6});
+  const dead=[];for(let r=0;r<R;r++)for(let c=0;c<C;c++){const k=cell(c,r);if(!path.includes(k)&&open(c,r).length===1&&c+(R-1-r)>3)dead.push([c,r]);}
+  const gm=makeGrinch();const gp=dead.length?pick(dead):[Math.floor(C/2),0];const BEDP=new THREE.Vector3(cx(gp[0]),0,cz(gp[1]));gm.g.position.copy(BEDP);gm.g.rotation.y=rand(0,6);gm.head.rotation.x=.5;scene.add(gm.g);gm.lantern.visible=false;
+  const gbed=mesh(new THREE.BoxGeometry(2,.3,1.3),M(0x3d7d26),BEDP.x,.15,BEDP.z);scene.add(gbed);
+  const G2={state:'sleep',pos:BEDP.clone(),face:gm.g.rotation.y,walk:0,next:null,bored:0,laugh:0,mutter:0};let noise=0;
+  const cellOf=v=>[clamp(Math.floor((v.x-ox)/S),0,C-1),clamp(Math.floor((v.z-oz)/S),0,R-1)];
+  const stepToward=(from,to)=>{const s0=cell(...from),t0=cell(...to);if(s0===t0)return to;const pv={};pv[s0]=-1;const qq=[from];
+    while(qq.length){const [c,r]=qq.shift();if(cell(c,r)===t0)break;for(const [a,b] of open(c,r)){const k=cell(a,b);if(pv[k]===undefined){pv[k]=cell(c,r);qq.push([a,b]);}}}
+    if(pv[t0]===undefined)return from;let k=t0;while(pv[k]!==s0)k=pv[k];return [k%C,Math.floor(k/C)];};
+  const cellDist=(a,b)=>{const s0=cell(...a),t0=cell(...b);const dd={};dd[s0]=0;const qq=[a];while(qq.length){const [c,r]=qq.shift();const k=cell(c,r);if(k===t0)return dd[k];for(const [x,y] of open(c,r)){const kk=cell(x,y);if(dd[kk]===undefined){dd[kk]=dd[k]+1;qq.push([x,y]);}}}return 99;};
   // exit
   const EX=new THREE.Vector3(ox+W+1.1,0,cz(0));
   const arch=new THREE.Group();arch.position.set(ox+W,0,cz(0));scene.add(arch);
@@ -1283,19 +1290,46 @@ function stageJail(who,back){
   // hint crumbs along the way out (shown later)
   const crumbs=[];path.forEach((k,i)=>{if(i===0)return;const c=k%C,r=Math.floor(k/C);const m=ball(.14,E(0xfff07a,1.2),cx(c),.15,cz(r),1,1,1,true);m.castShadow=false;m.visible=false;scene.add(m);crumbs.push(m);});
   PL.forEach((p,i)=>placePlayer(p,cx(0)+(PL.length>1?(i?.6:-.6):0),cz(R-1),Math.PI/2));addTags();
-  setHUD(`Grinchs Versteck`,null,`<span>Findet den Ausgang!</span>`);
+  setHUD(`Grinchs Versteck`,null,'');
+  const noiseHUD=()=>{const n=Math.round(clamp(noise,0,1)*5);hudRight(G2.state==='sleep'?`<span>${n>=3?'🔊':'🤫'} Lärm ${'▮'.repeat(n)}${'▯'.repeat(5-n)}</span>`:G2.state==='chase'?'<span>😱 Der Grinch ist wach!</span>':'<span>🥱 Der Grinch wird müde …</span>');};noiseHUD();
   const off=new THREE.Vector3(0,12,8.5),bx=[Math.min(0,ox+7),Math.max(0,-ox-7)],bz=[oz+3,-oz-3];followCam(0,off,bx,bz,true);
   showBanner(`Der Grinch hat ${who} gefangen!`,2.6);
-  setTimeout(()=>{if(stage===jail)showBanner('Findet den Weg aus dem Versteck!',2.4);},2700);
+  setTimeout(()=>{if(stage===jail)showBanner('Psst! Der Grinch schläft. Aktionstaste halten = schleichen!',3.2);},2700);
+  const backToCage=()=>{SFX.steal();say(G2.pos.clone().setY(2.8),pick(['Zurück in den Käfig!','Hab euch! Ab in den Käfig!']),'g',2.2);G2.laugh=1.5;
+    PL.forEach((p,i)=>{burst(p.pos.clone().setY(1),0x9bd46c,10,2.4);p.pos.set(cx(0)+(PL.length>1?(i?.6:-.6):0),0,cz(R-1));p.stun=1;p.sus=0;});G2.state='home';G2.next=null;noise=0;showBanner('Erwischt! Zurück in den Käfig!',2);};
   let t=0,hint=false,done=false;
   const jail=stage={update(dt){t+=dt;
+      PL.forEach(p=>{p.sneak=ctl(p.i).hold;p.hidden=p.sneak;});
       movePlayers(dt,5.6,[ox+.4,ox+W+2.6,oz+.4,oz+H-.4],cols);
+      if(G2.state==='sleep')PL.forEach(p=>collide(p.pos,.4,[{x:BEDP.x,z:BEDP.z,r:.9}]));
+      // noise wakes the grinch
+      if(G2.state==='sleep'){let add=0;PL.forEach(p=>{const c=ctl(p.i),mv=(c.x||c.z)&&p.stun<=0;const dd=d2(p.pos,G2.pos);if(mv&&!p.sneak&&dd<8.5)add+=(1-dd/8.5)*.9+.12;});
+        noise=add>0?noise+dt*add*.6*(1+d*.15):Math.max(0,noise-dt*.22);
+        if(noise>.5&&G2.mutter<=0){G2.mutter=4;say(G2.pos.clone().setY(2.3),pick(['Hmm …?','Mmpf … wer …?','*schnarch* … hä?']),'g',1.6);}G2.mutter-=dt;
+        if(noise>=1){G2.state='chase';G2.bored=0;G2.next=null;gm.head.rotation.x=0;gm.lantern.visible=true;SFX.alert();say(G2.pos.clone().setY(2.9),'WER IST DA?!','g',2);showBanner('Oh nein! Der Grinch ist aufgewacht! Schnell weg!',2.4);}}
+      else{const gc=cellOf(G2.pos);let target;
+        if(G2.state==='chase'){let best=null,bd=99;PL.forEach(p=>{const dd=cellDist(gc,cellOf(p.pos));if(dd<bd){bd=dd;best=p;}});
+          if(bd>4||PL.every(p=>p.sneak&&bd>1))G2.bored+=dt;else G2.bored=Math.max(0,G2.bored-dt*.5);
+          if(G2.bored>6){G2.state='home';G2.next=null;say(G2.pos.clone().setY(2.8),'Gähn … ich leg mich wieder hin.','g',2);}
+          target=best?cellOf(best.pos):gc;
+          if(best&&bd<=0){const dx=best.pos.x-G2.pos.x,dz=best.pos.z-G2.pos.z,dd=Math.hypot(dx,dz);if(dd>.05){const sp=Math.min(dd,(2.6+d*.3)*dt);G2.pos.x+=dx/dd*sp;G2.pos.z+=dz/dd*sp;G2.face=lerpAng(G2.face,Math.atan2(dx,dz),Math.min(1,dt*8));G2.walk+=dt*9;}G2.next=null;}
+          if(best&&d2(best.pos,G2.pos)<.9&&best.stun<=0){backToCage();return;}}
+        else target=cellOf(BEDP);
+        if(!(G2.state==='chase'&&target&&cell(...target)===cell(...gc))){
+          if(!G2.next){const nc=stepToward(gc,target);G2.next=new THREE.Vector3(cx(nc[0]),0,cz(nc[1]));}
+          const dx=G2.next.x-G2.pos.x,dz=G2.next.z-G2.pos.z,dd=Math.hypot(dx,dz),sp=(G2.state==='chase'?2.6+d*.3:2)*dt;
+          if(dd<.08){G2.next=null;if(G2.state==='home'&&cell(...gc)===cell(...cellOf(BEDP))&&d2(G2.pos,BEDP)<.1){G2.state='sleep';noise=0;gm.lantern.visible=false;gm.head.rotation.x=.5;showBanner('Puh, der Grinch schläft wieder.',2);}}
+          else{G2.pos.x+=dx/dd*Math.min(dd,sp);G2.pos.z+=dz/dd*Math.min(dd,sp);G2.face=lerpAng(G2.face,Math.atan2(dx,dz),Math.min(1,dt*8));G2.walk+=dt*9;}}
+      }
+      noiseHUD();
       if(!hint&&t>30){hint=true;crumbs.forEach(c=>c.visible=true);showBanner('Tipp: Folgt den goldenen Krümeln!',2.6);SFX.pick();}
       if(!done&&PL.some(p=>p.pos.x>ox+W+.6)){done=true;SFX.win();showBanner('Geschafft! Ihr seid entkommen!',2);PL.forEach(p=>say(p.pos.clone().setY(2.3),'Frei!','g',1.6));setTimeout(()=>fadeTo(back),1400);}
     },
     anim(dt){torches.forEach((l,i)=>l.intensity=.7+Math.sin(T*9+i*2)*.12+Math.sin(T*13+i)*.06);
-      animGrinch(gm,0,'sneak',T);gm.head.rotation.x=.5;
-      if(Math.floor(T/1.8)!==Math.floor((T-dt)/1.8))say(gm.g.position.clone().setY(2.2),'Z z z','z',1.6);
+      gm.g.position.copy(G2.pos);gm.g.rotation.y=G2.face;G2.laugh-=dt;
+      if(G2.state==='sleep'){animGrinch(gm,0,'sneak',T);gm.head.rotation.x=.5;if(Math.floor(T/1.8)!==Math.floor((T-dt)/1.8))say(gm.g.position.clone().setY(2.2),'Z z z','z',1.6);}
+      else animGrinch(gm,G2.walk,G2.laugh>0?'laugh':'sneak',T);
+      PL.forEach(p=>{if(p.stun>0)p.m.g.rotation.y=p.face+Math.sin(T*20)*.3;});
       crumbs.forEach((c,i)=>c.position.y=.15+Math.sin(T*4+i*.7)*.06);
       followCam(dt,off,bx,bz);}};
 }
