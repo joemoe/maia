@@ -400,8 +400,8 @@ function makePerson(i){
   arms[1].rotation.x=-.9;
   return {g,legs,arms,head};
 }
-function makeElfHero(variant){const e=makeElf(variant?3:1);const g=new THREE.Group();e.g.scale.setScalar(1.42);g.add(e.g);return {g,legs:e.legs,arms:e.arms,head:e.head};}
-const ELFNAME='Flo';
+function makeElfHero(variant){const e=makeElf(variant?3:1);const g=new THREE.Group();e.g.scale.setScalar(1.08);g.add(e.g);return {g,legs:e.legs,arms:e.arms,head:e.head};}
+const ELFNAME='Lio';
 function makeElf(i){
   const cols=[0x2f9a52,0x2f6fd0,0xd23a3a,0x9a6fc9,0xe08a2f,0x2fb0b0];
   const g=new THREE.Group(),skin=M(0xf6cfa8),c=M(cols[i%6]),hatC=M(cols[(i+2)%6]),white=M(0xffffff);
@@ -920,7 +920,8 @@ function orders(kind){
   const d=lvl(),t=Math.min(12,4+d*2),K=clamp(G.letters||5,3,10);
   if(kind==='start'&&G.round===1)return['Ho, ho, ho! Willkommen in meiner Weihnachtsfabrik, '+names()+'!','Ich bin hier der Chef. Schaut mal, wie fleißig meine Elfen arbeiten!','Aber der Grinch will Weihnachten verderben. Darum brauche ich '+(G.players===2?'euch':'dich')+'.',`Erster Auftrag: Fliegt mit dem Schlitten ins Dorf und sammelt ${t} Wunschzettel ein, bevor die Sonne aufgeht.`,'Übrigens: Oben im 2. Stock ist '+(G.players===2?'eure':'deine')+' Wohnung mit Bett. Da kommt man nur mit der Lebkuchenbahn hin. Sie hält vorne am Bahnhof.','Der Schlitten steht rechts am großen Tor. Ab mit euch!'];
   if(kind==='start')return[`Ho, ho, ho! Runde ${G.round}, ein neues Weihnachten beginnt!`,'Passt auf: Der Grinch ist frecher und schneller geworden.',`Auftrag: Holt ${t} Wunschzettel aus dem Dorf. Der Schlitten wartet am Tor!`];
-  if(kind==='afterP1')return[`${G.letters} Wunschzettel! Wunderbar gemacht!`,`Meine Elfen bauen heute Nacht ${K} Spielzeuge daraus und stellen sie ins Regal „Fertige Spielzeuge“.`,'Ich gehe jetzt ins Bett. Ihr haltet Wache! Vielleicht schleicht sich der Grinch herein.','Er kommt nur selten. Versteckt euch hinter den großen Geschenkkisten. Seine Laterne zeigt, wohin er schaut.','Wenn er nah ist und euch nicht sieht, drückt die Aktionstaste und ruft BUH! Dann rennt er weg.','Und wenn er ein Spielzeug klaut: schnell hinterher und BUH! Dann lässt er es fallen.'];
+  if(kind==='afterP1')return[`${G.letters} Wunschzettel! Wunderbar gemacht!`,'Und heute baut ihr die Geschenke selbst! Für jeden Wunschzettel ein Geschenk.','So geht es: 1. an der Werkbank bauen, 2. am Farbtisch anmalen, 3. am Packtisch einpacken, 4. ins Regal stellen.','Stellt euch in den Kreis und haltet die Aktionstaste gedrückt. Schafft ihr alle, bevor es Abend wird? Los!'];
+  if(kind==='night')return[`${G.made} Geschenk${G.made===1?'':'e'} im Regal! Das habt ihr toll gemacht!`,'Ich gehe jetzt ins Bett. Ihr haltet Wache! Vielleicht schleicht sich der Grinch herein.','Er kommt nur selten. Versteckt euch hinter den großen Geschenkkisten. Seine Laterne zeigt, wohin er schaut.','Wenn er nah ist und euch nicht sieht, drückt die Aktionstaste und ruft BUH! Dann rennt er weg.','Und wenn er ein Spielzeug klaut: schnell hinterher und BUH! Dann lässt er es fallen.'];
   if(kind==='alarm')return['Guten Morgen! … Oh nein! ALARM!',`Der Grinch hat heute Nacht ${G.stolen} ${G.stolen>1?'Spielzeuge':'Spielzeug'} geklaut!`,'Ein Elf hat ihn gesehen. Hier ist der Hinweis: Seine Höhle ist im Eisberg hinter dem Dorf, dort wo die grünen Kristalle leuchten.','Fliegt hin und holt die Spielzeuge still und heimlich zurück. Der Grinch darf euch nicht sehen!','Schleicht euch von Fels zu Fels und tragt ein Spielzeug nach dem anderen zum Schlitten. Ab zum Schlitten!'];
   if(kind==='afterP2')return[G.recovered?`Ihr habt ${G.recovered} ${G.recovered>1?'Spielzeuge':'Spielzeug'} aus der Grinch-Höhle zurückgeholt! Jetzt haben wir ${G.toys}.`:`Guten Morgen! Alle ${G.toys} Spielzeuge sind noch da. Gut aufgepasst!`,'Und heute ist Heiligabend! Meine Elfen haben alle Geschenke in den Schlitten geladen.','Fliegt über das Dorf und werft sie in die Schornsteine der Häuser mit hellen Fenstern. Der Ring auf den Dächern zeigt, wo sie landen.','Ab zum Schlitten!'];
   return[`Frohe Weihnachten! ${G.lastDelivered} Kinder freuen sich über ihre Geschenke.`,'Ihr seid die besten Helfer, die ich je hatte! Die Elfen jubeln euch zu.','Aber der Grinch gibt nicht auf. Nächstes Jahr wird er noch frecher …',`Auf geht's in Runde ${G.round+1}!`];
@@ -941,8 +942,9 @@ function stageHub(kind,back){
   if(back){ringM.visible=arrow.visible=!!goal;showBanner(goal?'Zurück in der Fabrik!':'Zurück in der Fabrik!',1.6);}
   setHUD(`Runde ${G.round} · Weihnachtsfabrik`,null,`<span>${IC.gift}${G.stars} verteilt</span>`);
   const afterDialog=()=>{
-    if(kind==='afterP1'){fadeTo(stageP2);return;}
-    if(kind==='afterP3'){G.round++;G.letters=0;G.toys=0;G.stolen=0;G.recovered=0;setHUD(`Runde ${G.round} · Weihnachtsfabrik`,null,`<span>${IC.gift}${G.stars} verteilt</span>`);dialog(orders('start'),afterDialog);return;}
+    if(kind==='afterP1'){fadeTo(stageWork);return;}
+    if(kind==='night'){fadeTo(stageP2);return;}
+    if(kind==='afterP3'){G.round++;G.letters=0;G.toys=0;G.made=0;G.stolen=0;G.recovered=0;setHUD(`Runde ${G.round} · Weihnachtsfabrik`,null,`<span>${IC.gift}${G.stars} verteilt</span>`);dialog(orders('start'),afterDialog);return;}
     goal=kind==='afterP2'?'p3':kind==='alarm'?'cave':'p1';G.hubGoal=goal;ringM.visible=arrow.visible=true;showBanner('Lauft zum Schlitten am Tor!');
   };
   let hubStage;if(!back)setTimeout(()=>{if(stage===hubStage)dialog(orders(kind),afterDialog);},450);
@@ -960,6 +962,57 @@ function stageHub(kind,back){
       ringM.material.opacity=.5+Math.sin(T*5)*.3;arrow.position.y=3.4+Math.sin(T*4)*.25;animDeer(sl,T*.3);stRing.material.opacity=goal?.5+Math.sin(T*5)*.3:.15;pf.upd(dt);
       if(!PL.length)return;if(!riding&&(dialogOpen||!goal))PL.forEach(p=>animPlayer(p,false));
       factoryCam(dt,false,7);updSnow(dt,new THREE.Vector3(30,0,0));}};
+}
+
+/* ---------- WORKSHOP: make the presents yourselves ---------- */
+const TOYNAMES=['Teddy','Ball','Auto','Roboter','Rakete'];
+function stageWork(){
+  clearScene();mode='play';hideOverlay();
+  const d=lvl(),F=buildFactory(false);addSnow(500,60);
+  const K=clamp(G.letters||5,3,10),total=Math.round(35+K*11-d*3);let time=total,made=0,done=false;
+  const wishes=[...Array(K)].map(()=>Math.floor(Math.random()*5));let nextWish=0;
+  // stations
+  const ST=[{key:'build',name:'Bauen',icon:'🔨',x:-8,z:3.2,t:1.6},{key:'paint',name:'Anmalen',icon:'🎨',x:2,z:3.2,t:1.2},{key:'wrap',name:'Einpacken',icon:'🎁',x:2,z:-1.5,t:1.2},{key:'shelf',name:'Ins Regal',icon:'📦',x:13,z:-2.2,t:.4}];
+  // props on the tables
+  const pots=[0xe0413a,0xf2c14e,0x2f6fd0,0x2f9a52];pots.forEach((c,i)=>{scene.add(mesh(new THREE.CylinderGeometry(.16,.14,.25,12),M(c,{roughness:.3}),.8+i*.45,1.14,1.9));});
+  const roll=mesh(new THREE.CylinderGeometry(.18,.18,1.4,14),M(0xd23a3a),2.8,1.2,-2.6);roll.rotation.z=Math.PI/2;scene.add(roll);
+  for(let i=0;i<5;i++){const w=mesh(new THREE.BoxGeometry(.5,.18,.3),M(0xc8955a),-9.2+i*.1,1.1+i*.18,1.8);w.rotation.y=i*.3;scene.add(w);}
+  ST.forEach((s,i)=>{s.ring=mesh(new THREE.RingGeometry(.85,1.1,36),new THREE.MeshBasicMaterial({color:0xf2c14e,transparent:true,opacity:.7,depthWrite:false}),s.x,.05,s.z,false);s.ring.rotation.x=-Math.PI/2;scene.add(s.ring);
+    tag(()=>_t.set(s.x,2.3,s.z),`${i+1}. ${s.icon} ${s.name}`,'tag');});
+  PL.forEach((p,i)=>{placePlayer(p,-4+i*1.4,6,Math.PI);p.step=0;p.prog=0;p.item=null;p.wish=null;});addTags();
+  const bars=PL.map(p=>{const l=tag(()=>_t.copy(p.m.g.position).setY(2.9),'','q');l.el.style.display='none';l.show=()=>p.prog>0;return l;});
+  const shelfSpots=[];for(let i=0;i<10;i++)shelfSpots.push(13-6.3+i*1.4);
+  setHUD(`Runde ${G.round} · Werkstatt`,'town','');
+  const upd=()=>hudRight(`<span>${IC.gift}${made} / ${K} gebaut</span>`);upd();
+  factoryCam(0,true);showBanner('Baut die Geschenke! Haltet die Aktionstaste im Kreis.',3);
+  const hurry=hurryClock();
+  const carry=(p,obj)=>{if(p.item){p.m.g.remove(p.item);}p.item=obj;if(obj){p.m.g.add(obj);obj.position.set(0,1.95,0);}};
+  const finish=()=>{done=true;G.made=Math.max(1,made);G.toys=G.made;PL.forEach(p=>carry(p,null));SFX.win();
+    showBanner(made>=K?'Alle Geschenke fertig! Super!':`${G.made} Geschenk${G.made===1?'':'e'} fertig!`,2.4);F.elves.forEach((e,k)=>{if(k<4)say(e.m.g.position.clone().setY(1.6),pick(['Juhu!','Toll!','Hurra!']),'b',1.4);});
+    setTimeout(()=>fadeTo(()=>stageHub('night')),1800);};
+  stage={update(dt){if(done)return;
+      time-=dt;hurry(time);
+      movePlayers(dt,5.6,[-FX+.6,FX-.6,-FZ+.6,FZ-.6],F.colliders);
+      for(const p of PL){const s=ST[p.step],c=ctl(p.i),inRing=d2(p.pos,s)<1.15;
+        if(p.step===0&&p.wish===null&&nextWish<K)p.wish=wishes[nextWish++];
+        if(p.step===0&&p.wish===null){p.prog=0;continue;}
+        if(inRing&&c.hold){p.prog+=dt/s.t;
+          const n=Math.min(5,Math.floor(p.prog*5));bars[p.i].el.textContent=`${s.icon} ${'▮'.repeat(n)}${'▯'.repeat(5-n)}`;
+          if(Math.floor(p.prog*8)!==Math.floor((p.prog-dt/s.t)*8)){if(s.key==='build')tone(220+Math.random()*60,.06,'square',.03);else if(s.key==='paint')tone(900,.05,'sine',.02,.6);else tone(1400,.03,'triangle',.02);}
+          if(p.prog>=1){p.prog=0;
+            if(s.key==='build'){const b=mesh(new THREE.BoxGeometry(.5,.4,.4),M(0xc8955a));carry(p,b);say(p.pos.clone().setY(2.6),`${TOYNAMES[p.wish]} gebaut!`,'b',1.2);burst(p.pos.clone().setY(1.6),0xc8955a,8,2);}
+            else if(s.key==='paint'){carry(p,makeToy(p.wish));p.item.scale.setScalar(1.4);say(p.pos.clone().setY(2.6),'Schön bunt!','b',1.2);burst(p.pos.clone().setY(1.6),pick(GIFTCOLS),12,2.5);}
+            else if(s.key==='wrap'){carry(p,makePresent(pick(GIFTCOLS),.8));say(p.pos.clone().setY(2.6),'Eingepackt!','b',1.2);SFX.pick();}
+            else{carry(p,null);const gpos=shelfSpots[made%10];const pr=makePresent(pick(GIFTCOLS),.7);pr.position.set(gpos,1.06,-3.6);scene.add(pr);made++;upd();SFX.deliver();burst(new THREE.Vector3(gpos,1.6,-3.6),0xf2c14e,16,3);p.wish=null;}
+            p.step=(p.step+1)%4;}}
+        else if(!c.hold)p.prog=Math.max(0,p.prog-dt*.5);}
+      if(made>=K||time<=0)finish();
+    },
+    anim(dt){animFactory(F,dt,false);hudBar(1-time/total);
+      ST.forEach((s,i)=>{const want=PL.some(p=>p.step===i&&(p.wish!==null));s.ring.material.color.setHex(want?0x6bff7a:0xf2c14e);s.ring.material.opacity=want?.6+Math.sin(T*6)*.3:.35;});
+      PL.forEach(p=>{if(p.item)p.item.rotation.y+=dt;});
+      const s=F.santa;s.g.rotation.y=.4;s.arms[1].rotation.z=-.35;
+      factoryCam(dt);updSnow(dt,new THREE.Vector3(30,0,0));}};
 }
 
 /* ---------- FLY cutscene ---------- */
@@ -1103,7 +1156,7 @@ function stageP1(res){
 function stageP2(){
   clearScene();mode='play';hideOverlay();
   const d=lvl(),F=buildFactory(true);
-  const K=clamp(G.letters||5,3,10),need=Math.ceil(K/2),total=50;let time=total,done=false,scares=0;
+  const K=clamp(G.made||G.letters||5,1,10),need=Math.ceil(K/2),total=50;let time=total,done=false,scares=0;
   const toys=[];for(let i=0;i<K;i++){const x=13-6.3+i*(12.6/Math.max(1,K-1));const m=makeToy(i%5);m.position.set(x,1.06,-3.6);scene.add(m);
     const bar=new THREE.Group();bar.position.set(x,1.9,-3.6);const bg=new THREE.Mesh(new THREE.PlaneGeometry(.8,.12),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.5}));const fg=new THREE.Mesh(new THREE.PlaneGeometry(.8,.12),new THREE.MeshBasicMaterial({color:0xf2c14e}));fg.position.z=.01;bar.add(bg);bar.add(fg);bar.visible=false;scene.add(bar);
     toys.push({x,z:-2.4,type:i%5,prog:0,broken:false,m,bar,fg,bm:null});}
