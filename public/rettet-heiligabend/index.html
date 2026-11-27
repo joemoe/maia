@@ -236,7 +236,7 @@ function makeGrinch(){
   const hm=mesh(fuzzyGeo(.3,2,.08,12),G1);hm.scale.set(1.08,.9,.95);head.add(hm);
   for(const s of [-1,1]){
     const ear=mesh(new THREE.ConeGeometry(.08,.36,6),G1,.36*s,.1,0);ear.rotation.z=-1.25*s;head.add(ear);
-    head.add(ball(.075,M(0xf5e663,{roughness:.3}),.11*s,.05,.24,1,.85,.6));
+    head.add(ball(.075,M(0xf5e663,{roughness:.3,emissive:0xf5e663,emissiveIntensity:1.1}),.11*s,.05,.24,1,.85,.6));
     head.add(ball(.032,M(0x111111),.12*s,.05,.285));
     const br=mesh(new THREE.BoxGeometry(.16,.04,.05),dk,.11*s,.15,.255);br.rotation.z=-.4*s;head.add(br);}
   head.add(ball(.04,G2,0,-.02,.29));
@@ -422,6 +422,7 @@ let parts=[],labels=[],snow=null,stars=null,stage=null;
 const labelLayer=document.getElementById('labels');
 function clearScene(){
   dialogOpen=false;dQueue=[];dDone=null;bannerT=0;const bn=document.getElementById('banner');if(bn)bn.classList.remove('on');const dg=document.getElementById('dialog');if(dg)dg.hidden=true;
+  spookyOn=false;flick=[];
   while(scene.children.length)scene.remove(scene.children[0]);
   labels.forEach(l=>l.el.remove());labels=[];parts=[];snow=null;stars=null;scene.fog=null;
 }
@@ -543,6 +544,15 @@ function animPlayer(p,moving){
   const sy=p.hidden?.72:1;p.m.g.scale.set(1,sy+(1-sy)*0,1);p.m.g.scale.y=sy;
   p.ice.visible=p.frozen>0;
 }
+let spookyOn=false,spookyT=4,flick=[];
+function spooky(){spookyOn=true;spookyT=rand(2,4);}
+function addFlick(l){flick.push({l,base:l.intensity,off:0});}
+function spookySound(){if(!spookyOn)return;const k=Math.floor(Math.random()*5),at=camLook.clone().add(new THREE.Vector3(rand(-9,9),3,rand(-7,-2)));
+  if(k===0){tone(420,.3,'sine',.05,.92);tone(380,.5,'sine',.05,.9,.4);say(at,'Huhuu …','z',2);}
+  else if(k===1){tone(110,1.8,'sawtooth',.012,1.9);tone(150,1.5,'triangle',.02,.7,.3);}
+  else if(k===2){for(let i=0;i<5;i++)tone(720+i*35,.07,'square',.018,1,i*.12);say(at,'Hihihi …','g',1.6);}
+  else if(k===3){tone(170,.6,'sawtooth',.025,.55);}
+  else{tone(300,1.3,'sine',.035,1.6);tone(470,1.1,'sine',.03,.7,1.3);say(at,'Auuuuh …','z',2.2);}}
 let shakeA=0;function scare(k=1){shakeA=Math.max(shakeA,.35*k);const f=document.getElementById('flash');if(f){f.style.transition='none';f.style.opacity=String(.85*k);requestAnimationFrame(()=>{f.style.transition='opacity .7s';f.style.opacity='0';});}}
 function hurryClock(){let last=99;return t=>{const s=Math.ceil(t);if(s<last&&s<=10&&s>0){if(last>10)showBanner('Schnell! Nur noch 10 Sekunden!',2);tone(s<=3?1100:880,.06,'square',.035);last=s;const f=hud.querySelector('.hbar');if(f)f.classList.add('hurry');}};}
 function closeCalls(){for(const p of PL){if(p.stun>0||p.frozen>0){p.near=false;continue;}if((p.sus||0)>.65)p.near=true;else if(p.near&&(p.sus||0)<=.02){p.near=false;say(p.pos.clone().setY(2.4),pick(['Puh, knapp!','Uff, das war knapp!','Glück gehabt!']),'b',1.5);}}}
@@ -572,7 +582,7 @@ function lotsOfSaid(){return G.players===2?'Ihr':'Du';}
 /* ================= FACTORY (hub + phase 2) ================= */
 const FX=24,FZ=10;
 function buildFactory(night){
-  const L=env(night?{bg:0x0f0b1e,sky:0x5a6aa8,ground:0x2a1a10,hemi:.38,sun:0x9fb4ff,sunI:.35,sunPos:[6,20,10],sh:30,near:60,far:150}
+  const L=env(night?{bg:0x08060f,sky:0x4a5a98,ground:0x2a1a10,hemi:.26,sun:0x9fb4ff,sunI:.35,sunPos:[6,20,10],sh:30,near:60,far:150}
                    :{bg:0x1f1830,sky:0xfff1d6,ground:0x6b4a2b,hemi:.75,sun:0xffe2b8,sunI:.75,sunPos:[8,24,14],sh:30,near:60,far:150});
   const W=FX*2,D=FZ*2;
   const apron=mesh(new THREE.PlaneGeometry(W+12,10),M(night?0x9aa8c8:0xeef4fb,{roughness:1}),0,-.01,FZ+5,false);apron.rotation.x=-Math.PI/2;scene.add(apron);
@@ -672,7 +682,7 @@ function buildFactory(night){
   door(-FX+.05,2,Math.PI/2);door(FX-.05,-6,-Math.PI/2);
   // hanging lamps
   const lamps=[];for(const [x,z] of [[-12,0],[0,0],[12,0],[-12,-6],[12,3]]){const lg2=new THREE.Group();lg2.position.set(x,5.6,z);scene.add(lg2);lg2.add(mesh(new THREE.CylinderGeometry(.02,.02,1.6),M(0x222222),0,.8,0,false));lg2.add(mesh(new THREE.ConeGeometry(.5,.4,16,1,true),M(0x2f9a52,{side:THREE.DoubleSide}),0,0,0,false));const b=ball(.18,E(0xffe2a0,night?.4:1.2),0,-.1,0,1,1,1,true);b.castShadow=false;lg2.add(b);
-    const pl=new THREE.PointLight(0xffd9a0,night?.25:.75,13,1.4);pl.position.set(x,4.8,z);scene.add(pl);lamps.push(pl);}
+    const pl=new THREE.PointLight(0xffd9a0,night?.25:.75,13,1.4);pl.position.set(x,4.8,z);scene.add(pl);lamps.push(pl);if(night)addFlick(pl);}
   return {L,colliders,crates,santa,elves,gears,mlights,bulbs,convToys,belt,tree,shelf,sleighSpot:new THREE.Vector3(19,0,5),train,trackCurve,station,TZ};
 }
 function animFactory(F,dt,night){
@@ -974,7 +984,7 @@ function seatPlayers(sl){PL.forEach((p,i)=>{const m=p.m.g;sl.g.add(m);m.position
 
 /* ---------- PHASE 1: village ---------- */
 function buildVillage(){
-  const L=env({bg:0x0b1633,sky:0x4a6ab0,ground:0xffffff,hemi:.55,sun:0xb8c8ff,sunI:.75,sunPos:[-20,30,18],sh:36,near:45,far:130});
+  const L=env({bg:0x070c1f,sky:0x3a5090,ground:0xffffff,hemi:.3,sun:0xa8b8f0,sunI:.42,sunPos:[-20,30,18],sh:36,near:20,far:62});
   const moon=addStars();addSnow(900,60);
   const ground=mesh(new THREE.PlaneGeometry(140,100),M(0xe8f0fa,{roughness:1}),0,0,0,false);ground.rotation.x=-Math.PI/2;scene.add(ground);
   const street=mesh(new THREE.PlaneGeometry(62,7.5),M(0xc9d6ea,{roughness:1}),0,.01,-1.2,false);street.rotation.x=-Math.PI/2;scene.add(street);
@@ -991,7 +1001,7 @@ function buildVillage(){
   const big=makeTree(2.2,true);big.position.set(0,0,-1.2);scene.add(big);colliders.push({x:0,z:-1.2,r:1.6});
   const bl=new THREE.PointLight(0xffc870,1,14);bl.position.set(0,4,0);scene.add(bl);
   for(const [x,z] of [[-12,-4.6],[12,-4.6],[-12,2.4],[12,2.4],[-24,-4.6],[24,2.4]]){const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);g.add(mesh(new THREE.CylinderGeometry(.08,.1,3.2,8),M(0x1b1b22,{metalness:.4}),0,1.6,0));g.add(mesh(new THREE.BoxGeometry(.4,.5,.4),E(0xffe2a0,1.2),0,3.3,0,false));g.add(mesh(new THREE.ConeGeometry(.35,.3,4),M(0x1b1b22),0,3.7,0));const gl=glow(0xffd98a,2.2,.6);gl.position.y=3.3;g.add(gl);colliders.push({x,z,r:.2});}
-  for(const [x,z] of [[-12,2.4],[12,-4.6]]){const pl=new THREE.PointLight(0xffd98a,.7,10);pl.position.set(x,3,z);scene.add(pl);}
+  for(const [x,z] of [[-12,2.4],[12,-4.6],[-24,-4.6],[24,2.4]]){const pl=new THREE.PointLight(0xffd98a,.8,10);pl.position.set(x,3,z);scene.add(pl);addFlick(pl);}
   const trees=[[-28,-12],[-24,11],[-10,-14],[2,-14],[12,-13],[27,-11],[29,9],[14,11],[-2,12],[-14,11],[26,-2],[-29,4]];
   trees.forEach(([x,z])=>{const t=makeTree(rand(.9,1.4));t.position.set(x,0,z);scene.add(t);colliders.push({x,z,r:.8});});
   for(const [x,z] of [[-12,-12.5],[22,10]]){const s=makeSnowman();s.position.set(x,0,z);s.rotation.y=rand(-.5,.5);scene.add(s);colliders.push({x,z,r:.55});}
@@ -1016,14 +1026,15 @@ function stageP1(res){
     const cone=new THREE.Group();const sec=mesh(new THREE.CircleGeometry(VR,28,-Math.PI/2-VC,VC*2),new THREE.MeshBasicMaterial({color:0xffa020,transparent:true,opacity:.3,depthWrite:false}),0,.04,0,false);sec.rotation.x=-Math.PI/2;cone.add(sec);cone.visible=false;scene.add(cone);
     folks.push({m,cone,sec,state:'in',t:(res?8:5)+i*rand(3,6),door:null,face:0,ph:rand(0,6),pop:0});}
   let warned=false;
-  const sky0=new THREE.Color(0x0b1633),sky1=new THREE.Color(0xf2a679),tmpC=new THREE.Color();
+  const sky0=new THREE.Color(0x070c1f),sky1=new THREE.Color(0xf2a679),tmpC=new THREE.Color();
   const wander=(g,far)=>{for(let k=0;k<10;k++){g.w.set(rand(-26,26),0,rand(-4.5,2.5));if(!far||PL.every(p=>d2(p.pos,g.w)>10))break;}};
   setHUD(`Runde ${G.round} · Wunschzettel`,'night','');
   const upd=()=>hudRight(`<span>${IC.letter}${got} / ${target}</span>`);upd();
   followCam(0,new THREE.Vector3(0,14,14),[-20,20],[-6,4],true);
   const guides=PL.map(p=>{const a=new THREE.Mesh(new THREE.ConeGeometry(.28,.7,3),new THREE.MeshBasicMaterial({color:p.i?0x4fe0ff:0xf2c14e,transparent:true,opacity:.8,depthWrite:false}));scene.add(a);return a;});
   showBanner(res?'Weiter geht\'s! Sammelt die Wunschzettel!':`Sammelt ${target} Wunschzettel!`,2.4);
-  let caught=false;const hurry=hurryClock();
+  let caught=false;const hurry=hurryClock();spooky();
+  const plights=PL.map(p=>{const l=new THREE.PointLight(0xffd9a0,.7,7,1.6);scene.add(l);return l;});
   stage={update(dt){
       if(caught)return;
       if(!returning){time-=dt;hurry(time);}
@@ -1072,11 +1083,11 @@ function stageP1(res){
     anim(dt){
       const pr=clamp(1-time/total,0,1),dawn=clamp((pr-.55)/.45,0,1);
       tmpC.copy(sky0).lerp(sky1,dawn);scene.background.copy(tmpC);scene.fog.color.copy(tmpC);
-      V.L.hemi.intensity=.55+dawn*.5;V.L.dl.color.setHex(0xb8c8ff).lerp(new THREE.Color(0xffc49a),dawn);if(stars)stars.material.opacity=.9*(1-dawn);
+      V.L.hemi.intensity=.3+dawn*.7;V.L.dl.intensity=.42+dawn*.4;V.L.dl.color.setHex(0xb8c8ff).lerp(new THREE.Color(0xffc49a),dawn);if(stars)stars.material.opacity=.9*(1-dawn);
       hudBar(pr);
       for(const b of V.boxes){b.env.visible=b.gl.visible=b.letter;b.env.rotation.y+=dt*2;b.env.position.y=2.15+Math.sin(T*3+b.x)*.12;b.flag.rotation.z=b.letter?0:-1.4;}
       V.big.userData.star&&(V.big.userData.star.rotation.y+=dt);
-      GR.forEach(g=>{const gm=g.gm;gm.g.position.copy(g.pos);gm.g.rotation.y=g.face;animGrinch(gm,g.walk,g.laugh>0?'laugh':'sneak',T);});
+      PL.forEach((p,i)=>plights[i].position.set(p.pos.x,2.2,p.pos.z));GR.forEach(g=>{const gm=g.gm;gm.g.position.copy(g.pos);gm.g.rotation.y=g.face;animGrinch(gm,g.walk,g.laugh>0?'laugh':'sneak',T);});
       for(const f of folks)if(f.state==='out'){f.pop=Math.min(1,f.pop+dt*2);f.m.g.scale.setScalar(.3+.7*f.pop);f.m.g.rotation.y=f.face;f.m.head.rotation.y=Math.sin((T+f.ph)*1.3)*.2;f.cone.position.set(f.door.x,0,f.door.z);f.cone.rotation.y=f.face;f.sec.material.opacity=.15+.2*f.pop;f.cone.scale.setScalar(f.pop);}
       ringM.material.opacity=.5+Math.sin(T*5)*.3;arrow.position.y=3.4+Math.sin(T*4)*.25;animDeer(sl,T*.3);
       PL.forEach(p=>{if(p.stun>0){p.m.g.rotation.y=p.face+Math.sin(T*20)*.3;}});
@@ -1107,7 +1118,7 @@ function stageP2(){
   const entries=[{x:-FX+.8,z:2,kind:'door'},{x:FX-.8,z:-6,kind:'door'}];if(d>=1)entries.push({x:6,z:-1.5,kind:'chimney'});
   const g={state:'away',timer:4+rand(0,2),pos:new THREE.Vector3(-30,0,0),face:0,want:0,walk:0,target:null,look:0,lookT:3,throwCd:0,drop:0,laugh:0,visits:0};
   let balls=[];
-  setHUD(`Runde ${G.round} · Wache in der Fabrik`,'night','');
+  setHUD(`Runde ${G.round} · Wache in der Fabrik`,'night','');spooky();
   const intact=()=>toys.filter(t=>!t.gone).length;let stolen=0;
   const upd=()=>hudRight(`<span>${IC.toy}${intact()} / ${K} im Regal</span><span>${IC.ghost}${stolen} geklaut</span>`);upd();
   const dropCarry=()=>{const t=g.carry;if(!t)return;g.carry=null;scene.add(t.m);t.m.position.set(t.x,1.06,-3.6);t.m.rotation.set(0,0,0);t.gone=false;t.prog=0;say(new THREE.Vector3(t.x,2.4,-3.6),'Zurück ins Regal!','b');upd();};
@@ -1188,7 +1199,7 @@ function stageP2(){
 function stageCave(res){
   clearScene();mode='play';hideOverlay();
   const d=lvl(),n=Math.max(1,G.stolen||1);let recovered=res?res.recovered:0,done=false,caught=false;const total=Math.max(50,70-d*5);let time=res?res.time:total;
-  const L=env({bg:0x05070f,sky:0x6a7ab0,ground:0x10141e,hemi:.65,sun:0x8fa8ff,sunI:.3,sunPos:[-10,25,15],sh:30,near:30,far:80});
+  const L=env({bg:0x030409,sky:0x5a6aa0,ground:0x10141e,hemi:.4,sun:0x8fa8ff,sunI:.2,sunPos:[-10,25,15],sh:30,near:15,far:44});spooky();
   const floor=mesh(new THREE.PlaneGeometry(60,44),M(0x2c3446,{roughness:1}),0,0,0,false);floor.rotation.x=-Math.PI/2;scene.add(floor);
   const snowIn=mesh(new THREE.CircleGeometry(4.5,30),M(0xdfe9f5,{roughness:1}),-16,.02,6.5,false);snowIn.rotation.x=-Math.PI/2;scene.add(snowIn);
   const rockM=M(0x3a4258,{flatShading:true,roughness:1}),rockM2=M(0x4a5470,{flatShading:true,roughness:1}),ice=M(0x9fdcff,{flatShading:true,roughness:.2,metalness:.1,transparent:true,opacity:.85});
@@ -1200,7 +1211,7 @@ function stageCave(res){
   const crystals=[];
   for(const [x,z,s] of [[-10,-8,1],[0,-9.5,1.3],[11,-8.5,1.1],[15,0,1],[-15,-2,.9],[6,8.8,.9]]){const gq=new THREE.Group();gq.position.set(x,0,z);scene.add(gq);
     for(let k=0;k<4;k++){const c=mesh(new THREE.ConeGeometry(.22*s,rand(1,1.8)*s,5),E(0x5dff8a,1.1),rand(-.4,.4),.5*s,rand(-.4,.4),false);c.rotation.set(rand(-.4,.4),0,rand(-.4,.4));gq.add(c);crystals.push(c);}
-    const gl=glow(0x5dff8a,3*s,.5);gl.position.y=1;gq.add(gl);const pl=new THREE.PointLight(0x5dff8a,.9,9);pl.position.set(x,1.5,z);scene.add(pl);}
+    const gl=glow(0x5dff8a,3*s,.5);gl.position.y=1;gq.add(gl);const pl=new THREE.PointLight(0x5dff8a,.9,9);pl.position.set(x,1.5,z);scene.add(pl);addFlick(pl);}
   const hides=[];
   for(const [x,z] of [[-10,2.5],[-5,-3.5],[-1,3.5],[4,-2.5],[8.5,2.5],[-11,-4.5],[1.5,-6.5]]){const m=mesh(fuzzyGeo(1.15,1,.2,2.5),rockM2,x,.7,z);m.scale.set(1.1,.9,1);scene.add(m);hides.push({x,z});colliders.push({x,z,r:1.05});}
   // Grinch's home
@@ -1293,7 +1304,7 @@ function stageCave(res){
 function stageJail(who,back){
   clearScene();mode='play';hideOverlay();
   const d=lvl(),C=Math.min(10,6+d),R=5,S=3.2,WH=1.3;
-  const L=env({bg:0x0b130a,sky:0x8fc890,ground:0x14200f,hemi:.7,sun:0xc8ffd0,sunI:.45,sunPos:[-6,25,10],sh:26,near:30,far:80});
+  const L=env({bg:0x050904,sky:0x7ab880,ground:0x14200f,hemi:.42,sun:0xc8ffd0,sunI:.25,sunPos:[-6,25,10],sh:26,near:14,far:42});spooky();
   const W=C*S,H=R*S,ox=-W/2,oz=-H/2;
   const fl=mesh(new THREE.PlaneGeometry(W+12,H+8),M(0x37402c,{roughness:1}),0,0,0,false);fl.rotation.x=-Math.PI/2;scene.add(fl);
   for(let i=0;i<40;i++){const pb=mesh(SPHlo,M(0x4a5a3a,{roughness:1}),rand(ox,ox+W),0,rand(oz,oz+H),false);pb.scale.set(rand(.1,.3),.05,rand(.1,.3));scene.add(pb);}
@@ -1522,6 +1533,8 @@ let T=0,last=performance.now();
 function loop(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
   if(stage){if(mode==='play'&&!dialogOpen)stage.update(dt);stage.anim(dt);}
+  if(spookyOn&&mode==='play'&&!dialogOpen){spookyT-=dt;if(spookyT<=0){spookyT=rand(5,10);spookySound();}}
+  for(const f of flick){if(f.off>0){f.off-=dt;f.l.intensity=f.base*.12;}else{if(Math.random()<dt*.5)f.off=rand(.05,.35);f.l.intensity=f.base*(.85+Math.random()*.15);}}
   if(shakeA>0){shakeA=Math.max(0,shakeA-dt*.9);cam.position.x+=(Math.random()-.5)*shakeA;cam.position.y+=(Math.random()-.5)*shakeA;}
   updParts(dt);updLabels(dt);
   if(bannerT>0){bannerT-=dt;if(bannerT<=0)banner.classList.remove('on');}
