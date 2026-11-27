@@ -44,6 +44,7 @@ canvas#game{display:block;width:100%;height:100%;touch-action:none}
 #banner.on{opacity:1}
 #dialog{position:absolute;left:3%;right:3%;bottom:4%;display:flex;gap:14px;align-items:flex-start;background:var(--snow);color:var(--ink);border-radius:20px;border:4px solid #fff;box-shadow:0 8px 0 #b9c8e2;padding:12px 16px;font-size:clamp(13px,1.9vw,19px)}
 #dialog[hidden]{display:none}
+[hidden]{display:none!important}
 #dialog .portrait{flex:0 0 auto;width:clamp(54px,9vw,96px);aspect-ratio:1;border-radius:50%;background:#ffe9d6;overflow:hidden;border:3px solid var(--berry)}
 #dialog .dtext{min-width:0;flex:1}
 #dialog b{font-family:var(--display);color:var(--berry);font-size:1.05em}
@@ -515,7 +516,7 @@ function createPlayers(){
   }
 }
 function placePlayer(p,x,z,face=0){if(p.carry){p.m.g.remove(p.carry);p.carry=null;}scene.add(p.m.g);p.m.g.scale.setScalar(1);p.pos.set(x,0,z);p.face=face;p.stun=0;p.frozen=0;p.hidden=false;p.sus=0;p.susL=null;p.ring.visible=true;p.ice.visible=false;p.m.g.rotation.set(0,face,0);p.m.g.position.copy(p.pos);}
-function addTags(){if(G.players<2)return;PL.forEach(p=>tag(()=>_t.copy(p.m.g.position).add(_up.set(0,1.95*p.m.g.scale.y,0)),`Spieler ${p.i+1}`,'tag'+(p.i?' p2':'')));}
+function addTags(){if(G.players<2)return;PL.forEach(p=>tag(()=>p.m.g.getWorldPosition(_t).add(_up.set(0,1.95*p.m.g.scale.y,0)),`Spieler ${p.i+1}`,'tag'+(p.i?' p2':'')));}
 const _t=new THREE.Vector3(),_up=new THREE.Vector3();
 function animPlayer(p,moving){
   const s=moving?Math.sin(p.walk)*.7:0;p.m.legs[0].rotation.x=s;p.m.legs[1].rotation.x=-s;p.m.arms[0].rotation.x=-s*.8;p.m.arms[1].rotation.x=s*.8;
@@ -550,27 +551,38 @@ function buildFactory(night){
   const L=env(night?{bg:0x0f0b1e,sky:0x5a6aa8,ground:0x2a1a10,hemi:.38,sun:0x9fb4ff,sunI:.35,sunPos:[6,20,10],sh:30,near:60,far:150}
                    :{bg:0x1f1830,sky:0xfff1d6,ground:0x6b4a2b,hemi:.75,sun:0xffe2b8,sunI:.75,sunPos:[8,24,14],sh:30,near:60,far:150});
   const W=FX*2,D=FZ*2;
-  const apron=mesh(new THREE.PlaneGeometry(W+1,9),new THREE.MeshStandardMaterial({map:planks(night?'#4a3020':'#6a4428','#3a2414',false,6,1.2),roughness:.9}),0,-.01,FZ+4.5,false);apron.rotation.x=-Math.PI/2;scene.add(apron);
-  const floor=mesh(new THREE.PlaneGeometry(W,D),new THREE.MeshStandardMaterial({map:planks('#8a5a34','#5a3a20',false,6,3),roughness:.85}),0,0,0,false);floor.rotation.x=-Math.PI/2;scene.add(floor);
+  const apron=mesh(new THREE.PlaneGeometry(W+12,10),M(night?0x9aa8c8:0xeef4fb,{roughness:1}),0,-.01,FZ+5,false);apron.rotation.x=-Math.PI/2;scene.add(apron);
+  const floor=mesh(new THREE.PlaneGeometry(W,D),gbMat(night?'#9a6232':'#c58548',12,5,{tiles:true}),0,0,0,false);floor.rotation.x=-Math.PI/2;scene.add(floor);
   const rug=mesh(new THREE.CircleGeometry(4,40),M(0xa52a2a),-17,.02,-3,false);rug.rotation.x=-Math.PI/2;scene.add(rug);
-  for(let i=0;i<14;i++){const x=-FX+1.7*i+1;const fence=mesh(new THREE.BoxGeometry(.18,1,.18),M(0xd23a3a),x*1.0,.5,FZ+.3);scene.add(fence);const cap=ball(.13,M(0xffffff),x,1.05,FZ+.3,1,1,1,true);scene.add(cap);}
-  for(let i=14;i<29;i++){const x=-FX+1.7*i+1;if(x>FX)break;scene.add(mesh(new THREE.BoxGeometry(.18,1,.18),M(0xd23a3a),x,.5,FZ+.3));scene.add(ball(.13,M(0xffffff),x,1.05,FZ+.3,1,1,1,true));}
-  scene.add(mesh(new THREE.BoxGeometry(W,.12,.1),M(0x2f9a52),0,.8,FZ+.3));
+  for(let i=0;i<29;i++){const x=-FX+1.7*i+1;if(x>FX)break;if(Math.abs(x)<2.2)continue;scene.add(mesh(new THREE.CylinderGeometry(.1,.1,1,10),stripeMat,x,.5,FZ+.3));scene.add(ball(.14,ICING,x,1.05,FZ+.3,1,1,1,true));}
+  for(const sx of [-1,1])scene.add(mesh(new THREE.BoxGeometry(FX-2.2,.12,.1),M(0x2f9a52),sx*(FX+2.2)/2,.8,FZ+.3));
+  // gingerbread train station in front of the factory
+  const TZ=FZ+2.9;
+  const plat=mesh(new THREE.BoxGeometry(6.4,.06,1.9),gbMat('#a8642e',2,1,{tiles:true}),0,.03,FZ+1.25,false);scene.add(plat);
+  for(const sx of [-1,1]){scene.add(mesh(new THREE.CylinderGeometry(.14,.14,3.2,10),stripeMat,sx*2.3,1.6,FZ+.35));scene.add(ball(.2,ICING,sx*2.3,3.25,FZ+.35,1,1,1,true));}
+  const stTex=canvasTex(512,128,(x,w,h)=>{x.fillStyle='#d23a3a';x.fillRect(0,0,w,h);x.fillStyle='#fff';x.font='700 56px Fredoka, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('Lebkuchenbahn',w/2,h/2+4);});
+  const stS=new THREE.Group();stS.position.set(0,2.85,FZ+.35);stS.rotation.x=-.85;scene.add(stS);stS.add(mesh(new THREE.BoxGeometry(4.8,.95,.12),ICING,0,0,0));stS.add(mesh(new THREE.PlaneGeometry(4.5,.8),new THREE.MeshBasicMaterial({map:stTex}),0,0,.07,false));
+  const trackCurve=new THREE.LineCurve3(new THREE.Vector3(-FX-8,0,TZ),new THREE.Vector3(FX+8,0,TZ));buildTrack(trackCurve);
+  const train=makeTrain();trainLine(train,3.2,TZ);
+  const station=new THREE.Vector3(0,0,FZ+1.15);
   const rugB=mesh(new THREE.RingGeometry(3.4,3.7,40),M(0xf2c14e),-17,.03,-3,false);rugB.rotation.x=-Math.PI/2;scene.add(rugB);
-  const wallM=new THREE.MeshStandardMaterial({map:planks(night?'#5a3a2a':'#8a5a3a','#4a2a1a',true,10,2),roughness:.9});
+  const wallM=gbMat(night?'#8a5228':'#b8733a',8,1.6);
   scene.add(mesh(new THREE.BoxGeometry(W+.8,7,.4),wallM,0,3.5,-FZ-.2));
   scene.add(mesh(new THREE.BoxGeometry(.4,7,D),wallM,-FX-.2,3.5,0));
   scene.add(mesh(new THREE.BoxGeometry(.4,7,FZ+2),wallM,FX+.2,3.5,(-FZ+2)/2));
   scene.add(mesh(new THREE.BoxGeometry(.4,2.5,FZ-2),wallM,FX+.2,5.75,(FZ+2)/2));
   const outside=mesh(new THREE.PlaneGeometry(7,5),new THREE.MeshBasicMaterial({color:night?0x1a2a5a:0x9fc3ef}),FX+1.2,2.3,(FZ+2)/2,false);outside.rotation.y=-Math.PI/2;scene.add(outside);
-  const trimM=M(0xd23a3a);
-  scene.add(mesh(new THREE.BoxGeometry(W+.8,.3,.5),trimM,0,7,-FZ-.1));
+  scene.add(mesh(new THREE.BoxGeometry(W+.8,.35,.55),ICING,0,7,-FZ-.1));icingDrips(scene,-FX,FX,6.85,-FZ+.18,.7);
+  for(let x=-FX+2;x<FX;x+=4){const gd=gumdrop(GIFTCOLS[Math.abs(Math.round(x/4))%6],1);gd.position.set(x,7.17,-FZ-.1);scene.add(gd);}
+  // hint at the 2nd floor: the train track climbs up outside the right wall
+  const upT=canvasTex(512,128,(x,w,h)=>{x.fillStyle='#d23a3a';x.fillRect(0,0,w,h);x.fillStyle='#fff';x.font='700 50px Fredoka, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('2. Stock: Wohnung ↑',w/2,h/2+4);});
+  scene.add(mesh(new THREE.PlaneGeometry(4,1),new THREE.MeshBasicMaterial({map:upT}),6,5.5,-FZ+.03,false));
   for(const x of [-12,0,12]){
     const wg=new THREE.Group();wg.position.set(x,4.2,-FZ+.05);scene.add(wg);
     const disk=mesh(new THREE.CircleGeometry(1.5,36),new THREE.MeshBasicMaterial({color:night?0x203a7a:0x9fd0ff}),0,0,0,false);wg.add(disk);
     if(x===0){const mn=mesh(new THREE.CircleGeometry(.35,24),new THREE.MeshBasicMaterial({color:0xf3f0c8}),.6,.5,.01,false);wg.add(mn);}
-    const fr=mesh(new THREE.TorusGeometry(1.5,.14,10,36),M(0x5a3a22),0,0,.05);wg.add(fr);
-    wg.add(mesh(new THREE.BoxGeometry(.12,3,.1),M(0x5a3a22),0,0,.05));wg.add(mesh(new THREE.BoxGeometry(3,.12,.1),M(0x5a3a22),0,0,.05));
+    const fr=mesh(new THREE.TorusGeometry(1.5,.16,10,36),ICING,0,0,.05);wg.add(fr);
+    wg.add(mesh(new THREE.BoxGeometry(.12,3,.1),ICING,0,0,.05));wg.add(mesh(new THREE.BoxGeometry(3,.12,.1),ICING,0,0,.05));
     const wl=mesh(new THREE.TorusGeometry(1.75,.09,8,36),M(0x1f6b46),0,0,.08);wg.add(wl);
   }
   const bulbs=[];const bcols=[0xff4a4a,0xffd84a,0x4fe0ff,0x6bff7a,0xff8ad8];
@@ -589,7 +601,7 @@ function buildFactory(night){
   const santa=makeSanta();santa.g.position.set(-17,0,-7.7);scene.add(santa.g);
   const sign=new THREE.Group();sign.position.set(-17,5,-FZ+.25);scene.add(sign);
   sign.add(mesh(new THREE.BoxGeometry(4.4,1.1,.12),M(0x2f9a52)));
-  const signTex=canvasTex(512,128,(x,w,h)=>{x.fillStyle='#2f9a52';x.fillRect(0,0,w,h);x.fillStyle='#fff';x.font='700 64px Fredoka, Baloo 2, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('Chef-Büro',w/2,h/2+4);});
+  const signTex=canvasTex(512,128,(x,w,h)=>{x.fillStyle='#2f9a52';x.fillRect(0,0,w,h);x.fillStyle='#fff';x.font='700 64px Fredoka, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('Chef-Büro',w/2,h/2+4);});
   const sp=mesh(new THREE.PlaneGeometry(4.2,1.0),new THREE.MeshBasicMaterial({map:signTex}),0,0,.07,false);sign.add(sp);
   // toy machine
   const mach=new THREE.Group();mach.position.set(-7,0,-8.3);scene.add(mach);
@@ -610,7 +622,7 @@ function buildFactory(night){
   const shelf=new THREE.Group();shelf.position.set(13,0,-3.6);scene.add(shelf);
   shelf.add(mesh(new THREE.BoxGeometry(14,.12,1.5),M(0x8a5a34),0,1.0,0));
   for(const x of [-6.8,-2.3,2.3,6.8])shelf.add(mesh(new THREE.BoxGeometry(.15,1,1.4),M(0x5a3a22),x,.5,0));
-  const shelfSign=canvasTex(512,96,(x,w,h)=>{x.fillStyle='#f2c14e';x.fillRect(0,0,w,h);x.fillStyle='#5a3a22';x.font='700 54px Fredoka, Baloo 2, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('Fertige Spielzeuge',w/2,h/2+3);});
+  const shelfSign=canvasTex(512,96,(x,w,h)=>{x.fillStyle='#f2c14e';x.fillRect(0,0,w,h);x.fillStyle='#5a3a22';x.font='700 54px Fredoka, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('Fertige Spielzeuge',w/2,h/2+3);});
   const ss=mesh(new THREE.PlaneGeometry(4,.75),new THREE.MeshBasicMaterial({map:shelfSign}),0,1.6,.6,false);shelf.add(ss);
   colliders.push(box(13,-3.6,14,1.5));
   // elf work tables
@@ -637,7 +649,7 @@ function buildFactory(night){
   // hanging lamps
   const lamps=[];for(const [x,z] of [[-12,0],[0,0],[12,0],[-12,-6],[12,3]]){const lg2=new THREE.Group();lg2.position.set(x,5.6,z);scene.add(lg2);lg2.add(mesh(new THREE.CylinderGeometry(.02,.02,1.6),M(0x222222),0,.8,0,false));lg2.add(mesh(new THREE.ConeGeometry(.5,.4,16,1,true),M(0x2f9a52,{side:THREE.DoubleSide}),0,0,0,false));const b=ball(.18,E(0xffe2a0,night?.4:1.2),0,-.1,0,1,1,1,true);b.castShadow=false;lg2.add(b);
     const pl=new THREE.PointLight(0xffd9a0,night?.25:.75,13,1.4);pl.position.set(x,4.8,z);scene.add(pl);lamps.push(pl);}
-  return {L,colliders,crates,santa,elves,gears,mlights,bulbs,convToys,belt,tree,shelf,sleighSpot:new THREE.Vector3(19,0,5)};
+  return {L,colliders,crates,santa,elves,gears,mlights,bulbs,convToys,belt,tree,shelf,sleighSpot:new THREE.Vector3(19,0,5),train,trackCurve,station,TZ};
 }
 function animFactory(F,dt,night){
   F.gears.forEach((g,i)=>g.rotation.z+=dt*(i%2?-1.5:1.2));
@@ -649,44 +661,269 @@ function animFactory(F,dt,night){
     else{e.t+=dt*.08;const k=(Math.sin(e.t*TAU)+1)/2;const x=e.a[0]+(e.b[0]-e.a[0])*k,z=e.a[1]+(e.b[1]-e.a[1])*k;const dir=Math.cos(e.t*TAU)>=0?1:-1;m.g.position.set(x,Math.abs(Math.sin(T*10))*.05,z);m.g.rotation.y=Math.atan2((e.b[0]-e.a[0])*dir,(e.b[1]-e.a[1])*dir);const s=Math.sin(T*10)*.6;m.legs[0].rotation.x=s;m.legs[1].rotation.x=-s;}});
 }
 
-function factoryCam(dt,snap){return followCam(dt,new THREE.Vector3(0,12,11.5),[-13,13],[-4,4],snap);}
+function factoryCam(dt,snap,zmax=4){return followCam(dt,new THREE.Vector3(0,12,11.5),[-13,13],[-4,zmax],snap);}
+
+/* ---------- LEBKUCHEN: textures, train, track ---------- */
+function gingerTex(base,rx,ry,o={}){return canvasTex(256,256,(x,w,h)=>{x.fillStyle=base;x.fillRect(0,0,w,h);
+  for(let i=0;i<700;i++){x.fillStyle=Math.random()<.6?`rgba(70,35,10,${(Math.random()*.18).toFixed(2)})`:`rgba(255,225,180,${(Math.random()*.12).toFixed(2)})`;x.fillRect(Math.random()*w,Math.random()*h,2+Math.random()*2,2);}
+  x.strokeStyle='#fffaf0';x.lineWidth=o.thin?4:6;x.lineCap='round';x.lineJoin='round';
+  if(o.plain)return;
+  if(o.tiles){for(let k=0;k<2;k++){x.beginPath();for(let X=0;X<=w;X+=4)x.lineTo(X,k*128+3+Math.sin(X/9)*2);x.stroke();x.beginPath();for(let Y=0;Y<=h;Y+=4)x.lineTo(k*128+3+Math.sin(Y/9)*2,Y);x.stroke();}
+    x.fillStyle='#fffaf0';for(const [a,b] of [[67,67],[195,195],[67,195],[195,67]]){for(let i=0;i<8;i++){const an=i/8*TAU;x.beginPath();x.arc(a+Math.cos(an)*15,b+Math.sin(an)*15,3.5,0,TAU);x.fill();}}
+    return;}
+  for(let r=0;r<4;r++){const y=r*64;x.beginPath();for(let X=0;X<=w;X+=4)x.lineTo(X,y+3+Math.sin(X/10)*2.5);x.stroke();
+    const off=r%2?64:0;for(let c=0;c<2;c++){const X=off+c*128;x.beginPath();x.moveTo(X+3,y);x.lineTo(X+3,y+64);x.stroke();}}
+  const cols=['#e94343','#4fd06a','#4f9be9','#f2c14e','#ff8ad8'];
+  for(let r=0;r<4;r++)for(let c=0;c<2;c++){const cx=(r%2?64:0)+c*128+64,cy=r*64+35,col=cols[(r*3+c)%5];
+    for(const X of [cx,cx-256]){x.fillStyle='rgba(0,0,0,.25)';x.beginPath();x.arc(X+1.5,cy+2,8,0,TAU);x.fill();x.fillStyle=col;x.beginPath();x.arc(X,cy,8,0,TAU);x.fill();x.fillStyle='rgba(255,255,255,.6)';x.beginPath();x.arc(X-2.5,cy-2.5,2.5,0,TAU);x.fill();}}
+},rx,ry);}
+const gbMat=(base,rx,ry,o)=>new THREE.MeshStandardMaterial({map:gingerTex(base,rx,ry,o),roughness:.85});
+const ICING=M(0xfffaf0,{roughness:.45});
+const pepTex=canvasTex(128,128,(x,w)=>{x.fillStyle='#fff';x.beginPath();x.arc(64,64,63,0,TAU);x.fill();for(let i=0;i<8;i++){x.fillStyle=i%2?'#e23a3a':'#fff';x.beginPath();x.moveTo(64,64);x.arc(64,64,60,i/8*TAU,(i+.5)/8*TAU);x.closePath();x.fill();}x.fillStyle='#e23a3a';x.beginPath();x.arc(64,64,10,0,TAU);x.fill();});
+const pepMat=new THREE.MeshStandardMaterial({map:pepTex,roughness:.4});
+function icingDrips(parent,x0,x1,y,z,step=.7,axis='x'){for(let v=x0;v<=x1;v+=step){const s=rand(.7,1.3);const b=ball(.17,ICING,axis==='x'?v:z,y-.05*s,axis==='x'?z:v,1,1.4*s,1,true);b.castShadow=false;parent.add(b);}}
+function gumdrop(col,s=1){const g=mesh(new THREE.SphereGeometry(.28*s,14,10,0,TAU,0,Math.PI/2),M(col,{roughness:.3}),0,0,0);return g;}
+function makeTrain(){
+  const gm=gbMat('#b36a32',1,1,{thin:true}),dark=M(0x4a2410),parts=[];
+  const wheel=(g,x,z,r=.3)=>{const w=mesh(new THREE.CylinderGeometry(r,r,.14,22),[M(0xd23a3a),pepMat,pepMat],x,r,z);w.rotation.x=Math.PI/2;g.add(w);return w;};
+  const wheels=[];
+  const part=()=>{const o=new THREE.Group(),inn=new THREE.Group();inn.rotation.y=-Math.PI/2;o.add(inn);o.userData.inner=inn;scene.add(o);parts.push(o);return inn;};
+  // locomotive (built along +x)
+  const L=part();
+  L.add(mesh(new THREE.BoxGeometry(2.6,.25,1.1),dark,0,.5,0));
+  const boil=mesh(new THREE.CylinderGeometry(.48,.48,1.6,20),gm,.35,1.05,0);boil.rotation.z=Math.PI/2;L.add(boil);
+  for(const x of [-.25,.35,.95]){const r=mesh(new THREE.TorusGeometry(.49,.06,8,24),ICING,x,1.05,0);r.rotation.y=Math.PI/2;L.add(r);}
+  const face=mesh(new THREE.CircleGeometry(.44,24),pepMat,1.16,1.05,0);face.rotation.y=Math.PI/2;L.add(face);
+  L.add(mesh(new THREE.CylinderGeometry(.2,.14,.6,14),dark,.8,1.75,0));L.add(ball(.24,M(0xe23a3a,{roughness:.3}),.8,2.1,0,1,.7,1));
+  const lamp=ball(.13,E(0xffe08a,1.3),1.2,1.55,0,1,1,1,true);lamp.castShadow=false;L.add(lamp);
+  L.add(mesh(new THREE.BoxGeometry(1.05,1.3,1.15),gm,-.75,1.25,0));
+  L.add(mesh(new THREE.BoxGeometry(1.35,.16,1.4),ICING,-.75,1.96,0));
+  for(const z of [-.58,.58])L.add(mesh(new THREE.BoxGeometry(.5,.45,.02),E(0xffd772,.5),-.75,1.45,z));
+  [[-1.1,0xe94343],[-.4,0x4fd06a]].forEach(([x,c])=>{const g=gumdrop(c,.8);g.position.set(x,2.04,0);L.add(g);});
+  for(const x of [-.85,0,.85])for(const z of [-.6,.6])wheels.push(wheel(L,x,z));
+  // two wagons
+  for(let k=0;k<2;k++){const W=part();
+    W.add(mesh(new THREE.BoxGeometry(1.9,.22,1.1),dark,0,.5,0));
+    W.add(mesh(new THREE.BoxGeometry(1.9,.55,.1),gm,0,.88,.52));W.add(mesh(new THREE.BoxGeometry(1.9,.55,.1),gm,0,.88,-.52));
+    W.add(mesh(new THREE.BoxGeometry(.1,.55,1.1),gm,.92,.88,0));W.add(mesh(new THREE.BoxGeometry(.1,.55,1.1),gm,-.92,.88,0));
+    for(const z of [-.52,.52])W.add(mesh(new THREE.BoxGeometry(2,.1,.16),ICING,0,1.18,z));
+    for(const x of [-.6,0,.6]){const g=gumdrop(GIFTCOLS[(x*5+k*2+9)%6|0],.45);g.position.set(x,.92,.58);g.rotation.x=Math.PI/2;W.add(g);}
+    W.add(mesh(new THREE.BoxGeometry(.5,.1,.12),dark,1.15,.5,0));
+    for(const x of [-.55,.55])for(const z of [-.6,.6])wheels.push(wheel(W,x,z,.26));}
+  return {parts,wheels,offs:[0,2.6,4.9],L:0};
+}
+function trainLine(tr,x,z){tr.parts.forEach((p,i)=>{p.position.set(x-tr.offs[i],0,z);p.rotation.set(0,Math.PI/2,0);});}
+function trainOnCurve(tr,curve,s,dir){const L=curve.getLength();
+  tr.parts.forEach((p,i)=>{const u=clamp(s-dir*tr.offs[i]/L,0,1),u2=clamp(u+dir*.004,0,1);p.position.copy(curve.getPointAt(u));
+    if(Math.abs(u2-u)>1e-5){const q=curve.getPointAt(u2);p.lookAt(q);}else{const q=curve.getPointAt(clamp(u-dir*.004,0,1));p.lookAt(p.position.clone().multiplyScalar(2).sub(q));}});}
+function spinWheels(tr,d){tr.wheels.forEach(w=>w.rotation.y-=d*3.3);}
+function seatInTrain(tr){PL.forEach((p,i)=>{const m=p.m.g,inn=tr.parts[1+(i%2)].userData.inner;inn.add(m);m.position.set(0,.55,0);m.rotation.set(0,Math.PI/2,0);m.scale.setScalar(.8);p.ring.visible=false;p.ice.visible=false;p.m.legs.forEach(l=>l.rotation.x=-1.4);p.m.arms.forEach((a,k)=>a.rotation.x=k?-2.6:-.5);});}
+function buildTrack(curve,parent=scene){
+  const L=curve.getLength(),n=Math.max(20,Math.round(L*3)),up=new THREE.Vector3(0,1,0);
+  for(const side of [-1,1]){const pts=[];for(let i=0;i<=n;i++){const u=i/n,p=curve.getPointAt(u),t=curve.getTangentAt(u),lat=new THREE.Vector3().crossVectors(t,up).normalize();pts.push(p.clone().addScaledVector(lat,side*.6).add(new THREE.Vector3(0,.1,0)));}
+    parent.add(mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),n*2,.06,6),M(0xd23a3a,{roughness:.4}),0,0,0,false));}
+  const sg=new THREE.BoxGeometry(1.6,.1,.34),sm=M(0x8a4a1c);
+  for(let d=.4;d<L;d+=.8){const u=d/L,p=curve.getPointAt(u),t=curve.getTangentAt(u);const s=mesh(sg,sm,p.x,p.y+.03,p.z,false);s.lookAt(p.clone().add(t));s.rotateY(Math.PI/2);parent.add(s);
+    if(p.y>.5&&Math.round(d/.8)%3===0){const h=p.y;const c=mesh(new THREE.CylinderGeometry(.13,.13,h,10),stripeMat,p.x,h/2,p.z);parent.add(c);}}
+}
+function puffs(){const list=[];return{add(pos){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:flakeTex,color:0xffffff,transparent:true,opacity:.8,depthWrite:false}));s.position.copy(pos);s.scale.setScalar(.5);scene.add(s);list.push({s,t:1.4});},
+  upd(dt){for(let i=list.length-1;i>=0;i--){const q=list[i];q.t-=dt;q.s.position.y+=dt*1.4;q.s.scale.multiplyScalar(1+dt*1.2);q.s.material.opacity=Math.max(0,q.t*.55);if(q.t<=0){scene.remove(q.s);list.splice(i,1);}}}};}
+function chimneyPos(tr){return tr.parts[0].userData.inner.localToWorld(new THREE.Vector3(.8,2.3,0));}
+
+/* ---------- train ride along the outside of the gingerbread factory ---------- */
+function buildGingerHouse(){
+  const g=new THREE.Group();scene.add(g);
+  const W=18,D=10,H1=5,H2=4.6,H=H1+H2;
+  const body=mesh(new THREE.BoxGeometry(W,H,D),gbMat('#b8733a',5,3),0,H/2,0);g.add(body);
+  g.add(mesh(new THREE.BoxGeometry(W+.5,.4,D+.5),ICING,0,H1,0));
+  icingDrips(g,-W/2,W/2,H1-.15,D/2+.25,.6);
+  g.add(mesh(new THREE.BoxGeometry(W+.6,.3,D+.6),ICING,0,H,0));
+  const tri=new THREE.Shape();tri.moveTo(-D/2-.6,0);tri.lineTo(D/2+.6,0);tri.lineTo(0,4);tri.closePath();
+  const rg=new THREE.ExtrudeGeometry(tri,{depth:W+1,bevelEnabled:false});rg.translate(0,0,-(W+1)/2);rg.rotateY(Math.PI/2);
+  g.add(mesh(rg,M(0xffffff,{roughness:.9}),0,H,0));
+  icingDrips(g,-W/2-.4,W/2+.4,H-.05,D/2+.55,.55);
+  for(let x=-W/2;x<=W/2;x+=2.2){const gd=gumdrop(GIFTCOLS[Math.abs(Math.round(x))%6],1);gd.position.set(x,H+4,0);g.add(gd);}
+  g.add(mesh(new THREE.BoxGeometry(1.2,2.2,1.2),gbMat('#9a5a2a',1,1,{thin:true}),-5,H+3.4,-1.5));
+  const win=(x,y,z,w,h,ry=0)=>{const wg=new THREE.Group();wg.position.set(x,y,z);wg.rotation.y=ry;g.add(wg);
+    wg.add(mesh(new THREE.PlaneGeometry(w,h),E(0xffcf6a,.9),0,0,0,false));
+    for(const [dx,dy,ww,hh] of [[0,h/2,w+.3,.22],[0,-h/2,w+.3,.22],[-w/2,0,.22,h+.3],[w/2,0,.22,h+.3],[0,0,.1,h],[0,0,w,.1]])wg.add(mesh(new THREE.BoxGeometry(ww,hh,.12),ICING,dx,dy,.06,false));
+    const gl=glow(0xffc870,Math.max(w,h)*1.6,.35);gl.position.z=.3;wg.add(gl);};
+  for(const x of [-6.5,-2.2,6.5])win(x,2.4,D/2+.02,2.2,2.2);
+  win(-6,H1+2.2,D/2+.02,1.8,1.6);win(-1.5,H1+2.2,D/2+.02,1.8,1.6);win(3,H1+2.2,D/2+.02,1.8,1.6);
+  win(W/2+.02,H1+2.3,0,1.6,1.5,Math.PI/2);win(W/2+.02,2.4,1.5,2,2,Math.PI/2);
+  // big door
+  const dr=new THREE.Group();dr.position.set(2.4,0,D/2+.03);g.add(dr);dr.add(mesh(new THREE.BoxGeometry(2.4,3.6,.1),M(0x5a2e14),0,1.8,0));dr.add(mesh(new THREE.TorusGeometry(1.2,.15,8,24,Math.PI),ICING,0,3.6,.06));
+  dr.add(ball(.12,M(0xf2c14e,{metalness:.6}),.8,1.7,.1));const wr=mesh(new THREE.TorusGeometry(.45,.13,8,18),M(0x1f6b46),0,2.7,.1);dr.add(wr);
+  // signs
+  const sign=(text,x,y,z,w,ry=0,col='#2f9a52')=>{const t=canvasTex(512,128,(c,ww,hh)=>{c.fillStyle=col;c.fillRect(0,0,ww,hh);c.fillStyle='#fff';c.font='700 60px Fredoka, sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(text,ww/2,hh/2+4);});
+    const s=mesh(new THREE.PlaneGeometry(w,w/4),new THREE.MeshBasicMaterial({map:t}),x,y,z,false);s.rotation.y=ry;g.add(s);};
+  sign('Weihnachtsfabrik',2.4,4.25,D/2+.05,4.4);
+  sign('Unsere Wohnung',-3.7,H1+3.95,D/2+.05,3,0,'#d23a3a');
+  // balcony with upper station on the right side
+  const bx=W/2+1.6,bz=-3.4,by=H1+.15;
+  g.add(mesh(new THREE.BoxGeometry(3.4,.3,4.4),gbMat('#a8642e',1,1,{tiles:true}),bx,by-.15,bz));
+  for(const z of [bz-2.1,bz+2.1])g.add(mesh(new THREE.CylinderGeometry(.13,.13,by,10),stripeMat,bx+1.4,by/2,z));
+  const updoor=new THREE.Group();updoor.position.set(W/2+.03,by,bz);updoor.rotation.y=Math.PI/2;g.add(updoor);updoor.add(mesh(new THREE.BoxGeometry(1.6,2.6,.1),M(0x5a2e14),0,1.3,0));updoor.add(mesh(new THREE.TorusGeometry(.8,.12,8,20,Math.PI),ICING,0,2.6,.06));
+  return {W,D,H1,bx,bz,by};
+}
+function stageRide(dir,next){
+  clearScene();mode='play';hud.hidden=true;
+  env({bg:0x8fb8e8,sky:0xffffff,ground:0xdfe9f5,hemi:.8,sun:0xfff0d8,sunI:.85,sunPos:[16,28,20],sh:30,near:45,far:140});
+  addSnow(700,60);
+  const gr=mesh(new THREE.PlaneGeometry(220,220),M(0xf1f6fc,{roughness:1}),0,0,0,false);gr.rotation.x=-Math.PI/2;scene.add(gr);
+  const Hs=buildGingerHouse();
+  for(const [x,z,s] of [[-18,-6,1.6],[-14,13,1.2],[20,10,1.4],[22,-8,1.8],[-24,4,1.3],[14,-12,1.5]]){const t=makeTree(s);t.position.set(x,0,z);scene.add(t);}
+  const sm=makeSnowman();sm.position.set(-9,0,12);sm.rotation.y=.4;scene.add(sm);
+  const ex=Hs.W/2+1.9;
+  const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(-30,0,8),new THREE.Vector3(-12,0,8),new THREE.Vector3(4,0,8),new THREE.Vector3(9.5,.15,7.6),new THREE.Vector3(ex,.6,5),new THREE.Vector3(ex,2,2),new THREE.Vector3(ex,3.6,-1),new THREE.Vector3(ex,Hs.by,-4.2),new THREE.Vector3(ex,Hs.by,-5.6)]);
+  buildTrack(curve);
+  const tr=makeTrain();seatInTrain(tr);const pf=puffs();
+  const L=curve.getLength(),s0=dir==='up'?tr.offs[2]/L:1-tr.offs[2]/L,s1=dir==='up'?1:-.05,dsg=dir==='up'?1:-1,dur=5.2;
+  let t=0,done=false,pt=0,prev=s0;const look=new THREE.Vector3(1,4,0);
+  showBanner(dir==='up'?'Tschu-tschu! Hoch in den 2. Stock!':'Tschu-tschu! Runter in die Fabrik!',2.6);SFX.bells();
+  stage={update(dt){t+=dt;const k=clamp(t/dur,0,1),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2,s=s0+(s1-s0)*e;
+      trainOnCurve(tr,curve,s,dsg);spinWheels(tr,Math.abs(s-prev)*L);prev=s;
+      pt-=dt;if(pt<=0&&k<1){pt=.22;pf.add(chimneyPos(tr));if(Math.random()<.35)tone(rand(500,600),.06,'triangle',.02);}
+      if(t>dur+.5&&!done){done=true;fadeTo(next);}},
+    anim(dt){pf.upd(dt);updSnow(dt,new THREE.Vector3(0,0,0));const p=tr.parts[0].position;look.lerp(new THREE.Vector3(p.x*.6+1,p.y*.7+2.5,p.z*.5),Math.min(1,dt*2.5));
+      cam.position.set(look.x+15,look.y+8,look.z+20);cam.lookAt(look);}};
+  stage.update(0);
+}
+
+/* ---------- the apartment on the 2nd floor ---------- */
+function stageHome(){
+  clearScene();mode='play';
+  const L=env({bg:0x24160e,sky:0xfff1d6,ground:0x6b4a2b,hemi:.75,sun:0xffe2b8,sunI:.6,sunPos:[5,18,9],sh:14,near:40,far:90});
+  const RX=8,RZ=5;
+  const floor=mesh(new THREE.PlaneGeometry(RX*2,RZ*2),gbMat('#c58548',4,2.5,{tiles:true}),0,0,0,false);floor.rotation.x=-Math.PI/2;scene.add(floor);
+  const wm=gbMat('#b8733a',4,1.3);
+  scene.add(mesh(new THREE.BoxGeometry(RX*2+.8,5,.4),wm,0,2.5,-RZ-.2));
+  scene.add(mesh(new THREE.BoxGeometry(.4,5,RZ*2),wm,-RX-.2,2.5,0));scene.add(mesh(new THREE.BoxGeometry(.4,5,RZ*2),wm,RX+.2,2.5,0));
+  scene.add(mesh(new THREE.BoxGeometry(RX*2+.8,.3,.55),ICING,0,5,-RZ-.1));icingDrips(scene,-RX,RX,4.85,-RZ+.15,.6);
+  scene.add(mesh(new THREE.BoxGeometry(RX*2+.8,.7,.4),wm,0,.35,RZ+.2));scene.add(mesh(new THREE.BoxGeometry(RX*2+.9,.16,.5),ICING,0,.72,RZ+.2));
+  const base=mesh(new THREE.PlaneGeometry(80,40),M(0x3a2010,{roughness:1}),0,-.05,10,false);base.rotation.x=-Math.PI/2;scene.add(base);
+  const rug=mesh(new THREE.CircleGeometry(2.6,40),M(0x2f9a52),0.6,.02,1.2,false);rug.rotation.x=-Math.PI/2;rug.scale.set(1.4,1,1);scene.add(rug);
+  const rugB=mesh(new THREE.RingGeometry(2.3,2.5,40),ICING,0.6,.03,1.2,false);rugB.rotation.x=-Math.PI/2;rugB.scale.set(1.4,1,1);scene.add(rugB);
+  const cols=[];
+  // window
+  const wg=new THREE.Group();wg.position.set(.8,2.8,-RZ+.02);scene.add(wg);
+  const sky=new THREE.MeshBasicMaterial({color:0x9fd0ff});wg.add(mesh(new THREE.PlaneGeometry(3,2.2),sky,0,0,0,false));
+  const moon=mesh(new THREE.CircleGeometry(.28,20),new THREE.MeshBasicMaterial({color:0xf3f0c8}),.8,.5,.01,false);moon.visible=false;wg.add(moon);
+  const wstars=[];for(let i=0;i<7;i++){const st=mesh(new THREE.CircleGeometry(.04,6),new THREE.MeshBasicMaterial({color:0xffffff}),rand(-1.3,1.3),rand(-.2,.95),.01,false);st.visible=false;wg.add(st);wstars.push(st);}
+  for(const [dx,dy,ww,hh] of [[0,1.1,3.3,.22],[0,-1.1,3.3,.22],[-1.5,0,.22,2.4],[1.5,0,.22,2.4],[0,0,.1,2.2],[0,0,3,.1]])wg.add(mesh(new THREE.BoxGeometry(ww,hh,.12),ICING,dx,dy,.06,false));
+  for(const sx of [-1,1])wg.add(mesh(new THREE.BoxGeometry(.6,2.6,.08),M(0xd23a3a),sx*1.85,-.05,.12));
+  // family picture with both heroes
+  const pic=canvasTex(256,180,(c,w,h)=>{c.fillStyle='#fff6e0';c.fillRect(0,0,w,h);c.fillStyle='#bfe3ff';c.fillRect(10,10,w-20,h-20);drawElfin2D(c,88,168,1.15);drawGinger2D(c,172,168,1.15);c.fillStyle='#d23a3a';c.font='700 22px Fredoka, sans-serif';c.textAlign='center';c.fillText('♥',w/2,40);});
+  const pf=mesh(new THREE.PlaneGeometry(2,1.4),new THREE.MeshBasicMaterial({map:pic}),-4.2,3.6,-RZ+.03,false);scene.add(pf);
+  scene.add(mesh(new THREE.BoxGeometry(2.25,1.65,.06),M(0xf2c14e,{metalness:.4,roughness:.4}),-4.2,3.6,-RZ+.01,false));
+  // double bed
+  const bed=new THREE.Group();bed.position.set(-4.2,0,-2.9);scene.add(bed);
+  const hb=mesh(new THREE.BoxGeometry(3.5,2.1,.3),gbMat('#a8642e',1,1,{thin:true}),0,1.05,-1.75);bed.add(hb);
+  const heart=new THREE.Shape();heart.moveTo(0,-.35);heart.bezierCurveTo(-.5,0,-.45,.4,0,.25);heart.bezierCurveTo(.45,.4,.5,0,0,-.35);
+  const hm=mesh(new THREE.ShapeGeometry(heart),M(0xe23a3a,{roughness:.3}),0,1.45,-1.58,false);hm.scale.setScalar(1.3);bed.add(hm);
+  bed.add(mesh(new THREE.BoxGeometry(3.5,.5,3.4),M(0x5a2e14),0,.35,0));
+  bed.add(mesh(new THREE.BoxGeometry(3.5,.9,.25),gbMat('#a8642e',1,.4,{thin:true}),0,.45,1.7));
+  bed.add(mesh(new THREE.BoxGeometry(3.2,.32,3.2),M(0xffffff,{roughness:.9}),0,.76,0));
+  for(const x of [-.8,.8])bed.add(ball(.62,M(0xfffaf0),x,.98,-1.3,1,.22,.5));
+  const quiltTex=canvasTex(128,128,(c,w,h)=>{c.fillStyle='#c8323a';c.fillRect(0,0,w,h);c.fillStyle='#fff';for(let i=0;i<4;i++)for(let j=0;j<4;j++){const x=16+i*32+(j%2)*16,y=16+j*32;c.beginPath();for(let k=0;k<10;k++){const a=k/10*TAU-Math.PI/2,r=k%2?3:7;c.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r);}c.fill();}c.fillRect(0,0,w,6);},2,2);
+  const quilt=mesh(new THREE.BoxGeometry(3.3,.14,2.2),new THREE.MeshStandardMaterial({map:quiltTex,roughness:.9}),0,.98,.55);bed.add(quilt);
+  cols.push(box(-4.2,-2.9,3.6,3.7));
+  for(const x of [-6.6,-1.8]){scene.add(mesh(new THREE.BoxGeometry(.9,.9,.9),gbMat('#9a5a2a',1,1,{thin:true}),x,.45,-4.2));const lb=ball(.22,E(0xffe2a0,.6),x,1.3,-4.2,1,1,1,true);lb.castShadow=false;scene.add(lb);scene.add(mesh(new THREE.ConeGeometry(.35,.35,14,1,true),M(0xd23a3a,{side:THREE.DoubleSide}),x,1.45,-4.2,false));cols.push(box(x,-4.2,1,1));}
+  const nl=new THREE.PointLight(0xffd59a,.15,8,1.5);nl.position.set(-4.2,2,-3);scene.add(nl);
+  // fireplace with stockings
+  const fp=new THREE.Group();fp.position.set(5.2,0,-RZ+.45);scene.add(fp);
+  fp.add(mesh(new THREE.BoxGeometry(3.2,2.6,.9),gbMat('#a8642e',1,1),0,1.3,0));fp.add(mesh(new THREE.BoxGeometry(1.8,1.3,.1),M(0x1a0e08),0,.75,.43,false));
+  fp.add(mesh(new THREE.BoxGeometry(3.6,.25,1.1),ICING,0,2.65,0));
+  const flames=[];for(const [x,s,c] of [[-.35,.8,0xff7a2a],[.1,1,0xffb43a],[.45,.7,0xff5a1a],[0,.5,0xfff07a]]){const f=mesh(new THREE.ConeGeometry(.2*s,.7*s,8),E(c,1.4),x,.4+.35*s,.3,false);fp.add(f);flames.push(f);}
+  const fg=glow(0xff9a3a,2.4,.7);fg.position.set(0,.8,.6);fp.add(fg);
+  const fire=new THREE.PointLight(0xff8a3a,.9,9,1.6);fire.position.set(5.2,1,-3.6);scene.add(fire);
+  [[-.8,0xd23a3a],[.8,0x2f9a52]].forEach(([x,c])=>{fp.add(mesh(new THREE.BoxGeometry(.38,.7,.15),M(c),x,2.15,.55));fp.add(mesh(new THREE.BoxGeometry(.55,.25,.15),M(c),x+.1,1.85,.55));fp.add(mesh(new THREE.BoxGeometry(.42,.16,.18),ICING,x,2.5,.56));});
+  cols.push(box(5.2,-RZ+.45,3.3,1));
+  // tree, toy chest, cookie table
+  const tree=makeTree(1.1,true);tree.position.set(-6.8,0,2.6);scene.add(tree);cols.push({x:-6.8,z:2.6,r:1});
+  const chest=new THREE.Group();chest.position.set(1.6,0,-3.9);scene.add(chest);chest.add(mesh(new THREE.BoxGeometry(1.8,.9,.9),M(0x2f6fd0,{roughness:.5}),0,.45,0));chest.add(mesh(new THREE.BoxGeometry(1.9,.15,1),M(0xf2c14e,{metalness:.4}),0,.95,0));
+  const ty=makeToy(1);ty.position.set(-.4,1.03,0);chest.add(ty);const ty2=makeToy(3);ty2.position.set(.45,1.03,0);chest.add(ty2);cols.push(box(1.6,-3.9,1.9,1));
+  const tb=new THREE.Group();tb.position.set(2.4,0,1.2);scene.add(tb);tb.add(mesh(new THREE.CylinderGeometry(.9,.9,.1,24),gbMat('#a8642e',1,1,{tiles:true}),0,.8,0));tb.add(mesh(new THREE.CylinderGeometry(.12,.18,.8,10),M(0x5a2e14),0,.4,0));
+  tb.add(mesh(new THREE.CylinderGeometry(.35,.35,.04,20),ICING,0,.87,0));for(let i=0;i<4;i++){const c=mesh(new THREE.CylinderGeometry(.11,.11,.04,12),M(0xb8733a),Math.cos(i*1.6)*.17,.9+i*.03,Math.sin(i*1.6)*.17);tb.add(c);}
+  for(const [x,c] of [[-.55,0xd23a3a],[.55,0x2f6fd0]]){tb.add(mesh(new THREE.CylinderGeometry(.13,.11,.28,12),M(c),x,1,.2));tb.add(mesh(new THREE.CylinderGeometry(.1,.1,.02,12),M(0xfffaf0),x,1.14,.2,false));}
+  cols.push({x:2.4,z:1.2,r:.95});
+  // door to the train
+  const dr=new THREE.Group();dr.position.set(RX-.02,0,2.6);dr.rotation.y=-Math.PI/2;scene.add(dr);dr.add(mesh(new THREE.BoxGeometry(1.8,3,.15),M(0x5a2e14),0,1.5,0));dr.add(mesh(new THREE.TorusGeometry(.9,.13,8,20,Math.PI),ICING,0,3,.08));dr.add(ball(.09,M(0xf2c14e,{metalness:.6}),.6,1.4,.12));
+  const DOOR=new THREE.Vector3(RX-1.1,0,2.6),BED=new THREE.Vector3(-4.2,0,-.6);
+  const mkRing=(p,c)=>{const r=mesh(new THREE.RingGeometry(.75,.98,36),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.8,depthWrite:false}),p.x,.04,p.z,false);r.rotation.x=-Math.PI/2;scene.add(r);return r;};
+  const rDoor=mkRing(DOOR,0xf2c14e),rBed=mkRing(BED,0xff8ad8);
+  tag(()=>_t.set(DOOR.x,2.3,DOOR.z),'🚂 Bahn nach unten','tag');
+  const bedTag=tag(()=>_t.set(BED.x,2.2,BED.z+.2),'🛏️ Aktionstaste: schlafen','tag');
+  PL.forEach((p,i)=>placePlayer(p,RX-2.4,2.2+i*1.1,-Math.PI/2));addTags();
+  setHUD('Eure Wohnung · 2. Stock',null,'');
+  const camOff=new THREE.Vector3(0,9.5,8.2);followCam(0,camOff,[-2,2],[-1.6,-.2],true);
+  showBanner('Willkommen zu Hause!',2);
+  let sleep=0,leaving=false,zt=0;const day={sky:new THREE.Color(0x9fd0ff),night:new THREE.Color(0x1a2a5a)};
+  const lie=()=>{PL.forEach((p,i)=>{const m=p.m.g;m.position.set(-4.2+(PL.length===2?(i?.75:-.75):0),1.3,-2.0);m.rotation.set(-Math.PI/2,0,0);m.scale.setScalar(.8);p.ring.visible=false;p.m.legs.forEach(l=>l.rotation.x=0);p.m.arms.forEach(a=>a.rotation.x=0);});quilt.position.set(0,1.52,1.05);quilt.scale.set(1,1,.65);};
+  const wake=()=>{quilt.position.set(0,.98,.55);quilt.scale.set(1,1,1);PL.forEach((p,i)=>placePlayer(p,-4.8+i*1.3,-.4,0));SFX.win();showBanner('Guten Morgen! Ausgeschlafen! ☀️',2.4);PL.forEach(p=>say(p.pos.clone().setY(2.3),pick(['Guten Morgen!','Gähn … gut geschlafen!','Auf geht\'s!']),'',1.8));};
+  stage={update(dt){
+      if(sleep>0){sleep-=dt;const k=sleep>6?1-(sleep-6)/1:sleep<1?sleep:1;
+        L.hemi.intensity=.75-.45*k;L.dl.intensity=.6-.5*k;bedTag.el.style.visibility=k>.05?'hidden':'';nl.intensity=.15+.6*k;sky.color.copy(day.sky).lerp(day.night,k);moon.visible=k>.5;wstars.forEach(s=>s.visible=k>.5);
+        zt-=dt;if(zt<=0&&sleep>1){zt=.9;const p=PL[Math.floor(T*1.1)%PL.length];say(p.m.g.position.clone().add(new THREE.Vector3(0,.6,-1.3)),pick(['Z z z','z Z z','Zzz …']),'z',1.6);tone(rand(80,100),.6,'sine',.04,.8);}
+        if(sleep<=0){sleep=0;bedTag.el.style.visibility='';L.hemi.intensity=.75;L.dl.intensity=.6;nl.intensity=.15;sky.color.copy(day.sky);moon.visible=false;wstars.forEach(s=>s.visible=false);wake();}
+        return;}
+      movePlayers(dt,5.4,[-RX+.6,RX-.6,-RZ+.6,RZ-.6],cols);
+      const nearBed=PL.some(p=>d2(p.pos,BED)<1.3);bedTag.el.style.opacity=nearBed?1:.55;
+      if(nearBed&&PL.some(p=>ctl(p.i).act&&d2(p.pos,BED)<1.6)){sleep=7;zt=1;lie();showBanner(G.players===2?'Gute Nacht, ihr zwei!':'Gute Nacht!',2);tone(523,.3,'triangle',.05);tone(392,.4,'triangle',.05,1,.25);return;}
+      if(!leaving&&PL.some(p=>d2(p.pos,DOOR)<1)){leaving=true;SFX.bells();fadeTo(()=>stageRide('down',()=>stageHub(G.hubKind||'start',true)));}
+    },
+    anim(dt){rDoor.material.opacity=rBed.material.opacity=.5+Math.sin(T*5)*.3;
+      flames.forEach((f,i)=>{f.scale.y=1+Math.sin(T*(9+i*2.3)+i)*.18;f.scale.x=1+Math.sin(T*7+i)*.08;});fire.intensity=.8+Math.sin(T*11)*.12+Math.sin(T*17)*.08;
+      if(tree.userData.star)tree.userData.star.rotation.y+=dt;
+      if(sleep>0){PL.forEach((p,i)=>{p.m.g.position.y=1.3+Math.max(0,Math.sin(T*2+i*1.5))*.03;});return;}
+      followCam(dt,camOff,[-2,2],[-1.6,-.2]);}};
+}
 
 /* ---------- HUB ---------- */
 function orders(kind){
   const d=lvl(),t=Math.min(12,4+d*2),K=clamp(G.letters||5,3,10);
-  if(kind==='start'&&G.round===1)return['Ho, ho, ho! Willkommen in meiner Weihnachtsfabrik, '+names()+'!','Ich bin hier der Chef. Schaut mal, wie fleißig meine Elfen arbeiten!','Aber der Grinch will Weihnachten verderben. Darum brauche ich '+(G.players===2?'euch':'dich')+'.',`Erster Auftrag: Fliegt mit dem Schlitten ins Dorf und sammelt ${t} Wunschzettel ein, bevor die Sonne aufgeht.`,'Der Schlitten steht rechts am großen Tor. Ab mit euch!'];
+  if(kind==='start'&&G.round===1)return['Ho, ho, ho! Willkommen in meiner Weihnachtsfabrik, '+names()+'!','Ich bin hier der Chef. Schaut mal, wie fleißig meine Elfen arbeiten!','Aber der Grinch will Weihnachten verderben. Darum brauche ich '+(G.players===2?'euch':'dich')+'.',`Erster Auftrag: Fliegt mit dem Schlitten ins Dorf und sammelt ${t} Wunschzettel ein, bevor die Sonne aufgeht.`,'Übrigens: Oben im 2. Stock ist '+(G.players===2?'eure':'deine')+' Wohnung mit Bett. Da kommt man nur mit der Lebkuchenbahn hin. Sie hält vorne am Bahnhof.','Der Schlitten steht rechts am großen Tor. Ab mit euch!'];
   if(kind==='start')return[`Ho, ho, ho! Runde ${G.round}, ein neues Weihnachten beginnt!`,'Passt auf: Der Grinch ist frecher und schneller geworden.',`Auftrag: Holt ${t} Wunschzettel aus dem Dorf. Der Schlitten wartet am Tor!`];
   if(kind==='afterP1')return[`${G.letters} Wunschzettel! Wunderbar gemacht!`,`Meine Elfen bauen heute Nacht ${K} Spielzeuge daraus und stellen sie ins Regal „Fertige Spielzeuge“.`,'Ich gehe jetzt ins Bett. Ihr haltet Wache! Vielleicht schleicht sich der Grinch herein.','Er kommt nur selten. Versteckt euch hinter den großen Geschenkkisten. Seine Laterne zeigt, wohin er schaut.','Wenn er nah ist und euch nicht sieht, drückt die Aktionstaste und ruft BUH! Dann rennt er weg.','Und wenn er ein Spielzeug klaut: schnell hinterher und BUH! Dann lässt er es fallen.'];
   if(kind==='alarm')return['Guten Morgen! … Oh nein! ALARM!',`Der Grinch hat heute Nacht ${G.stolen} ${G.stolen>1?'Spielzeuge':'Spielzeug'} geklaut!`,'Ein Elf hat ihn gesehen. Hier ist der Hinweis: Seine Höhle ist im Eisberg hinter dem Dorf, dort wo die grünen Kristalle leuchten.','Fliegt hin und holt die Spielzeuge still und heimlich zurück. Der Grinch darf euch nicht sehen!','Schleicht euch von Fels zu Fels und tragt ein Spielzeug nach dem anderen zum Schlitten. Ab zum Schlitten!'];
   if(kind==='afterP2')return[G.recovered?`Ihr habt ${G.recovered} ${G.recovered>1?'Spielzeuge':'Spielzeug'} aus der Grinch-Höhle zurückgeholt! Jetzt haben wir ${G.toys}.`:`Guten Morgen! Alle ${G.toys} Spielzeuge sind noch da. Gut aufgepasst!`,'Und heute ist Heiligabend! Meine Elfen haben alle Geschenke in den Schlitten geladen.','Fliegt über das Dorf und werft sie in die Schornsteine der Häuser mit hellen Fenstern. Der Ring auf den Dächern zeigt, wo sie landen.','Ab zum Schlitten!'];
   return[`Frohe Weihnachten! ${G.lastDelivered} Kinder freuen sich über ihre Geschenke.`,'Ihr seid die besten Helfer, die ich je hatte! Die Elfen jubeln euch zu.','Aber der Grinch gibt nicht auf. Nächstes Jahr wird er noch frecher …',`Auf geht's in Runde ${G.round+1}!`];
 }
-function stageHub(kind){
-  clearScene();mode='play';hideOverlay();
+function stageHub(kind,back){
+  clearScene();mode='play';hideOverlay();if(!back){G.hubKind=kind;G.hubGoal=null;}
   const F=buildFactory(false);addSnow(500,60);
   const sl=makeSleigh();sl.g.position.copy(F.sleighSpot);sl.g.rotation.y=0;scene.add(sl.g);
   const ringM=mesh(new THREE.RingGeometry(1.8,2.3,40),new THREE.MeshBasicMaterial({color:0xf2c14e,transparent:true,opacity:.8,depthWrite:false}),F.sleighSpot.x,.05,F.sleighSpot.z,false);ringM.rotation.x=-Math.PI/2;ringM.visible=false;scene.add(ringM);
   const arrow=mesh(new THREE.ConeGeometry(.4,.8,12),E(0xf2c14e,.8),F.sleighSpot.x,3.4,F.sleighSpot.z,false);arrow.rotation.x=Math.PI;arrow.visible=false;scene.add(arrow);
-  PL.forEach((p,i)=>placePlayer(p,-17.6+i*1.2,-4,Math.PI));addTags();
-  factoryCam(0,true);
-  let goal=null,boarded=false;
+  if(back)PL.forEach((p,i)=>placePlayer(p,-.6+i*1.2,FZ-1.8,Math.PI));else PL.forEach((p,i)=>placePlayer(p,-17.6+i*1.2,-4,Math.PI));addTags();
+  factoryCam(0,true,7);
+  let goal=back?G.hubGoal:null,boarded=false,riding=0,rideS=0;
+  const stRing=mesh(new THREE.RingGeometry(.8,1.05,36),new THREE.MeshBasicMaterial({color:0xff8ad8,transparent:true,opacity:.8,depthWrite:false}),F.station.x,.07,F.station.z,false);stRing.rotation.x=-Math.PI/2;scene.add(stRing);
+  tag(()=>_t.set(F.station.x,2.2,F.station.z),'🚂 Zur Wohnung','tag');
+  const tL=F.trackCurve.getLength(),s0=(3.2+FX+8)/tL;rideS=s0;const pf=puffs();let pt=0;
+  const hubCols=F.colliders.concat([box(sl.g.position.x+.6,sl.g.position.z,3.6,1.6),box(-(FX+2.2)/2,FZ+.3,FX-2.2,.3),box((FX+2.2)/2,FZ+.3,FX-2.2,.3),box(-3.35,FZ+1.2,.3,2),box(3.35,FZ+1.2,.3,2)]);
+  if(back){ringM.visible=arrow.visible=!!goal;showBanner(goal?'Zurück in der Fabrik!':'Zurück in der Fabrik!',1.6);}
   setHUD(`Runde ${G.round} · Weihnachtsfabrik`,null,`<span>${IC.gift}${G.stars} verteilt</span>`);
   const afterDialog=()=>{
     if(kind==='afterP1'){fadeTo(stageP2);return;}
     if(kind==='afterP3'){G.round++;G.letters=0;G.toys=0;G.stolen=0;G.recovered=0;setHUD(`Runde ${G.round} · Weihnachtsfabrik`,null,`<span>${IC.gift}${G.stars} verteilt</span>`);dialog(orders('start'),afterDialog);return;}
-    goal=kind==='afterP2'?'p3':kind==='alarm'?'cave':'p1';ringM.visible=arrow.visible=true;showBanner('Lauft zum Schlitten am Tor!');
+    goal=kind==='afterP2'?'p3':kind==='alarm'?'cave':'p1';G.hubGoal=goal;ringM.visible=arrow.visible=true;showBanner('Lauft zum Schlitten am Tor!');
   };
-  let hubStage;setTimeout(()=>{if(stage===hubStage)dialog(orders(kind),afterDialog);},450);
+  let hubStage;if(!back)setTimeout(()=>{if(stage===hubStage)dialog(orders(kind),afterDialog);},450);
   hubStage=stage={update(dt){
-      movePlayers(dt,5.4,[-FX+.6,FX-.6,-FZ+.6,FZ-.6],F.colliders.concat([box(sl.g.position.x+.6,sl.g.position.z,3.6,1.6)]));
+      if(riding){riding+=dt;rideS+=dt*Math.min(1,riding*.6)*6/tL;trainOnCurve(F.train,F.trackCurve,rideS,1);spinWheels(F.train,dt*Math.min(1,riding*.6)*6);
+        pt-=dt;if(pt<=0){pt=.25;pf.add(chimneyPos(F.train));}
+        if(riding>2.2&&!boarded){boarded=true;fadeTo(()=>stageRide('up',stageHome));}return;}
+      movePlayers(dt,5.4,[-FX+.6,FX-.6,-FZ+.6,FZ+1.6],hubCols);
+      if(goal&&!boarded&&PL.some(p=>d2(p.pos,F.station)<1)){riding=.001;seatInTrain(F.train);SFX.bells();showBanner('Einsteigen! Tschu-tschu!',2);return;}
       if(goal&&!boarded&&PL.some(p=>d2(p.pos,F.sleighSpot)<3)){boarded=true;SFX.bells();
         if(goal==='p1')stageFly('Ab ins Dorf!',stageP1,'out');else if(goal==='cave')stageFly('Zur Grinch-Höhle! Psst …',stageCave,'out');else fadeTo(stageP3);}
     },
     anim(dt){animFactory(F,dt,false);const s=F.santa;s.g.rotation.y=Math.atan2(PL[0].pos.x-s.g.position.x,PL[0].pos.z-s.g.position.z)*.6;
       const talk=dialogOpen;s.arms[1].rotation.z=talk?-2.3+Math.sin(T*6)*.3:-.35;s.head.rotation.x=talk?Math.sin(T*8)*.05:0;s.g.position.y=Math.abs(Math.sin(T*2))*.03;
-      ringM.material.opacity=.5+Math.sin(T*5)*.3;arrow.position.y=3.4+Math.sin(T*4)*.25;animDeer(sl,T*.3);
-      if(!PL.length)return;if(dialogOpen||!goal)PL.forEach(p=>animPlayer(p,false));
-      factoryCam(dt);updSnow(dt,new THREE.Vector3(30,0,0));}};
+      ringM.material.opacity=.5+Math.sin(T*5)*.3;arrow.position.y=3.4+Math.sin(T*4)*.25;animDeer(sl,T*.3);stRing.material.opacity=goal?.5+Math.sin(T*5)*.3:.15;pf.upd(dt);
+      if(!PL.length)return;if(!riding&&(dialogOpen||!goal))PL.forEach(p=>animPlayer(p,false));
+      factoryCam(dt,false,7);updSnow(dt,new THREE.Vector3(30,0,0));}};
 }
 
 /* ---------- FLY cutscene ---------- */
@@ -924,7 +1161,7 @@ function stageCave(){
   colliders.push(box(13,-6,2.8,1.8));
   const can=mesh(new THREE.CylinderGeometry(.45,.4,1.1,14),M(0x8a95a8,{metalness:.6,roughness:.4}),15.5,.55,-3);scene.add(can);colliders.push({x:15.5,z:-3,r:.5});
   const boot=ball(.25,M(0x3a2414),9.5,.12,-8,1.8,.6,1);scene.add(boot);
-  const sign=canvasTex(512,128,(x,w,h)=>{x.fillStyle='#3d7d26';x.fillRect(0,0,w,h);x.fillStyle='#f5e663';x.font='700 58px Fredoka, Baloo 2, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('BETRETEN VERBOTEN!',w/2,h/2+3);});
+  const sign=canvasTex(512,128,(x,w,h)=>{x.fillStyle='#3d7d26';x.fillRect(0,0,w,h);x.fillStyle='#f5e663';x.font='700 58px Fredoka, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('BETRETEN VERBOTEN!',w/2,h/2+3);});
   const sg=mesh(new THREE.PlaneGeometry(3.2,.8),new THREE.MeshBasicMaterial({map:sign}),-12.5,2.4,8.2,false);sg.rotation.y=.9;scene.add(sg);scene.add(mesh(new THREE.CylinderGeometry(.06,.06,2.4),M(0x5a3a22),-12.5,1.2,8.2));
   // pile of stolen toys
   const pileC=new THREE.Vector3(12,0,-2);
