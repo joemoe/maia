@@ -37,6 +37,7 @@ canvas#game{display:block;width:100%;height:100%;touch-action:none}
 #hud .hbar{display:flex;align-items:center;gap:8px;flex:0 1 30%}
 #hud .track{flex:1;height:10px;border-radius:5px;background:rgba(255,255,255,.18);overflow:hidden}
 #hud .fill{height:100%;width:0;border-radius:5px;background:linear-gradient(90deg,#3f5fb0,#f6a35e)}
+#hud .hbar.hurry .fill{background:#e23a3a;animation:hurry .45s infinite alternate}@keyframes hurry{to{opacity:.35}}
 #hud .hbar.town .fill{background:linear-gradient(90deg,#2f9a52,#f2c14e)}
 #hud .hr{display:flex;gap:14px;white-space:nowrap;color:#fff}
 #hud svg{width:1.2em;height:1.2em;vertical-align:-.25em;margin-right:4px}
@@ -44,12 +45,14 @@ canvas#game{display:block;width:100%;height:100%;touch-action:none}
 #banner.on{opacity:1}
 #dialog{position:absolute;left:3%;right:3%;bottom:4%;display:flex;gap:14px;align-items:flex-start;background:var(--snow);color:var(--ink);border-radius:20px;border:4px solid #fff;box-shadow:0 8px 0 #b9c8e2;padding:12px 16px;font-size:clamp(13px,1.9vw,19px)}
 #dialog[hidden]{display:none}
+[hidden]{display:none!important}
 #dialog .portrait{flex:0 0 auto;width:clamp(54px,9vw,96px);aspect-ratio:1;border-radius:50%;background:#ffe9d6;overflow:hidden;border:3px solid var(--berry)}
 #dialog .dtext{min-width:0;flex:1}
 #dialog b{font-family:var(--display);color:var(--berry);font-size:1.05em}
 #dialog p{margin:2px 0 8px}
 #dialog .row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 #dialog .hint{color:#5a6787;font-size:.8em}
+#flash{position:absolute;inset:0;pointer-events:none;opacity:0;box-shadow:inset 0 0 140px 50px rgba(230,30,30,.95);transition:opacity .6s}
 #fade{position:absolute;inset:0;background:#050b1d;opacity:0;pointer-events:none;transition:opacity .45s}
 #fade.on{opacity:1}
 #overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(6,12,32,.55);padding:12px;overflow:auto}
@@ -58,6 +61,9 @@ canvas#game{display:block;width:100%;height:100%;touch-action:none}
 .panel h2{font-family:var(--display);font-weight:700;font-size:clamp(20px,3.6vw,34px);line-height:1.1;margin:0 0 6px;color:var(--berry);text-wrap:balance}
 .panel .eyebrow{font-weight:700;letter-spacing:1.5px;text-transform:uppercase;font-size:.78em;color:var(--pine);margin:0 0 2px}
 .panel p{margin:6px 0}
+.panel.note{background:#e9f5c8;border-color:#9bd46c;box-shadow:0 10px 0 #3d7d26;transform:rotate(-1.5deg);max-width:560px;text-align:center}
+.panel.note h2{color:#2e6b1f}.panel.note .plan{font:700 clamp(17px,2.6vw,26px) var(--display);color:#1e3a12;margin:10px 0 14px;transform:rotate(1deg)}
+.panel.note svg{width:64px;height:64px}.panel.note .sig{font-style:italic;color:#3d7d26;margin:0 0 12px}
 .small{font-size:.85em;color:#4b5777}
 .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 .btn{font:700 clamp(15px,2vw,20px) var(--display);border:0;border-radius:14px;padding:9px 22px;cursor:pointer;background:var(--berry);color:#fff;box-shadow:0 5px 0 #8f2121}
@@ -75,6 +81,7 @@ canvas#game{display:block;width:100%;height:100%;touch-action:none}
 .pick{display:flex;flex-direction:column;align-items:center;gap:2px;background:#f4f7fc;border:3px solid transparent;border-radius:14px;padding:4px 8px 6px;cursor:pointer;font:700 clamp(12px,1.5vw,15px) var(--display);color:var(--ink)}
 .pick[aria-pressed="true"]{border-color:var(--pine);background:#e5f5ea}
 .pick canvas{width:clamp(48px,7vw,74px);height:auto;aspect-ratio:110/130}
+.pick small{display:block;font-weight:600;font-size:.72em;opacity:.75;line-height:1.1}
 .keys{display:inline-block;background:#dfe7f5;border-radius:6px;padding:0 6px;font-weight:700}
 #pad{display:none;justify-content:space-between;align-items:center;gap:12px;user-select:none;-webkit-user-select:none}
 #pad.on{display:flex}
@@ -109,7 +116,7 @@ canvas#game{display:block;width:100%;height:100%;touch-action:none}
       <div class="portrait"><svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="#ffe9d6"/><path d="M22 44 Q30 6 66 10 Q86 14 84 30 L78 44Z" fill="#d23a3a"/><circle cx="86" cy="30" r="8" fill="#fff"/><rect x="18" y="40" width="64" height="12" rx="6" fill="#fff"/><circle cx="50" cy="60" r="20" fill="#f6cfa8"/><circle cx="42" cy="58" r="2.6" fill="#2a1b14"/><circle cx="58" cy="58" r="2.6" fill="#2a1b14"/><circle cx="50" cy="65" r="4.5" fill="#e98b7b"/><path d="M22 66 Q26 100 50 100 Q74 100 78 66 Q64 76 50 72 Q36 76 22 66Z" fill="#fff"/><path d="M36 71 Q44 66 50 71 Q56 66 64 71 Q56 76 50 73 Q44 76 36 71Z" fill="#fff" stroke="#e3e8f0"/></svg></div>
       <div class="dtext"><b>Chef Weihnachtsmann</b><p id="dline"></p><div class="row"><span class="hint">Leertaste oder Enter</span><button class="btn green" id="dnext" type="button">Weiter ▶</button></div></div>
     </div>
-    <div id="fade"></div>
+    <div id="fade"></div><div id="flash"></div>
     <div id="overlay" hidden></div>
   </div>
   <div id="pad">
@@ -232,7 +239,7 @@ function makeGrinch(){
   const hm=mesh(fuzzyGeo(.3,2,.08,12),G1);hm.scale.set(1.08,.9,.95);head.add(hm);
   for(const s of [-1,1]){
     const ear=mesh(new THREE.ConeGeometry(.08,.36,6),G1,.36*s,.1,0);ear.rotation.z=-1.25*s;head.add(ear);
-    head.add(ball(.075,M(0xf5e663,{roughness:.3}),.11*s,.05,.24,1,.85,.6));
+    head.add(ball(.075,M(0xf5e663,{roughness:.3,emissive:0xf5e663,emissiveIntensity:1.1}),.11*s,.05,.24,1,.85,.6));
     head.add(ball(.032,M(0x111111),.12*s,.05,.285));
     const br=mesh(new THREE.BoxGeometry(.16,.04,.05),dk,.11*s,.15,.255);br.rotation.z=-.4*s;head.add(br);}
   head.add(ball(.04,G2,0,-.02,.29));
@@ -380,6 +387,24 @@ function makeSleigh(){
   return {g,deer,seats:[new THREE.Vector3(.25,.55,.32),new THREE.Vector3(.25,.55,-.32)],sack};
 }
 function animDeer(sl,t,speed=1){sl.deer.forEach((r,i)=>{r.legs.forEach((l,k)=>l.rotation.z=Math.sin(t*10*speed+k*1.6+i)*.5);r.head.rotation.z=Math.sin(t*5+i)*.06;});}
+function makePerson(i){
+  const robes=[0x6a8fd0,0xd07a9a,0x8fbf6a,0xd0b06a,0x9a7ad0],skins=[0xf6cfa8,0xe0b088,0xc08a60,0xf3d9c0];
+  const g=new THREE.Group(),skin=M(skins[i%4]),robe=M(robes[i%5],{roughness:.9}),capC=M([0xd23a3a,0x2f6fd0,0x2f9a52][i%3]),white=M(0xffffff);
+  const legs=[],arms=[];
+  for(const s of [-1,1]){const pv=new THREE.Group();pv.position.set(.13*s,.45,0);pv.add(mesh(new THREE.CylinderGeometry(.08,.08,.4,8),robe,0,-.2,0));pv.add(ball(.1,M(0x7a4a2a),0,-.42,.06,1,.6,1.5));g.add(pv);legs.push(pv);}
+  g.add(mesh(new THREE.CylinderGeometry(.26,.42,1.05,14),robe,0,.95,0));
+  for(let k=0;k<3;k++)g.add(ball(.035,white,0,1.25-k*.2,.3,1,1,1,true));
+  for(const s of [-1,1]){const pv=new THREE.Group();pv.position.set(.33*s,1.35,0);pv.add(mesh(new THREE.CylinderGeometry(.07,.06,.55,8),robe,0,-.27,0));pv.add(ball(.075,skin,0,-.57,0));pv.rotation.z=.15*s;g.add(pv);arms.push(pv);}
+  const head=new THREE.Group();head.position.y=1.72;g.add(head);head.add(ball(.27,skin,0,0,0));
+  for(const s of [-1,1]){head.add(ball(.035,M(0x2a1b14),.09*s,.03,.24));head.add(ball(.05,M(0xf08a8a),.15*s,-.06,.2,1,.7,.4));}
+  head.add(ball(.05,skin,0,-.02,.27));const sm=smile(.06,.012,M(0x8a3b2a));sm.rotation.z=Math.PI;sm.position.set(0,-.1,.24);head.add(sm);
+  const cap=new THREE.Group();cap.position.set(0,.15,0);cap.rotation.z=.35;head.add(cap);cap.add(mesh(new THREE.ConeGeometry(.27,.6,14),capC,0,.28,0));cap.add(ball(.08,white,0,.6,0));
+  const candle=new THREE.Group();candle.position.set(0,-.62,.1);arms[1].add(candle);candle.add(mesh(new THREE.CylinderGeometry(.13,.13,.03,12),M(0xf2c14e,{metalness:.5}),0,0,0));candle.add(mesh(new THREE.CylinderGeometry(.04,.04,.22,8),white,0,.12,0));candle.add(ball(.04,E(0xffd060,2),0,.27,0,1,1.6,1,true));const cg=glow(0xffc860,1.1,.8);cg.position.y=.28;candle.add(cg);
+  arms[1].rotation.x=-.9;
+  return {g,legs,arms,head};
+}
+function makeElfHero(variant){const e=makeElf(variant?3:1);const g=new THREE.Group();e.g.scale.setScalar(1.08);g.add(e.g);return {g,legs:e.legs,arms:e.arms,head:e.head};}
+const ELFNAME='Lio';
 function makeElf(i){
   const cols=[0x2f9a52,0x2f6fd0,0xd23a3a,0x9a6fc9,0xe08a2f,0x2fb0b0];
   const g=new THREE.Group(),skin=M(0xf6cfa8),c=M(cols[i%6]),hatC=M(cols[(i+2)%6]),white=M(0xffffff);
@@ -402,6 +427,7 @@ let parts=[],labels=[],snow=null,stars=null,stage=null;
 const labelLayer=document.getElementById('labels');
 function clearScene(){
   dialogOpen=false;dQueue=[];dDone=null;bannerT=0;const bn=document.getElementById('banner');if(bn)bn.classList.remove('on');const dg=document.getElementById('dialog');if(dg)dg.hidden=true;
+  spookyOn=false;flick=[];
   while(scene.children.length)scene.remove(scene.children[0]);
   labels.forEach(l=>l.el.remove());labels=[];parts=[];snow=null;stars=null;scene.fog=null;
 }
@@ -460,7 +486,7 @@ function ctl(i){
   const k=i===0?KEYS.p1:KEYS.p2,o=KEYS.p2,one=G.players===1&&i===0;
   const has=n=>k[n].some(c=>down.has(c))||(one&&o[n].some(c=>down.has(c)));
   const hit=n=>k[n].some(c=>hits.has(c))||(one&&o[n].some(c=>hits.has(c)));
-  return {x:(has('right')?1:0)-(has('left')?1:0),z:(has('down')?1:0)-(has('up')?1:0),act:hit('act')};
+  return {x:(has('right')?1:0)-(has('left')?1:0),z:(has('down')?1:0)-(has('up')?1:0),act:hit('act'),hold:has('act')};
 }
 const pad=document.getElementById('pad');
 try{if(matchMedia('(pointer: coarse)').matches||'ontouchstart' in window)pad.classList.add('on');}catch(e){}
@@ -498,6 +524,19 @@ function advanceDialog(){if(!dialogOpen)return;if(dQueue.length){dline.textConte
 document.getElementById('dnext').onclick=advanceDialog;
 function show(html){overlay.innerHTML=`<div class="panel">${html}</div>`;overlay.hidden=false;mode='menu';const b=overlay.querySelector('[data-primary]');if(b)setTimeout(()=>{try{b.focus({preventScroll:true});}catch(e){}},60);}
 function hideOverlay(){overlay.hidden=true;overlay.innerHTML='';}
+/* ---------- the Grinch's secret plan (shown before each round) ---------- */
+const PLANS={
+  p1:[{k:'fast',t:'Heute renne ich SUPERSCHNELL durchs Dorf! Mir läuft keiner davon!'},{k:'folks',t:'Ich habe alle Dorfbewohner aufgeweckt! Die gucken heute GANZ OFT aus der Tür!'}],
+  work:[{k:'elf',t:'Psst! Ich verkleide mich als ELF und klaue eure Geschenke aus dem Regal! Mich erkennt keiner … außer vielleicht an meinen grünen Händen. Und bloß nicht hingehen und BUH rufen!'}],
+  p2:[{k:'often',t:'Heute Nacht komme ich GANZ OFT! Ihr kriegt keine Pause!'},{k:'dark',t:'Heute Nacht mache ich das LICHT AUS! Im Dunkeln seht ihr nur meine Augen leuchten!'}],
+  cave:[{k:'awake',t:'Heute schlafe ich GAR NICHT! Ich passe die ganze Zeit auf meine Spielzeuge auf!'},{k:'fast',t:'Heute bin ich in meiner Höhle doppelt so flink! Hihi!'}],
+  p3:[{k:'snow',t:'An Heiligabend werfe ich DOPPELT so viele Schneebälle! Bäm, bäm, bäm!'}]};
+let plan={key:'',k:''};
+function planNote(key){const o=pick(PLANS[key]);plan={key,k:o.k};
+  show(`<p class="eyebrow">Gefunden: ein grüner Zettel!</p>${IC.ghost}<h2>Grinchs geheimer Plan</h2><p class="plan">„${o.t}“</p><p class="sig">– Mr. Grinch</p><button class="btn" data-primary>Oh nein! Das schaffen wir trotzdem!</button>`);
+  overlay.querySelector('.panel').classList.add('note');
+  overlay.querySelector('[data-primary]').onclick=()=>{hideOverlay();mode='play';hits.clear();SFX.bells();};
+  tone(196,.25,'sawtooth',.03,.8);tone(147,.35,'sawtooth',.03,.7,.18);}
 
 /* ================= game state ================= */
 const G={players:1,chars:['elfin','ginger'],round:1,letters:0,toys:0,stars:0};
@@ -507,15 +546,15 @@ function createPlayers(){
   PL=[];
   for(let i=0;i<G.players;i++){
     const ch=G.chars[i],variant=i===1&&G.players===2&&G.chars[0]===G.chars[1];
-    const m=ch==='elfin'?makeElfin(variant):makeGinger(variant);
+    const m=ch==='elfin'?makeElfin(variant):ch==='elf'?makeElfHero(variant):makeGinger(variant);
     const ring=new THREE.Mesh(new THREE.RingGeometry(.42,.54,30),new THREE.MeshBasicMaterial({color:i?0x4fe0ff:0xf2c14e,transparent:true,opacity:.9,depthWrite:false}));
     ring.rotation.x=-Math.PI/2;ring.position.y=.04;m.g.add(ring);
     const ice=mesh(new THREE.BoxGeometry(.9,1.5,.9),new THREE.MeshStandardMaterial({color:0xbfe9ff,transparent:true,opacity:.55,roughness:.1,metalness:.1}),0,.75,0,false);ice.visible=false;m.g.add(ice);
     PL.push({i,ch,m,ring,ice,pos:new THREE.Vector3(),face:0,walk:0,stun:0,frozen:0,hidden:false,sus:0,susL:null});
   }
 }
-function placePlayer(p,x,z,face=0){if(p.carry){p.m.g.remove(p.carry);p.carry=null;}scene.add(p.m.g);p.m.g.scale.setScalar(1);p.pos.set(x,0,z);p.face=face;p.stun=0;p.frozen=0;p.hidden=false;p.sus=0;p.susL=null;p.ring.visible=true;p.ice.visible=false;p.m.g.rotation.set(0,face,0);p.m.g.position.copy(p.pos);}
-function addTags(){if(G.players<2)return;PL.forEach(p=>tag(()=>_t.copy(p.m.g.position).add(_up.set(0,1.95*p.m.g.scale.y,0)),`Spieler ${p.i+1}`,'tag'+(p.i?' p2':'')));}
+function placePlayer(p,x,z,face=0){if(p.carry){p.m.g.remove(p.carry);p.carry=null;}scene.add(p.m.g);p.m.g.scale.setScalar(1);p.pos.set(x,0,z);p.face=face;p.stun=0;p.frozen=0;p.hidden=false;p.sneak=false;p.near=false;p.sus=0;p.susL=null;p.ring.visible=true;p.ice.visible=false;p.m.g.rotation.set(0,face,0);p.m.g.position.copy(p.pos);}
+function addTags(){PL.forEach(p=>tag(()=>p.m.g.getWorldPosition(_t).add(_up.set(0,1.95*p.m.g.scale.y,0)),heroName(p.i),'tag'+(p.i?' p2':'')));}
 const _t=new THREE.Vector3(),_up=new THREE.Vector3();
 function animPlayer(p,moving){
   const s=moving?Math.sin(p.walk)*.7:0;p.m.legs[0].rotation.x=s;p.m.legs[1].rotation.x=-s;p.m.arms[0].rotation.x=-s*.8;p.m.arms[1].rotation.x=s*.8;
@@ -523,11 +562,23 @@ function animPlayer(p,moving){
   const sy=p.hidden?.72:1;p.m.g.scale.set(1,sy+(1-sy)*0,1);p.m.g.scale.y=sy;
   p.ice.visible=p.frozen>0;
 }
-function movePlayers(dt,speed,b,cols){
+let spookyOn=false,spookyT=4,flick=[];
+function spooky(){spookyOn=true;spookyT=rand(2,4);}
+function addFlick(l){flick.push({l,base:l.intensity,off:0});}
+function spookySound(){if(!spookyOn)return;const k=Math.floor(Math.random()*5),at=camLook.clone().add(new THREE.Vector3(rand(-9,9),3,rand(-7,-2)));
+  if(k===0){tone(420,.3,'sine',.05,.92);tone(380,.5,'sine',.05,.9,.4);say(at,'Huhuu …','z',2);}
+  else if(k===1){tone(110,1.8,'sawtooth',.012,1.9);tone(150,1.5,'triangle',.02,.7,.3);}
+  else if(k===2){for(let i=0;i<5;i++)tone(720+i*35,.07,'square',.018,1,i*.12);say(at,'Hihihi …','g',1.6);}
+  else if(k===3){tone(170,.6,'sawtooth',.025,.55);}
+  else{tone(300,1.3,'sine',.035,1.6);tone(470,1.1,'sine',.03,.7,1.3);say(at,'Auuuuh …','z',2.2);}}
+let shakeA=0;function scare(k=1){shakeA=Math.max(shakeA,.35*k);const f=document.getElementById('flash');if(f){f.style.transition='none';f.style.opacity=String(.85*k);requestAnimationFrame(()=>{f.style.transition='opacity .7s';f.style.opacity='0';});}}
+function hurryClock(){let last=99;return t=>{const s=Math.ceil(t);if(s<last&&s<=10&&s>0){if(last>10)showBanner('Schnell! Nur noch 10 Sekunden!',2);tone(s<=3?1100:880,.06,'square',.035);last=s;const f=hud.querySelector('.hbar');if(f)f.classList.add('hurry');}};}
+function closeCalls(){for(const p of PL){if(p.stun>0||p.frozen>0){p.near=false;continue;}if((p.sus||0)>.65)p.near=true;else if(p.near&&(p.sus||0)<=.02){p.near=false;say(p.pos.clone().setY(2.4),pick(['Puh, knapp!','Uff, das war knapp!','Glück gehabt!']),'b',1.5);}}}
+function movePlayers(dt,speed,b,cols){closeCalls();
   for(const p of PL){let moving=false;
     if(p.stun>0)p.stun-=dt;if(p.frozen>0)p.frozen-=dt;
     if(p.stun<=0&&p.frozen<=0){const c=ctl(p.i);let x=c.x,z=c.z;const l=Math.hypot(x,z);
-      if(l>0){x/=l;z/=l;moving=true;const sp=speed*(p.carry?.78:1);p.pos.x+=x*sp*dt;p.pos.z+=z*sp*dt;p.face=lerpAng(p.face,Math.atan2(x,z),Math.min(1,dt*14));p.walk+=dt*11;}}
+      if(l>0){x/=l;z/=l;moving=true;const sp=speed*(p.carry?.78:1)*(p.sneak?.45:1);p.pos.x+=x*sp*dt;p.pos.z+=z*sp*dt;p.face=lerpAng(p.face,Math.atan2(x,z),Math.min(1,dt*14));p.walk+=dt*11;}}
     collide(p.pos,.4,cols);p.pos.x=clamp(p.pos.x,b[0],b[1]);p.pos.z=clamp(p.pos.z,b[2],b[3]);
     animPlayer(p,moving);}
   if(PL.length===2){const a=PL[0].pos,c=PL[1].pos,dd=d2(a,c);if(dd<.8&&dd>1e-3){const k=(.8-dd)/2/dd;const dx=(a.x-c.x)*k,dz=(a.z-c.z)*k;a.x+=dx;a.z+=dz;c.x-=dx;c.z-=dz;}}
@@ -541,36 +592,49 @@ function followCam(dt,off,bx,bz,snapNow){
   const k=snapNow?1:Math.min(1,dt*3.5);camPos.lerp(want,k);camLook.lerp(mid,k);
   cam.position.copy(camPos);cam.lookAt(camLook);return mid;
 }
-function names(){if(G.players===2)return'ihr zwei';return G.chars[0]==='elfin'?'liebe Elfin':'lieber Lebkuchenmann';}
+function heroName(i){const c=G.chars[i];let n=c==='elfin'?'Lili':c==='elf'?ELFNAME:'Benni';if(i===1&&G.players===2&&G.chars[0]===c)n+=' 2';return n;}
+function teamName(){return G.players===2?heroName(0)+' und '+heroName(1):heroName(0);}
+function names(){if(G.players===2)return teamName();return(G.chars[0]==='elfin'?'liebe ':'lieber ')+heroName(0);}
 function lotsOfSaid(){return G.players===2?'Ihr':'Du';}
 
 /* ================= FACTORY (hub + phase 2) ================= */
 const FX=24,FZ=10;
 function buildFactory(night){
-  const L=env(night?{bg:0x0f0b1e,sky:0x5a6aa8,ground:0x2a1a10,hemi:.38,sun:0x9fb4ff,sunI:.35,sunPos:[6,20,10],sh:30,near:60,far:150}
+  const L=env(night?{bg:0x08060f,sky:0x4a5a98,ground:0x2a1a10,hemi:.26,sun:0x9fb4ff,sunI:.35,sunPos:[6,20,10],sh:30,near:60,far:150}
                    :{bg:0x1f1830,sky:0xfff1d6,ground:0x6b4a2b,hemi:.75,sun:0xffe2b8,sunI:.75,sunPos:[8,24,14],sh:30,near:60,far:150});
   const W=FX*2,D=FZ*2;
-  const apron=mesh(new THREE.PlaneGeometry(W+1,9),new THREE.MeshStandardMaterial({map:planks(night?'#4a3020':'#6a4428','#3a2414',false,6,1.2),roughness:.9}),0,-.01,FZ+4.5,false);apron.rotation.x=-Math.PI/2;scene.add(apron);
-  const floor=mesh(new THREE.PlaneGeometry(W,D),new THREE.MeshStandardMaterial({map:planks('#8a5a34','#5a3a20',false,6,3),roughness:.85}),0,0,0,false);floor.rotation.x=-Math.PI/2;scene.add(floor);
+  const apron=mesh(new THREE.PlaneGeometry(W+12,10),M(night?0x9aa8c8:0xeef4fb,{roughness:1}),0,-.01,FZ+5,false);apron.rotation.x=-Math.PI/2;scene.add(apron);
+  const floor=mesh(new THREE.PlaneGeometry(W,D),gbMat(night?'#9a6232':'#c58548',12,5,{tiles:true}),0,0,0,false);floor.rotation.x=-Math.PI/2;scene.add(floor);
   const rug=mesh(new THREE.CircleGeometry(4,40),M(0xa52a2a),-17,.02,-3,false);rug.rotation.x=-Math.PI/2;scene.add(rug);
-  for(let i=0;i<14;i++){const x=-FX+1.7*i+1;const fence=mesh(new THREE.BoxGeometry(.18,1,.18),M(0xd23a3a),x*1.0,.5,FZ+.3);scene.add(fence);const cap=ball(.13,M(0xffffff),x,1.05,FZ+.3,1,1,1,true);scene.add(cap);}
-  for(let i=14;i<29;i++){const x=-FX+1.7*i+1;if(x>FX)break;scene.add(mesh(new THREE.BoxGeometry(.18,1,.18),M(0xd23a3a),x,.5,FZ+.3));scene.add(ball(.13,M(0xffffff),x,1.05,FZ+.3,1,1,1,true));}
-  scene.add(mesh(new THREE.BoxGeometry(W,.12,.1),M(0x2f9a52),0,.8,FZ+.3));
+  for(let i=0;i<29;i++){const x=-FX+1.7*i+1;if(x>FX)break;if(Math.abs(x)<2.2)continue;scene.add(mesh(new THREE.CylinderGeometry(.1,.1,1,10),stripeMat,x,.5,FZ+.3));scene.add(ball(.14,ICING,x,1.05,FZ+.3,1,1,1,true));}
+  for(const sx of [-1,1])scene.add(mesh(new THREE.BoxGeometry(FX-2.2,.12,.1),M(0x2f9a52),sx*(FX+2.2)/2,.8,FZ+.3));
+  // gingerbread train station in front of the factory
+  const TZ=FZ+2.9;
+  const plat=mesh(new THREE.BoxGeometry(6.4,.06,1.9),gbMat('#a8642e',2,1,{tiles:true}),0,.03,FZ+1.25,false);scene.add(plat);
+  for(const sx of [-1,1]){scene.add(mesh(new THREE.CylinderGeometry(.14,.14,3.2,10),stripeMat,sx*2.3,1.6,FZ+.35));scene.add(ball(.2,ICING,sx*2.3,3.25,FZ+.35,1,1,1,true));}
+  const stTex=canvasTex(512,128,(x,w,h)=>{x.fillStyle='#d23a3a';x.fillRect(0,0,w,h);x.fillStyle='#fff';x.font='700 56px Fredoka, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('Lebkuchenbahn',w/2,h/2+4);});
+  const stS=new THREE.Group();stS.position.set(0,2.85,FZ+.35);stS.rotation.x=-.85;scene.add(stS);stS.add(mesh(new THREE.BoxGeometry(4.8,.95,.12),ICING,0,0,0));stS.add(mesh(new THREE.PlaneGeometry(4.5,.8),new THREE.MeshBasicMaterial({map:stTex}),0,0,.07,false));
+  const trackCurve=new THREE.LineCurve3(new THREE.Vector3(-FX-8,0,TZ),new THREE.Vector3(FX+8,0,TZ));buildTrack(trackCurve);
+  const train=makeTrain();trainLine(train,3.2,TZ);
+  const station=new THREE.Vector3(0,0,FZ+1.15);
   const rugB=mesh(new THREE.RingGeometry(3.4,3.7,40),M(0xf2c14e),-17,.03,-3,false);rugB.rotation.x=-Math.PI/2;scene.add(rugB);
-  const wallM=new THREE.MeshStandardMaterial({map:planks(night?'#5a3a2a':'#8a5a3a','#4a2a1a',true,10,2),roughness:.9});
+  const wallM=gbMat(night?'#8a5228':'#b8733a',8,1.6);
   scene.add(mesh(new THREE.BoxGeometry(W+.8,7,.4),wallM,0,3.5,-FZ-.2));
   scene.add(mesh(new THREE.BoxGeometry(.4,7,D),wallM,-FX-.2,3.5,0));
   scene.add(mesh(new THREE.BoxGeometry(.4,7,FZ+2),wallM,FX+.2,3.5,(-FZ+2)/2));
   scene.add(mesh(new THREE.BoxGeometry(.4,2.5,FZ-2),wallM,FX+.2,5.75,(FZ+2)/2));
   const outside=mesh(new THREE.PlaneGeometry(7,5),new THREE.MeshBasicMaterial({color:night?0x1a2a5a:0x9fc3ef}),FX+1.2,2.3,(FZ+2)/2,false);outside.rotation.y=-Math.PI/2;scene.add(outside);
-  const trimM=M(0xd23a3a);
-  scene.add(mesh(new THREE.BoxGeometry(W+.8,.3,.5),trimM,0,7,-FZ-.1));
+  scene.add(mesh(new THREE.BoxGeometry(W+.8,.35,.55),ICING,0,7,-FZ-.1));icingDrips(scene,-FX,FX,6.85,-FZ+.18,.7);
+  for(let x=-FX+2;x<FX;x+=4){const gd=gumdrop(GIFTCOLS[Math.abs(Math.round(x/4))%6],1);gd.position.set(x,7.17,-FZ-.1);scene.add(gd);}
+  // hint at the 2nd floor: the train track climbs up outside the right wall
+  const upT=canvasTex(512,128,(x,w,h)=>{x.fillStyle='#d23a3a';x.fillRect(0,0,w,h);x.fillStyle='#fff';x.font='700 50px Fredoka, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('2. Stock: Wohnung ↑',w/2,h/2+4);});
+  scene.add(mesh(new THREE.PlaneGeometry(4,1),new THREE.MeshBasicMaterial({map:upT}),6,5.5,-FZ+.03,false));
   for(const x of [-12,0,12]){
     const wg=new THREE.Group();wg.position.set(x,4.2,-FZ+.05);scene.add(wg);
     const disk=mesh(new THREE.CircleGeometry(1.5,36),new THREE.MeshBasicMaterial({color:night?0x203a7a:0x9fd0ff}),0,0,0,false);wg.add(disk);
     if(x===0){const mn=mesh(new THREE.CircleGeometry(.35,24),new THREE.MeshBasicMaterial({color:0xf3f0c8}),.6,.5,.01,false);wg.add(mn);}
-    const fr=mesh(new THREE.TorusGeometry(1.5,.14,10,36),M(0x5a3a22),0,0,.05);wg.add(fr);
-    wg.add(mesh(new THREE.BoxGeometry(.12,3,.1),M(0x5a3a22),0,0,.05));wg.add(mesh(new THREE.BoxGeometry(3,.12,.1),M(0x5a3a22),0,0,.05));
+    const fr=mesh(new THREE.TorusGeometry(1.5,.16,10,36),ICING,0,0,.05);wg.add(fr);
+    wg.add(mesh(new THREE.BoxGeometry(.12,3,.1),ICING,0,0,.05));wg.add(mesh(new THREE.BoxGeometry(3,.12,.1),ICING,0,0,.05));
     const wl=mesh(new THREE.TorusGeometry(1.75,.09,8,36),M(0x1f6b46),0,0,.08);wg.add(wl);
   }
   const bulbs=[];const bcols=[0xff4a4a,0xffd84a,0x4fe0ff,0x6bff7a,0xff8ad8];
@@ -589,7 +653,7 @@ function buildFactory(night){
   const santa=makeSanta();santa.g.position.set(-17,0,-7.7);scene.add(santa.g);
   const sign=new THREE.Group();sign.position.set(-17,5,-FZ+.25);scene.add(sign);
   sign.add(mesh(new THREE.BoxGeometry(4.4,1.1,.12),M(0x2f9a52)));
-  const signTex=canvasTex(512,128,(x,w,h)=>{x.fillStyle='#2f9a52';x.fillRect(0,0,w,h);x.fillStyle='#fff';x.font='700 64px Fredoka, Baloo 2, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('Chef-Büro',w/2,h/2+4);});
+  const signTex=canvasTex(512,128,(x,w,h)=>{x.fillStyle='#2f9a52';x.fillRect(0,0,w,h);x.fillStyle='#fff';x.font='700 64px Fredoka, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('Chef-Büro',w/2,h/2+4);});
   const sp=mesh(new THREE.PlaneGeometry(4.2,1.0),new THREE.MeshBasicMaterial({map:signTex}),0,0,.07,false);sign.add(sp);
   // toy machine
   const mach=new THREE.Group();mach.position.set(-7,0,-8.3);scene.add(mach);
@@ -610,7 +674,7 @@ function buildFactory(night){
   const shelf=new THREE.Group();shelf.position.set(13,0,-3.6);scene.add(shelf);
   shelf.add(mesh(new THREE.BoxGeometry(14,.12,1.5),M(0x8a5a34),0,1.0,0));
   for(const x of [-6.8,-2.3,2.3,6.8])shelf.add(mesh(new THREE.BoxGeometry(.15,1,1.4),M(0x5a3a22),x,.5,0));
-  const shelfSign=canvasTex(512,96,(x,w,h)=>{x.fillStyle='#f2c14e';x.fillRect(0,0,w,h);x.fillStyle='#5a3a22';x.font='700 54px Fredoka, Baloo 2, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('Fertige Spielzeuge',w/2,h/2+3);});
+  const shelfSign=canvasTex(512,96,(x,w,h)=>{x.fillStyle='#f2c14e';x.fillRect(0,0,w,h);x.fillStyle='#5a3a22';x.font='700 54px Fredoka, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('Fertige Spielzeuge',w/2,h/2+3);});
   const ss=mesh(new THREE.PlaneGeometry(4,.75),new THREE.MeshBasicMaterial({map:shelfSign}),0,1.6,.6,false);shelf.add(ss);
   colliders.push(box(13,-3.6,14,1.5));
   // elf work tables
@@ -636,8 +700,8 @@ function buildFactory(night){
   door(-FX+.05,2,Math.PI/2);door(FX-.05,-6,-Math.PI/2);
   // hanging lamps
   const lamps=[];for(const [x,z] of [[-12,0],[0,0],[12,0],[-12,-6],[12,3]]){const lg2=new THREE.Group();lg2.position.set(x,5.6,z);scene.add(lg2);lg2.add(mesh(new THREE.CylinderGeometry(.02,.02,1.6),M(0x222222),0,.8,0,false));lg2.add(mesh(new THREE.ConeGeometry(.5,.4,16,1,true),M(0x2f9a52,{side:THREE.DoubleSide}),0,0,0,false));const b=ball(.18,E(0xffe2a0,night?.4:1.2),0,-.1,0,1,1,1,true);b.castShadow=false;lg2.add(b);
-    const pl=new THREE.PointLight(0xffd9a0,night?.25:.75,13,1.4);pl.position.set(x,4.8,z);scene.add(pl);lamps.push(pl);}
-  return {L,colliders,crates,santa,elves,gears,mlights,bulbs,convToys,belt,tree,shelf,sleighSpot:new THREE.Vector3(19,0,5)};
+    const pl=new THREE.PointLight(0xffd9a0,night?.25:.75,13,1.4);pl.position.set(x,4.8,z);scene.add(pl);lamps.push(pl);if(night)addFlick(pl);}
+  return {L,lamps,colliders,crates,santa,elves,gears,mlights,bulbs,convToys,belt,tree,shelf,sleighSpot:new THREE.Vector3(19,0,5),train,trackCurve,station,TZ};
 }
 function animFactory(F,dt,night){
   F.gears.forEach((g,i)=>g.rotation.z+=dt*(i%2?-1.5:1.2));
@@ -649,43 +713,365 @@ function animFactory(F,dt,night){
     else{e.t+=dt*.08;const k=(Math.sin(e.t*TAU)+1)/2;const x=e.a[0]+(e.b[0]-e.a[0])*k,z=e.a[1]+(e.b[1]-e.a[1])*k;const dir=Math.cos(e.t*TAU)>=0?1:-1;m.g.position.set(x,Math.abs(Math.sin(T*10))*.05,z);m.g.rotation.y=Math.atan2((e.b[0]-e.a[0])*dir,(e.b[1]-e.a[1])*dir);const s=Math.sin(T*10)*.6;m.legs[0].rotation.x=s;m.legs[1].rotation.x=-s;}});
 }
 
-function factoryCam(dt,snap){return followCam(dt,new THREE.Vector3(0,12,11.5),[-13,13],[-4,4],snap);}
+function factoryCam(dt,snap,zmax=4){return followCam(dt,new THREE.Vector3(0,12,11.5),[-13,13],[-4,zmax],snap);}
+
+/* ---------- LEBKUCHEN: textures, train, track ---------- */
+function gingerTex(base,rx,ry,o={}){return canvasTex(256,256,(x,w,h)=>{x.fillStyle=base;x.fillRect(0,0,w,h);
+  for(let i=0;i<700;i++){x.fillStyle=Math.random()<.6?`rgba(70,35,10,${(Math.random()*.18).toFixed(2)})`:`rgba(255,225,180,${(Math.random()*.12).toFixed(2)})`;x.fillRect(Math.random()*w,Math.random()*h,2+Math.random()*2,2);}
+  x.strokeStyle='#fffaf0';x.lineWidth=o.thin?4:6;x.lineCap='round';x.lineJoin='round';
+  if(o.plain)return;
+  if(o.tiles){for(let k=0;k<2;k++){x.beginPath();for(let X=0;X<=w;X+=4)x.lineTo(X,k*128+3+Math.sin(X/9)*2);x.stroke();x.beginPath();for(let Y=0;Y<=h;Y+=4)x.lineTo(k*128+3+Math.sin(Y/9)*2,Y);x.stroke();}
+    x.fillStyle='#fffaf0';for(const [a,b] of [[67,67],[195,195],[67,195],[195,67]]){for(let i=0;i<8;i++){const an=i/8*TAU;x.beginPath();x.arc(a+Math.cos(an)*15,b+Math.sin(an)*15,3.5,0,TAU);x.fill();}}
+    return;}
+  for(let r=0;r<4;r++){const y=r*64;x.beginPath();for(let X=0;X<=w;X+=4)x.lineTo(X,y+3+Math.sin(X/10)*2.5);x.stroke();
+    const off=r%2?64:0;for(let c=0;c<2;c++){const X=off+c*128;x.beginPath();x.moveTo(X+3,y);x.lineTo(X+3,y+64);x.stroke();}}
+  const cols=['#e94343','#4fd06a','#4f9be9','#f2c14e','#ff8ad8'];
+  for(let r=0;r<4;r++)for(let c=0;c<2;c++){const cx=(r%2?64:0)+c*128+64,cy=r*64+35,col=cols[(r*3+c)%5];
+    for(const X of [cx,cx-256]){x.fillStyle='rgba(0,0,0,.25)';x.beginPath();x.arc(X+1.5,cy+2,8,0,TAU);x.fill();x.fillStyle=col;x.beginPath();x.arc(X,cy,8,0,TAU);x.fill();x.fillStyle='rgba(255,255,255,.6)';x.beginPath();x.arc(X-2.5,cy-2.5,2.5,0,TAU);x.fill();}}
+},rx,ry);}
+const gbMat=(base,rx,ry,o)=>new THREE.MeshStandardMaterial({map:gingerTex(base,rx,ry,o),roughness:.85});
+const ICING=M(0xfffaf0,{roughness:.45});
+const pepTex=canvasTex(128,128,(x,w)=>{x.fillStyle='#fff';x.beginPath();x.arc(64,64,63,0,TAU);x.fill();for(let i=0;i<8;i++){x.fillStyle=i%2?'#e23a3a':'#fff';x.beginPath();x.moveTo(64,64);x.arc(64,64,60,i/8*TAU,(i+.5)/8*TAU);x.closePath();x.fill();}x.fillStyle='#e23a3a';x.beginPath();x.arc(64,64,10,0,TAU);x.fill();});
+const pepMat=new THREE.MeshStandardMaterial({map:pepTex,roughness:.4});
+function icingDrips(parent,x0,x1,y,z,step=.7,axis='x'){for(let v=x0;v<=x1;v+=step){const s=rand(.7,1.3);const b=ball(.17,ICING,axis==='x'?v:z,y-.05*s,axis==='x'?z:v,1,1.4*s,1,true);b.castShadow=false;parent.add(b);}}
+function gumdrop(col,s=1){const g=mesh(new THREE.SphereGeometry(.28*s,14,10,0,TAU,0,Math.PI/2),M(col,{roughness:.3}),0,0,0);return g;}
+function makeTrain(){
+  const gm=gbMat('#b36a32',1,1,{thin:true}),dark=M(0x4a2410),parts=[];
+  const wheel=(g,x,z,r=.3)=>{const w=mesh(new THREE.CylinderGeometry(r,r,.14,22),[M(0xd23a3a),pepMat,pepMat],x,r,z);w.rotation.x=Math.PI/2;g.add(w);return w;};
+  const wheels=[];
+  const part=()=>{const o=new THREE.Group(),inn=new THREE.Group();inn.rotation.y=-Math.PI/2;o.add(inn);o.userData.inner=inn;scene.add(o);parts.push(o);return inn;};
+  // locomotive (built along +x)
+  const L=part();
+  L.add(mesh(new THREE.BoxGeometry(2.6,.25,1.1),dark,0,.5,0));
+  const boil=mesh(new THREE.CylinderGeometry(.48,.48,1.6,20),gm,.35,1.05,0);boil.rotation.z=Math.PI/2;L.add(boil);
+  for(const x of [-.25,.35,.95]){const r=mesh(new THREE.TorusGeometry(.49,.06,8,24),ICING,x,1.05,0);r.rotation.y=Math.PI/2;L.add(r);}
+  const face=mesh(new THREE.CircleGeometry(.44,24),pepMat,1.16,1.05,0);face.rotation.y=Math.PI/2;L.add(face);
+  L.add(mesh(new THREE.CylinderGeometry(.2,.14,.6,14),dark,.8,1.75,0));L.add(ball(.24,M(0xe23a3a,{roughness:.3}),.8,2.1,0,1,.7,1));
+  const lamp=ball(.13,E(0xffe08a,1.3),1.2,1.55,0,1,1,1,true);lamp.castShadow=false;L.add(lamp);
+  L.add(mesh(new THREE.BoxGeometry(1.05,1.3,1.15),gm,-.75,1.25,0));
+  L.add(mesh(new THREE.BoxGeometry(1.35,.16,1.4),ICING,-.75,1.96,0));
+  for(const z of [-.58,.58])L.add(mesh(new THREE.BoxGeometry(.5,.45,.02),E(0xffd772,.5),-.75,1.45,z));
+  [[-1.1,0xe94343],[-.4,0x4fd06a]].forEach(([x,c])=>{const g=gumdrop(c,.8);g.position.set(x,2.04,0);L.add(g);});
+  for(const x of [-.85,0,.85])for(const z of [-.6,.6])wheels.push(wheel(L,x,z));
+  // two wagons
+  for(let k=0;k<2;k++){const W=part();
+    W.add(mesh(new THREE.BoxGeometry(1.9,.22,1.1),dark,0,.5,0));
+    W.add(mesh(new THREE.BoxGeometry(1.9,.55,.1),gm,0,.88,.52));W.add(mesh(new THREE.BoxGeometry(1.9,.55,.1),gm,0,.88,-.52));
+    W.add(mesh(new THREE.BoxGeometry(.1,.55,1.1),gm,.92,.88,0));W.add(mesh(new THREE.BoxGeometry(.1,.55,1.1),gm,-.92,.88,0));
+    for(const z of [-.52,.52])W.add(mesh(new THREE.BoxGeometry(2,.1,.16),ICING,0,1.18,z));
+    for(const x of [-.6,0,.6]){const g=gumdrop(GIFTCOLS[(x*5+k*2+9)%6|0],.45);g.position.set(x,.92,.58);g.rotation.x=Math.PI/2;W.add(g);}
+    W.add(mesh(new THREE.BoxGeometry(.5,.1,.12),dark,1.15,.5,0));
+    for(const x of [-.55,.55])for(const z of [-.6,.6])wheels.push(wheel(W,x,z,.26));}
+  return {parts,wheels,offs:[0,2.6,4.9],L:0};
+}
+function trainLine(tr,x,z){tr.parts.forEach((p,i)=>{p.position.set(x-tr.offs[i],0,z);p.rotation.set(0,Math.PI/2,0);});}
+function trainOnCurve(tr,curve,s,dir){const L=curve.getLength();
+  tr.parts.forEach((p,i)=>{const u=clamp(s-dir*tr.offs[i]/L,0,1),u2=clamp(u+dir*.004,0,1);p.position.copy(curve.getPointAt(u));
+    if(Math.abs(u2-u)>1e-5){const q=curve.getPointAt(u2);p.lookAt(q);}else{const q=curve.getPointAt(clamp(u-dir*.004,0,1));p.lookAt(p.position.clone().multiplyScalar(2).sub(q));}});}
+function spinWheels(tr,d){tr.wheels.forEach(w=>w.rotation.y-=d*3.3);}
+function seatInTrain(tr){PL.forEach((p,i)=>{const m=p.m.g,inn=tr.parts[1+(i%2)].userData.inner;inn.add(m);m.position.set(0,.55,0);m.rotation.set(0,Math.PI/2,0);m.scale.setScalar(.8);p.ring.visible=false;p.ice.visible=false;p.m.legs.forEach(l=>l.rotation.x=-1.4);p.m.arms.forEach((a,k)=>a.rotation.x=k?-2.6:-.5);});}
+function buildTrack(curve,parent=scene){
+  const L=curve.getLength(),n=Math.max(20,Math.round(L*3)),up=new THREE.Vector3(0,1,0);
+  for(const side of [-1,1]){const pts=[];for(let i=0;i<=n;i++){const u=i/n,p=curve.getPointAt(u),t=curve.getTangentAt(u),lat=new THREE.Vector3().crossVectors(t,up).normalize();pts.push(p.clone().addScaledVector(lat,side*.6).add(new THREE.Vector3(0,.1,0)));}
+    parent.add(mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),n*2,.06,6),M(0xd23a3a,{roughness:.4}),0,0,0,false));}
+  const sg=new THREE.BoxGeometry(1.6,.1,.34),sm=M(0x8a4a1c);
+  for(let d=.4;d<L;d+=.8){const u=d/L,p=curve.getPointAt(u),t=curve.getTangentAt(u);const s=mesh(sg,sm,p.x,p.y+.03,p.z,false);s.lookAt(p.clone().add(t));s.rotateY(Math.PI/2);parent.add(s);
+    if(p.y>.5&&Math.round(d/.8)%3===0){const h=p.y;const c=mesh(new THREE.CylinderGeometry(.13,.13,h,10),stripeMat,p.x,h/2,p.z);parent.add(c);}}
+}
+function puffs(){const list=[];return{add(pos){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:flakeTex,color:0xffffff,transparent:true,opacity:.8,depthWrite:false}));s.position.copy(pos);s.scale.setScalar(.5);scene.add(s);list.push({s,t:1.4});},
+  upd(dt){for(let i=list.length-1;i>=0;i--){const q=list[i];q.t-=dt;q.s.position.y+=dt*1.4;q.s.scale.multiplyScalar(1+dt*1.2);q.s.material.opacity=Math.max(0,q.t*.55);if(q.t<=0){scene.remove(q.s);list.splice(i,1);}}}};}
+function chimneyPos(tr){return tr.parts[0].userData.inner.localToWorld(new THREE.Vector3(.8,2.3,0));}
+
+/* ---------- train ride along the outside of the gingerbread factory ---------- */
+function buildGingerHouse(){
+  const g=new THREE.Group();scene.add(g);
+  const W=18,D=10,H1=5,H2=4.6,H=H1+H2;
+  const body=mesh(new THREE.BoxGeometry(W,H,D),gbMat('#b8733a',5,3),0,H/2,0);g.add(body);
+  g.add(mesh(new THREE.BoxGeometry(W+.5,.4,D+.5),ICING,0,H1,0));
+  icingDrips(g,-W/2,W/2,H1-.15,D/2+.25,.6);
+  g.add(mesh(new THREE.BoxGeometry(W+.6,.3,D+.6),ICING,0,H,0));
+  const tri=new THREE.Shape();tri.moveTo(-D/2-.6,0);tri.lineTo(D/2+.6,0);tri.lineTo(0,4);tri.closePath();
+  const rg=new THREE.ExtrudeGeometry(tri,{depth:W+1,bevelEnabled:false});rg.translate(0,0,-(W+1)/2);rg.rotateY(Math.PI/2);
+  g.add(mesh(rg,M(0xffffff,{roughness:.9}),0,H,0));
+  icingDrips(g,-W/2-.4,W/2+.4,H-.05,D/2+.55,.55);
+  for(let x=-W/2;x<=W/2;x+=2.2){const gd=gumdrop(GIFTCOLS[Math.abs(Math.round(x))%6],1);gd.position.set(x,H+4,0);g.add(gd);}
+  g.add(mesh(new THREE.BoxGeometry(1.2,2.2,1.2),gbMat('#9a5a2a',1,1,{thin:true}),-5,H+3.4,-1.5));
+  const win=(x,y,z,w,h,ry=0)=>{const wg=new THREE.Group();wg.position.set(x,y,z);wg.rotation.y=ry;g.add(wg);
+    wg.add(mesh(new THREE.PlaneGeometry(w,h),E(0xffcf6a,.9),0,0,0,false));
+    for(const [dx,dy,ww,hh] of [[0,h/2,w+.3,.22],[0,-h/2,w+.3,.22],[-w/2,0,.22,h+.3],[w/2,0,.22,h+.3],[0,0,.1,h],[0,0,w,.1]])wg.add(mesh(new THREE.BoxGeometry(ww,hh,.12),ICING,dx,dy,.06,false));
+    const gl=glow(0xffc870,Math.max(w,h)*1.6,.35);gl.position.z=.3;wg.add(gl);};
+  for(const x of [-6.5,-2.2,6.5])win(x,2.4,D/2+.02,2.2,2.2);
+  win(-6,H1+2.2,D/2+.02,1.8,1.6);win(-1.5,H1+2.2,D/2+.02,1.8,1.6);win(3,H1+2.2,D/2+.02,1.8,1.6);
+  win(W/2+.02,H1+2.3,0,1.6,1.5,Math.PI/2);win(W/2+.02,2.4,1.5,2,2,Math.PI/2);
+  // big door
+  const dr=new THREE.Group();dr.position.set(2.4,0,D/2+.03);g.add(dr);dr.add(mesh(new THREE.BoxGeometry(2.4,3.6,.1),M(0x5a2e14),0,1.8,0));dr.add(mesh(new THREE.TorusGeometry(1.2,.15,8,24,Math.PI),ICING,0,3.6,.06));
+  dr.add(ball(.12,M(0xf2c14e,{metalness:.6}),.8,1.7,.1));const wr=mesh(new THREE.TorusGeometry(.45,.13,8,18),M(0x1f6b46),0,2.7,.1);dr.add(wr);
+  // signs
+  const sign=(text,x,y,z,w,ry=0,col='#2f9a52')=>{const t=canvasTex(512,128,(c,ww,hh)=>{c.fillStyle=col;c.fillRect(0,0,ww,hh);c.fillStyle='#fff';c.font='700 60px Fredoka, sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(text,ww/2,hh/2+4);});
+    const s=mesh(new THREE.PlaneGeometry(w,w/4),new THREE.MeshBasicMaterial({map:t}),x,y,z,false);s.rotation.y=ry;g.add(s);};
+  sign('Weihnachtsfabrik',2.4,4.25,D/2+.05,4.4);
+  sign('Unsere Wohnung',-3.7,H1+3.95,D/2+.05,3,0,'#d23a3a');
+  // balcony with upper station on the right side
+  const bx=W/2+1.6,bz=-3.4,by=H1+.15;
+  g.add(mesh(new THREE.BoxGeometry(3.4,.3,4.4),gbMat('#a8642e',1,1,{tiles:true}),bx,by-.15,bz));
+  for(const z of [bz-2.1,bz+2.1])g.add(mesh(new THREE.CylinderGeometry(.13,.13,by,10),stripeMat,bx+1.4,by/2,z));
+  const updoor=new THREE.Group();updoor.position.set(W/2+.03,by,bz);updoor.rotation.y=Math.PI/2;g.add(updoor);updoor.add(mesh(new THREE.BoxGeometry(1.6,2.6,.1),M(0x5a2e14),0,1.3,0));updoor.add(mesh(new THREE.TorusGeometry(.8,.12,8,20,Math.PI),ICING,0,2.6,.06));
+  return {W,D,H1,bx,bz,by};
+}
+function stageRide(dir,next){
+  clearScene();mode='play';hud.hidden=true;
+  env({bg:0x8fb8e8,sky:0xffffff,ground:0xdfe9f5,hemi:.8,sun:0xfff0d8,sunI:.85,sunPos:[16,28,20],sh:30,near:45,far:140});
+  addSnow(700,60);
+  const gr=mesh(new THREE.PlaneGeometry(220,220),M(0xf1f6fc,{roughness:1}),0,0,0,false);gr.rotation.x=-Math.PI/2;scene.add(gr);
+  const Hs=buildGingerHouse();
+  for(const [x,z,s] of [[-18,-6,1.6],[-14,13,1.2],[20,10,1.4],[22,-8,1.8],[-24,4,1.3],[14,-12,1.5]]){const t=makeTree(s);t.position.set(x,0,z);scene.add(t);}
+  const sm=makeSnowman();sm.position.set(-9,0,12);sm.rotation.y=.4;scene.add(sm);
+  const ex=Hs.W/2+1.9;
+  const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(-30,0,8),new THREE.Vector3(-12,0,8),new THREE.Vector3(4,0,8),new THREE.Vector3(9.5,.15,7.6),new THREE.Vector3(ex,.6,5),new THREE.Vector3(ex,2,2),new THREE.Vector3(ex,3.6,-1),new THREE.Vector3(ex,Hs.by,-4.2),new THREE.Vector3(ex,Hs.by,-5.6)]);
+  buildTrack(curve);
+  const tr=makeTrain();seatInTrain(tr);const pf=puffs();
+  const L=curve.getLength(),s0=dir==='up'?tr.offs[2]/L:1-tr.offs[2]/L,s1=dir==='up'?1:-.05,dsg=dir==='up'?1:-1,dur=5.2;
+  let t=0,done=false,pt=0,prev=s0;const look=new THREE.Vector3(1,4,0);
+  showBanner(dir==='up'?'Tschu-tschu! Hoch in den 2. Stock!':'Tschu-tschu! Runter in die Fabrik!',2.6);SFX.bells();
+  stage={update(dt){t+=dt;const k=clamp(t/dur,0,1),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2,s=s0+(s1-s0)*e;
+      trainOnCurve(tr,curve,s,dsg);spinWheels(tr,Math.abs(s-prev)*L);prev=s;
+      pt-=dt;if(pt<=0&&k<1){pt=.22;pf.add(chimneyPos(tr));if(Math.random()<.35)tone(rand(500,600),.06,'triangle',.02);}
+      if(t>dur+.5&&!done){done=true;fadeTo(next);}},
+    anim(dt){pf.upd(dt);updSnow(dt,new THREE.Vector3(0,0,0));const p=tr.parts[0].position;look.lerp(new THREE.Vector3(p.x*.6+1,p.y*.7+2.5,p.z*.5),Math.min(1,dt*2.5));
+      cam.position.set(look.x+15,look.y+8,look.z+20);cam.lookAt(look);}};
+  stage.update(0);
+}
+
+/* ---------- the apartment on the 2nd floor ---------- */
+function stageHome(){
+  clearScene();mode='play';
+  const L=env({bg:0x24160e,sky:0xfff1d6,ground:0x6b4a2b,hemi:.75,sun:0xffe2b8,sunI:.6,sunPos:[5,18,9],sh:14,near:40,far:90});
+  const RX=8,RZ=5;
+  const floor=mesh(new THREE.PlaneGeometry(RX*2,RZ*2),gbMat('#c58548',4,2.5,{tiles:true}),0,0,0,false);floor.rotation.x=-Math.PI/2;scene.add(floor);
+  const wm=gbMat('#b8733a',4,1.3);
+  scene.add(mesh(new THREE.BoxGeometry(RX*2+.8,5,.4),wm,0,2.5,-RZ-.2));
+  scene.add(mesh(new THREE.BoxGeometry(.4,5,RZ*2),wm,-RX-.2,2.5,0));scene.add(mesh(new THREE.BoxGeometry(.4,5,RZ*2),wm,RX+.2,2.5,0));
+  scene.add(mesh(new THREE.BoxGeometry(RX*2+.8,.3,.55),ICING,0,5,-RZ-.1));icingDrips(scene,-RX,RX,4.85,-RZ+.15,.6);
+  scene.add(mesh(new THREE.BoxGeometry(RX*2+.8,.7,.4),wm,0,.35,RZ+.2));scene.add(mesh(new THREE.BoxGeometry(RX*2+.9,.16,.5),ICING,0,.72,RZ+.2));
+  const base=mesh(new THREE.PlaneGeometry(80,40),M(0x3a2010,{roughness:1}),0,-.05,10,false);base.rotation.x=-Math.PI/2;scene.add(base);
+  const rug=mesh(new THREE.CircleGeometry(2.6,40),M(0x2f9a52),0.6,.02,1.2,false);rug.rotation.x=-Math.PI/2;rug.scale.set(1.4,1,1);scene.add(rug);
+  const rugB=mesh(new THREE.RingGeometry(2.3,2.5,40),ICING,0.6,.03,1.2,false);rugB.rotation.x=-Math.PI/2;rugB.scale.set(1.4,1,1);scene.add(rugB);
+  const cols=[];
+  // window
+  const wg=new THREE.Group();wg.position.set(.8,2.8,-RZ+.02);scene.add(wg);
+  const sky=new THREE.MeshBasicMaterial({color:0x9fd0ff});wg.add(mesh(new THREE.PlaneGeometry(3,2.2),sky,0,0,0,false));
+  const moon=mesh(new THREE.CircleGeometry(.28,20),new THREE.MeshBasicMaterial({color:0xf3f0c8}),.8,.5,.01,false);moon.visible=false;wg.add(moon);
+  const wstars=[];for(let i=0;i<7;i++){const st=mesh(new THREE.CircleGeometry(.04,6),new THREE.MeshBasicMaterial({color:0xffffff}),rand(-1.3,1.3),rand(-.2,.95),.01,false);st.visible=false;wg.add(st);wstars.push(st);}
+  for(const [dx,dy,ww,hh] of [[0,1.1,3.3,.22],[0,-1.1,3.3,.22],[-1.5,0,.22,2.4],[1.5,0,.22,2.4],[0,0,.1,2.2],[0,0,3,.1]])wg.add(mesh(new THREE.BoxGeometry(ww,hh,.12),ICING,dx,dy,.06,false));
+  for(const sx of [-1,1])wg.add(mesh(new THREE.BoxGeometry(.6,2.6,.08),M(0xd23a3a),sx*1.85,-.05,.12));
+  // family picture with both heroes
+  const pic=canvasTex(256,180,(c,w,h)=>{c.fillStyle='#fff6e0';c.fillRect(0,0,w,h);c.fillStyle='#bfe3ff';c.fillRect(10,10,w-20,h-20);drawElfin2D(c,88,168,1.15);drawGinger2D(c,172,168,1.15);c.fillStyle='#d23a3a';c.font='700 22px Fredoka, sans-serif';c.textAlign='center';c.fillText('Lili ♥ Benni',w/2,36);});
+  const pf=mesh(new THREE.PlaneGeometry(2,1.4),new THREE.MeshBasicMaterial({map:pic}),-4.2,3.6,-RZ+.03,false);scene.add(pf);
+  scene.add(mesh(new THREE.BoxGeometry(2.25,1.65,.06),M(0xf2c14e,{metalness:.4,roughness:.4}),-4.2,3.6,-RZ+.01,false));
+  // double bed
+  const bed=new THREE.Group();bed.position.set(-4.2,0,-2.9);scene.add(bed);
+  const hb=mesh(new THREE.BoxGeometry(3.5,2.1,.3),gbMat('#a8642e',1,1,{thin:true}),0,1.05,-1.75);bed.add(hb);
+  const heart=new THREE.Shape();heart.moveTo(0,-.35);heart.bezierCurveTo(-.5,0,-.45,.4,0,.25);heart.bezierCurveTo(.45,.4,.5,0,0,-.35);
+  const hm=mesh(new THREE.ShapeGeometry(heart),M(0xe23a3a,{roughness:.3}),0,1.45,-1.58,false);hm.scale.setScalar(1.3);bed.add(hm);
+  bed.add(mesh(new THREE.BoxGeometry(3.5,.5,3.4),M(0x5a2e14),0,.35,0));
+  bed.add(mesh(new THREE.BoxGeometry(3.5,.9,.25),gbMat('#a8642e',1,.4,{thin:true}),0,.45,1.7));
+  bed.add(mesh(new THREE.BoxGeometry(3.2,.32,3.2),M(0xffffff,{roughness:.9}),0,.76,0));
+  for(const x of [-.8,.8])bed.add(ball(.62,M(0xfffaf0),x,.98,-1.3,1,.22,.5));
+  const quiltTex=canvasTex(128,128,(c,w,h)=>{c.fillStyle='#c8323a';c.fillRect(0,0,w,h);c.fillStyle='#fff';for(let i=0;i<4;i++)for(let j=0;j<4;j++){const x=16+i*32+(j%2)*16,y=16+j*32;c.beginPath();for(let k=0;k<10;k++){const a=k/10*TAU-Math.PI/2,r=k%2?3:7;c.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r);}c.fill();}c.fillRect(0,0,w,6);},2,2);
+  const quilt=mesh(new THREE.BoxGeometry(3.3,.14,2.2),new THREE.MeshStandardMaterial({map:quiltTex,roughness:.9}),0,.98,.55);bed.add(quilt);
+  cols.push(box(-4.2,-2.9,3.6,3.7));
+  for(const x of [-6.6,-1.8]){scene.add(mesh(new THREE.BoxGeometry(.9,.9,.9),gbMat('#9a5a2a',1,1,{thin:true}),x,.45,-4.2));const lb=ball(.22,E(0xffe2a0,.6),x,1.3,-4.2,1,1,1,true);lb.castShadow=false;scene.add(lb);scene.add(mesh(new THREE.ConeGeometry(.35,.35,14,1,true),M(0xd23a3a,{side:THREE.DoubleSide}),x,1.45,-4.2,false));cols.push(box(x,-4.2,1,1));}
+  const nl=new THREE.PointLight(0xffd59a,.15,8,1.5);nl.position.set(-4.2,2,-3);scene.add(nl);
+  // fireplace with stockings
+  const fp=new THREE.Group();fp.position.set(5.2,0,-RZ+.45);scene.add(fp);
+  fp.add(mesh(new THREE.BoxGeometry(3.2,2.6,.9),gbMat('#a8642e',1,1),0,1.3,0));fp.add(mesh(new THREE.BoxGeometry(1.8,1.3,.1),M(0x1a0e08),0,.75,.43,false));
+  fp.add(mesh(new THREE.BoxGeometry(3.6,.25,1.1),ICING,0,2.65,0));
+  const flames=[];for(const [x,s,c] of [[-.35,.8,0xff7a2a],[.1,1,0xffb43a],[.45,.7,0xff5a1a],[0,.5,0xfff07a]]){const f=mesh(new THREE.ConeGeometry(.2*s,.7*s,8),E(c,1.4),x,.4+.35*s,.3,false);fp.add(f);flames.push(f);}
+  const fg=glow(0xff9a3a,2.4,.7);fg.position.set(0,.8,.6);fp.add(fg);
+  const fire=new THREE.PointLight(0xff8a3a,.9,9,1.6);fire.position.set(5.2,1,-3.6);scene.add(fire);
+  [[-.8,0xd23a3a],[.8,0x2f9a52]].forEach(([x,c])=>{fp.add(mesh(new THREE.BoxGeometry(.38,.7,.15),M(c),x,2.15,.55));fp.add(mesh(new THREE.BoxGeometry(.55,.25,.15),M(c),x+.1,1.85,.55));fp.add(mesh(new THREE.BoxGeometry(.42,.16,.18),ICING,x,2.5,.56));});
+  cols.push(box(5.2,-RZ+.45,3.3,1));
+  // tree, toy chest, cookie table
+  const tree=makeTree(1.1,true);tree.position.set(-6.8,0,2.6);scene.add(tree);cols.push({x:-6.8,z:2.6,r:1});
+  const chest=new THREE.Group();chest.position.set(1.6,0,-3.9);scene.add(chest);chest.add(mesh(new THREE.BoxGeometry(1.8,.9,.9),M(0x2f6fd0,{roughness:.5}),0,.45,0));chest.add(mesh(new THREE.BoxGeometry(1.9,.15,1),M(0xf2c14e,{metalness:.4}),0,.95,0));
+  const ty=makeToy(1);ty.position.set(-.4,1.03,0);chest.add(ty);const ty2=makeToy(3);ty2.position.set(.45,1.03,0);chest.add(ty2);cols.push(box(1.6,-3.9,1.9,1));
+  const tb=new THREE.Group();tb.position.set(2.4,0,1.2);scene.add(tb);tb.add(mesh(new THREE.CylinderGeometry(.9,.9,.1,24),gbMat('#a8642e',1,1,{tiles:true}),0,.8,0));tb.add(mesh(new THREE.CylinderGeometry(.12,.18,.8,10),M(0x5a2e14),0,.4,0));
+  tb.add(mesh(new THREE.CylinderGeometry(.35,.35,.04,20),ICING,0,.87,0));for(let i=0;i<4;i++){const c=mesh(new THREE.CylinderGeometry(.11,.11,.04,12),M(0xb8733a),Math.cos(i*1.6)*.17,.9+i*.03,Math.sin(i*1.6)*.17);tb.add(c);}
+  for(const [x,c] of [[-.55,0xd23a3a],[.55,0x2f6fd0]]){tb.add(mesh(new THREE.CylinderGeometry(.13,.11,.28,12),M(c),x,1,.2));tb.add(mesh(new THREE.CylinderGeometry(.1,.1,.02,12),M(0xfffaf0),x,1.14,.2,false));}
+  cols.push({x:2.4,z:1.2,r:.95});
+  // door to the train
+  const dr=new THREE.Group();dr.position.set(RX-.02,0,2.6);dr.rotation.y=-Math.PI/2;scene.add(dr);dr.add(mesh(new THREE.BoxGeometry(1.8,3,.15),M(0x5a2e14),0,1.5,0));dr.add(mesh(new THREE.TorusGeometry(.9,.13,8,20,Math.PI),ICING,0,3,.08));dr.add(ball(.09,M(0xf2c14e,{metalness:.6}),.6,1.4,.12));
+  const DOOR=new THREE.Vector3(RX-1.1,0,2.6),BED=new THREE.Vector3(-4.2,0,-.6);
+  const mkRing=(p,c)=>{const r=mesh(new THREE.RingGeometry(.75,.98,36),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.8,depthWrite:false}),p.x,.04,p.z,false);r.rotation.x=-Math.PI/2;scene.add(r);return r;};
+  const rDoor=mkRing(DOOR,0xf2c14e),rBed=mkRing(BED,0xff8ad8);
+  tag(()=>_t.set(DOOR.x,2.3,DOOR.z),'🚂 Bahn nach unten','tag');
+  const bedTag=tag(()=>_t.set(BED.x,2.2,BED.z+.2),'🛏️ Aktionstaste: schlafen','tag');
+  PL.forEach((p,i)=>placePlayer(p,RX-2.4,2.2+i*1.1,-Math.PI/2));addTags();
+  setHUD('Eure Wohnung · 2. Stock',null,'');
+  const camOff=new THREE.Vector3(0,9.5,8.2);followCam(0,camOff,[-2,2],[-1.6,-.2],true);
+  showBanner('Willkommen zu Hause!',2);
+  let sleep=0,leaving=false,zt=0;const day={sky:new THREE.Color(0x9fd0ff),night:new THREE.Color(0x1a2a5a)};
+  const lie=()=>{PL.forEach((p,i)=>{const m=p.m.g;m.position.set(-4.2+(PL.length===2?(i?.75:-.75):0),1.3,-2.0);m.rotation.set(-Math.PI/2,0,0);m.scale.setScalar(.8);p.ring.visible=false;p.m.legs.forEach(l=>l.rotation.x=0);p.m.arms.forEach(a=>a.rotation.x=0);});quilt.position.set(0,1.52,1.05);quilt.scale.set(1,1,.65);};
+  const wake=()=>{quilt.position.set(0,.98,.55);quilt.scale.set(1,1,1);PL.forEach((p,i)=>placePlayer(p,-4.8+i*1.3,-.4,0));SFX.win();showBanner('Guten Morgen! Ausgeschlafen! ☀️',2.4);PL.forEach(p=>say(p.pos.clone().setY(2.3),pick(['Guten Morgen!','Gähn … gut geschlafen!','Auf geht\'s!']),'',1.8));};
+  stage={update(dt){
+      if(sleep>0){sleep-=dt;const k=sleep>6?1-(sleep-6)/1:sleep<1?sleep:1;
+        L.hemi.intensity=.75-.45*k;L.dl.intensity=.6-.5*k;bedTag.el.style.visibility=k>.05?'hidden':'';nl.intensity=.15+.6*k;sky.color.copy(day.sky).lerp(day.night,k);moon.visible=k>.5;wstars.forEach(s=>s.visible=k>.5);
+        zt-=dt;if(zt<=0&&sleep>1){zt=.9;const p=PL[Math.floor(T*1.1)%PL.length];say(p.m.g.position.clone().add(new THREE.Vector3(0,.6,-1.3)),pick(['Z z z','z Z z','Zzz …']),'z',1.6);tone(rand(80,100),.6,'sine',.04,.8);}
+        if(sleep<=0){sleep=0;bedTag.el.style.visibility='';L.hemi.intensity=.75;L.dl.intensity=.6;nl.intensity=.15;sky.color.copy(day.sky);moon.visible=false;wstars.forEach(s=>s.visible=false);wake();}
+        return;}
+      movePlayers(dt,5.4,[-RX+.6,RX-.6,-RZ+.6,RZ-.6],cols);
+      const nearBed=PL.some(p=>d2(p.pos,BED)<1.3);bedTag.el.style.opacity=nearBed?1:.55;
+      if(nearBed&&PL.some(p=>ctl(p.i).act&&d2(p.pos,BED)<1.6)){sleep=7;zt=1;lie();showBanner('Gute Nacht, '+teamName()+'!',2);tone(523,.3,'triangle',.05);tone(392,.4,'triangle',.05,1,.25);return;}
+      if(!leaving&&PL.some(p=>d2(p.pos,DOOR)<1)){leaving=true;SFX.bells();fadeTo(()=>stageRide('down',()=>stageHub(G.hubKind||'start',true)));}
+    },
+    anim(dt){rDoor.material.opacity=rBed.material.opacity=.5+Math.sin(T*5)*.3;
+      flames.forEach((f,i)=>{f.scale.y=1+Math.sin(T*(9+i*2.3)+i)*.18;f.scale.x=1+Math.sin(T*7+i)*.08;});fire.intensity=.8+Math.sin(T*11)*.12+Math.sin(T*17)*.08;
+      if(tree.userData.star)tree.userData.star.rotation.y+=dt;
+      if(sleep>0){PL.forEach((p,i)=>{p.m.g.position.y=1.3+Math.max(0,Math.sin(T*2+i*1.5))*.03;});return;}
+      followCam(dt,camOff,[-2,2],[-1.6,-.2]);}};
+}
 
 /* ---------- HUB ---------- */
 function orders(kind){
   const d=lvl(),t=Math.min(12,4+d*2),K=clamp(G.letters||5,3,10);
-  if(kind==='start'&&G.round===1)return['Ho, ho, ho! Willkommen in meiner Weihnachtsfabrik, '+names()+'!','Ich bin hier der Chef. Schaut mal, wie fleißig meine Elfen arbeiten!','Aber der Grinch will Weihnachten verderben. Darum brauche ich '+(G.players===2?'euch':'dich')+'.',`Erster Auftrag: Fliegt mit dem Schlitten ins Dorf und sammelt ${t} Wunschzettel ein, bevor die Sonne aufgeht.`,'Der Schlitten steht rechts am großen Tor. Ab mit euch!'];
+  if(kind==='start'&&G.round===1)return['Ho, ho, ho! Willkommen in meiner Weihnachtsfabrik, '+names()+'!','Ich bin hier der Chef. Schaut mal, wie fleißig meine Elfen arbeiten!','Aber der Grinch will Weihnachten verderben. Darum brauche ich '+(G.players===2?'euch':'dich')+'.',`Erster Auftrag: Fliegt mit dem Schlitten ins Dorf und sammelt ${t} Wunschzettel ein, bevor die Sonne aufgeht.`,'Übrigens: Oben im 2. Stock ist '+(G.players===2?'eure':'deine')+' Wohnung mit Bett. Da kommt man nur mit der Lebkuchenbahn hin. Sie hält vorne am Bahnhof.','Der Schlitten steht rechts am großen Tor. Ab mit euch!'];
   if(kind==='start')return[`Ho, ho, ho! Runde ${G.round}, ein neues Weihnachten beginnt!`,'Passt auf: Der Grinch ist frecher und schneller geworden.',`Auftrag: Holt ${t} Wunschzettel aus dem Dorf. Der Schlitten wartet am Tor!`];
-  if(kind==='afterP1')return[`${G.letters} Wunschzettel! Wunderbar gemacht!`,`Meine Elfen bauen heute Nacht ${K} Spielzeuge daraus und stellen sie ins Regal „Fertige Spielzeuge“.`,'Ich gehe jetzt ins Bett. Ihr haltet Wache! Vielleicht schleicht sich der Grinch herein.','Er kommt nur selten. Versteckt euch hinter den großen Geschenkkisten. Seine Laterne zeigt, wohin er schaut.','Wenn er nah ist und euch nicht sieht, drückt die Aktionstaste und ruft BUH! Dann rennt er weg.','Und wenn er ein Spielzeug klaut: schnell hinterher und BUH! Dann lässt er es fallen.'];
+  if(kind==='afterP1')return[`${G.letters} Wunschzettel! Wunderbar gemacht!`,'Und heute baut ihr die Geschenke selbst! Für jeden Wunschzettel ein Geschenk.','So geht es: 1. an der Werkbank bauen, 2. am Farbtisch anmalen, 3. am Packtisch einpacken, 4. ins Regal stellen.','Stellt euch in den Kreis und haltet die Aktionstaste gedrückt. Schafft ihr alle, bevor es Abend wird?','Und passt gut auf: Wenn ein Elf sich komisch benimmt und zum Regal schleicht … geht hin und ruft BUH! Los!'];
+  if(kind==='night')return[`${G.made} Geschenk${G.made===1?'':'e'} im Regal! Das habt ihr toll gemacht!`,'Ich gehe jetzt ins Bett. Ihr haltet Wache! Vielleicht schleicht sich der Grinch herein.','Er kommt nur selten. Versteckt euch hinter den großen Geschenkkisten. Seine Laterne zeigt, wohin er schaut.','Wenn er nah ist und euch nicht sieht, drückt die Aktionstaste und ruft BUH! Dann rennt er weg.','Und wenn er ein Spielzeug klaut: schnell hinterher und BUH! Dann lässt er es fallen.'];
   if(kind==='alarm')return['Guten Morgen! … Oh nein! ALARM!',`Der Grinch hat heute Nacht ${G.stolen} ${G.stolen>1?'Spielzeuge':'Spielzeug'} geklaut!`,'Ein Elf hat ihn gesehen. Hier ist der Hinweis: Seine Höhle ist im Eisberg hinter dem Dorf, dort wo die grünen Kristalle leuchten.','Fliegt hin und holt die Spielzeuge still und heimlich zurück. Der Grinch darf euch nicht sehen!','Schleicht euch von Fels zu Fels und tragt ein Spielzeug nach dem anderen zum Schlitten. Ab zum Schlitten!'];
   if(kind==='afterP2')return[G.recovered?`Ihr habt ${G.recovered} ${G.recovered>1?'Spielzeuge':'Spielzeug'} aus der Grinch-Höhle zurückgeholt! Jetzt haben wir ${G.toys}.`:`Guten Morgen! Alle ${G.toys} Spielzeuge sind noch da. Gut aufgepasst!`,'Und heute ist Heiligabend! Meine Elfen haben alle Geschenke in den Schlitten geladen.','Fliegt über das Dorf und werft sie in die Schornsteine der Häuser mit hellen Fenstern. Der Ring auf den Dächern zeigt, wo sie landen.','Ab zum Schlitten!'];
   return[`Frohe Weihnachten! ${G.lastDelivered} Kinder freuen sich über ihre Geschenke.`,'Ihr seid die besten Helfer, die ich je hatte! Die Elfen jubeln euch zu.','Aber der Grinch gibt nicht auf. Nächstes Jahr wird er noch frecher …',`Auf geht's in Runde ${G.round+1}!`];
 }
-function stageHub(kind){
-  clearScene();mode='play';hideOverlay();
+function stageHub(kind,back){
+  clearScene();mode='play';hideOverlay();if(!back){G.hubKind=kind;G.hubGoal=null;}
   const F=buildFactory(false);addSnow(500,60);
   const sl=makeSleigh();sl.g.position.copy(F.sleighSpot);sl.g.rotation.y=0;scene.add(sl.g);
   const ringM=mesh(new THREE.RingGeometry(1.8,2.3,40),new THREE.MeshBasicMaterial({color:0xf2c14e,transparent:true,opacity:.8,depthWrite:false}),F.sleighSpot.x,.05,F.sleighSpot.z,false);ringM.rotation.x=-Math.PI/2;ringM.visible=false;scene.add(ringM);
   const arrow=mesh(new THREE.ConeGeometry(.4,.8,12),E(0xf2c14e,.8),F.sleighSpot.x,3.4,F.sleighSpot.z,false);arrow.rotation.x=Math.PI;arrow.visible=false;scene.add(arrow);
-  PL.forEach((p,i)=>placePlayer(p,-17.6+i*1.2,-4,Math.PI));addTags();
-  factoryCam(0,true);
-  let goal=null,boarded=false;
+  if(back)PL.forEach((p,i)=>placePlayer(p,-.6+i*1.2,FZ-1.8,Math.PI));else PL.forEach((p,i)=>placePlayer(p,-17.6+i*1.2,-4,Math.PI));addTags();
+  factoryCam(0,true,7);
+  let goal=back?G.hubGoal:null,boarded=false,riding=0,rideS=0;
+  const stRing=mesh(new THREE.RingGeometry(.8,1.05,36),new THREE.MeshBasicMaterial({color:0xff8ad8,transparent:true,opacity:.8,depthWrite:false}),F.station.x,.07,F.station.z,false);stRing.rotation.x=-Math.PI/2;scene.add(stRing);
+  tag(()=>_t.set(F.station.x,2.2,F.station.z),'🚂 Zur Wohnung','tag');
+  const tL=F.trackCurve.getLength(),s0=(3.2+FX+8)/tL;rideS=s0;const pf=puffs();let pt=0;
+  const hubCols=F.colliders.concat([box(sl.g.position.x+.6,sl.g.position.z,3.6,1.6),box(-(FX+2.2)/2,FZ+.3,FX-2.2,.3),box((FX+2.2)/2,FZ+.3,FX-2.2,.3),box(-3.35,FZ+1.2,.3,2),box(3.35,FZ+1.2,.3,2)]);
+  if(back){ringM.visible=arrow.visible=!!goal;showBanner(goal?'Zurück in der Fabrik!':'Zurück in der Fabrik!',1.6);}
   setHUD(`Runde ${G.round} · Weihnachtsfabrik`,null,`<span>${IC.gift}${G.stars} verteilt</span>`);
   const afterDialog=()=>{
-    if(kind==='afterP1'){fadeTo(stageP2);return;}
-    if(kind==='afterP3'){G.round++;G.letters=0;G.toys=0;G.stolen=0;G.recovered=0;setHUD(`Runde ${G.round} · Weihnachtsfabrik`,null,`<span>${IC.gift}${G.stars} verteilt</span>`);dialog(orders('start'),afterDialog);return;}
-    goal=kind==='afterP2'?'p3':kind==='alarm'?'cave':'p1';ringM.visible=arrow.visible=true;showBanner('Lauft zum Schlitten am Tor!');
+    if(kind==='afterP1'){fadeTo(stageWork);return;}
+    if(kind==='night'){fadeTo(stageP2);return;}
+    if(kind==='afterP3'){G.round++;G.letters=0;G.toys=0;G.made=0;G.stolen=0;G.recovered=0;setHUD(`Runde ${G.round} · Weihnachtsfabrik`,null,`<span>${IC.gift}${G.stars} verteilt</span>`);dialog(orders('start'),afterDialog);return;}
+    goal=kind==='afterP2'?'p3':kind==='alarm'?'cave':'p1';G.hubGoal=goal;ringM.visible=arrow.visible=true;showBanner('Lauft zum Schlitten am Tor!');
   };
-  let hubStage;setTimeout(()=>{if(stage===hubStage)dialog(orders(kind),afterDialog);},450);
+  let hubStage;if(!back)setTimeout(()=>{if(stage===hubStage)dialog(orders(kind),afterDialog);},450);
   hubStage=stage={update(dt){
-      movePlayers(dt,5.4,[-FX+.6,FX-.6,-FZ+.6,FZ-.6],F.colliders.concat([box(sl.g.position.x+.6,sl.g.position.z,3.6,1.6)]));
+      if(riding){riding+=dt;rideS+=dt*Math.min(1,riding*.6)*6/tL;trainOnCurve(F.train,F.trackCurve,rideS,1);spinWheels(F.train,dt*Math.min(1,riding*.6)*6);
+        pt-=dt;if(pt<=0){pt=.25;pf.add(chimneyPos(F.train));}
+        if(riding>2.2&&!boarded){boarded=true;fadeTo(()=>stageRide('up',stageHome));}return;}
+      movePlayers(dt,5.4,[-FX+.6,FX-.6,-FZ+.6,FZ+1.6],hubCols);
+      if(goal&&!boarded&&PL.some(p=>d2(p.pos,F.station)<1)){riding=.001;seatInTrain(F.train);SFX.bells();showBanner('Einsteigen! Tschu-tschu!',2);return;}
       if(goal&&!boarded&&PL.some(p=>d2(p.pos,F.sleighSpot)<3)){boarded=true;SFX.bells();
         if(goal==='p1')stageFly('Ab ins Dorf!',stageP1,'out');else if(goal==='cave')stageFly('Zur Grinch-Höhle! Psst …',stageCave,'out');else fadeTo(stageP3);}
     },
     anim(dt){animFactory(F,dt,false);const s=F.santa;s.g.rotation.y=Math.atan2(PL[0].pos.x-s.g.position.x,PL[0].pos.z-s.g.position.z)*.6;
       const talk=dialogOpen;s.arms[1].rotation.z=talk?-2.3+Math.sin(T*6)*.3:-.35;s.head.rotation.x=talk?Math.sin(T*8)*.05:0;s.g.position.y=Math.abs(Math.sin(T*2))*.03;
-      ringM.material.opacity=.5+Math.sin(T*5)*.3;arrow.position.y=3.4+Math.sin(T*4)*.25;animDeer(sl,T*.3);
-      if(!PL.length)return;if(dialogOpen||!goal)PL.forEach(p=>animPlayer(p,false));
+      ringM.material.opacity=.5+Math.sin(T*5)*.3;arrow.position.y=3.4+Math.sin(T*4)*.25;animDeer(sl,T*.3);stRing.material.opacity=goal?.5+Math.sin(T*5)*.3:.15;pf.upd(dt);
+      if(!PL.length)return;if(!riding&&(dialogOpen||!goal))PL.forEach(p=>animPlayer(p,false));
+      factoryCam(dt,false,7);updSnow(dt,new THREE.Vector3(30,0,0));}};
+}
+
+/* ---------- WORKSHOP: make the presents yourselves ---------- */
+const TOYNAMES=['Teddy','Ball','Auto','Roboter','Rakete'];
+function stageWork(){
+  clearScene();mode='play';hideOverlay();
+  const d=lvl(),F=buildFactory(false);addSnow(500,60);planNote('work');
+  const K=clamp(G.letters||5,3,10),total=Math.round(35+K*11-d*3);let time=total,made=0,done=false;
+  const wishes=[...Array(K)].map(()=>Math.floor(Math.random()*5));let nextWish=0;
+  // stations
+  const ST=[{key:'build',name:'Bauen',icon:'🔨',x:-8,z:3.2,t:1.6},{key:'paint',name:'Anmalen',icon:'🎨',x:2,z:3.2,t:1.2},{key:'wrap',name:'Einpacken',icon:'🎁',x:2,z:-1.5,t:1.2},{key:'shelf',name:'Ins Regal',icon:'📦',x:13,z:-2.2,t:.4}];
+  // props on the tables
+  const pots=[0xe0413a,0xf2c14e,0x2f6fd0,0x2f9a52];pots.forEach((c,i)=>{scene.add(mesh(new THREE.CylinderGeometry(.16,.14,.25,12),M(c,{roughness:.3}),.8+i*.45,1.14,1.9));});
+  const roll=mesh(new THREE.CylinderGeometry(.18,.18,1.4,14),M(0xd23a3a),2.8,1.2,-2.6);roll.rotation.z=Math.PI/2;scene.add(roll);
+  for(let i=0;i<5;i++){const w=mesh(new THREE.BoxGeometry(.5,.18,.3),M(0xc8955a),-9.2+i*.1,1.1+i*.18,1.8);w.rotation.y=i*.3;scene.add(w);}
+  ST.forEach((s,i)=>{s.ring=mesh(new THREE.RingGeometry(.85,1.1,36),new THREE.MeshBasicMaterial({color:0xf2c14e,transparent:true,opacity:.7,depthWrite:false}),s.x,.05,s.z,false);s.ring.rotation.x=-Math.PI/2;scene.add(s.ring);
+    tag(()=>_t.set(s.x,2.3,s.z),`${i+1}. ${s.icon} ${s.name}`,'tag');});
+  PL.forEach((p,i)=>{placePlayer(p,-4+i*1.4,6,Math.PI);p.step=0;p.prog=0;p.item=null;p.wish=null;});addTags();
+  const bars=PL.map(p=>{const l=tag(()=>_t.copy(p.m.g.position).setY(2.9),'','q');l.el.style.display='none';l.show=()=>p.prog>0;return l;});
+  const shelfSpots=[];for(let i=0;i<10;i++)shelfSpots.push(13-6.3+i*1.4);
+  setHUD(`Runde ${G.round} · Werkstatt`,'town','');
+  const upd=()=>hudRight(`<span>${IC.gift}${made} / ${K} gebaut</span>`);upd();
+  const shelfMeshes=[];
+  const placeShelf=()=>{const gpos=shelfSpots[made%10];const pr=makePresent(pick(GIFTCOLS),.7);pr.position.set(gpos,1.06,-3.6);scene.add(pr);shelfMeshes.push(pr);made++;upd();burst(new THREE.Vector3(gpos,1.6,-3.6),0xf2c14e,16,3);};
+  // the Grinch disguised as an elf
+  const DOORS=[new THREE.Vector3(-FX+.8,0,2),new THREE.Vector3(FX-.8,0,-6)];
+  const WPS=[[-14,-1.5],[-5,-1.6],[5,-1.6],[-11,7],[-1,7],[9,7],[16,6.8],[-17,3]];
+  const gm=makeGrinch();gm.g.visible=false;scene.add(gm.g);const greenSkin=M(0xb2d67e);
+  const dz={state:'wait',t:Math.max(4,rand(7,10)-d),m:null,pos:new THREE.Vector3(),face:0,walk:0,goal:null,path:null,wander:0,carry:null,giggle:3,hat:null,caught:0,lost:0};
+  const dSpeed=2.4+d*.3;let fakeCd=0;
+  const newDisguise=()=>{const m=makeElf(Math.floor(rand(0,6)));m.g.traverse(o=>{if(o.isMesh&&o.material.color&&o.material.color.getHex()===0xf6cfa8)o.material=greenSkin;});
+    dz.m=m;scene.add(m.g);dz.pos.copy(pick(DOORS));dz.state='sneak';dz.wander=Math.max(2.5,rand(5,8)-d);dz.goal=null;dz.carry=null;dz.giggle=rand(2,4);};
+  const moveTo=(tx,tz,sp,dt)=>{const dx=tx-dz.pos.x,dzz=tz-dz.pos.z,dd=Math.hypot(dx,dzz);if(dd<.15)return true;const st=Math.min(dd,sp*dt);dz.pos.x+=dx/dd*st;dz.pos.z+=dzz/dd*st;dz.face=lerpAng(dz.face,Math.atan2(dx,dzz),Math.min(1,dt*10));dz.walk+=dt*sp*3;return false;};
+  const disguised=()=>dz.m&&['sneak','toShelf','grab','flee'].includes(dz.state);
+  const unmask=()=>{const m=dz.m,head=m.head;scene.attach(head);dz.hat={o:head,v:new THREE.Vector3(rand(-2,2),5.5,rand(1,2.5)),t:1.6};
+    scene.remove(m.g);dz.m=null;gm.g.visible=true;gm.g.position.copy(dz.pos);gm.g.rotation.y=dz.face;dz.caught++;
+    scare(.6);SFX.buh();setTimeout(()=>SFX.flee(),150);burst(dz.pos.clone().setY(1.3),0x9bd46c,20,3.5);
+    say(dz.pos.clone().setY(2.9),pick(['AAAH! Erkannt!','Grrr! Meine Verkleidung!','Mist! Erwischt!']),'g',1.8);
+    if(dz.carry){dz.carry=null;placeShelf();SFX.win();showBanner('Erwischt! Das Geschenk ist gerettet!',2.4);}else showBanner('Das war der verkleidete GRINCH! Gut erkannt!',2.4);
+    F.elves.forEach((e,k)=>{if(k<3)say(e.m.g.position.clone().setY(1.6),pick(['Der Grinch!','Iiih!','Hurra, weg ist er!']),'b',1.4);});
+    dz.goal=DOORS.reduce((a,b)=>d2(a,dz.pos)<d2(b,dz.pos)?a:b);dz.state='run';};
+  const grab=()=>{const pr=shelfMeshes.pop();if(!pr){dz.state='sneak';dz.wander=2;return;}scene.remove(pr);made--;upd();wishes.push(Math.floor(Math.random()*5));
+    const c=makePresent(pick(GIFTCOLS),.6);c.position.set(0,.55,.3);dz.m.g.add(c);dz.carry=c;SFX.steal();scare(.35);
+    say(dz.pos.clone().setY(2.4),'Hihihi! Meins!','g',1.6);showBanner('Der Elf klaut ein Geschenk! Das ist der GRINCH! Schnell, BUH!',2.8);
+    dz.path=[[FX-1.5,-1.2],[FX-.8,-6]];dz.state='flee';};
+  const escaped=()=>{scene.remove(dz.m.g);dz.m=null;dz.carry=null;dz.lost++;SFX.lose();scare(.4);showBanner('Oh nein! Der Grinch ist mit einem Geschenk abgehauen!',2.8);
+    dz.state='wait';dz.t=Math.max(5,rand(9,13)-d*1.5);};
+  const updDisguise=dt=>{fakeCd-=dt;
+    if(dz.state==='wait'){dz.t-=dt;if(dz.t<=0)newDisguise();return;}
+    if(dz.state==='run'){if(moveTo(dz.goal.x,dz.goal.z,6.5,dt)){gm.g.visible=false;dz.state='wait';dz.t=Math.max(5,rand(10,14)-d*1.5);}return;}
+    dz.giggle-=dt;if(dz.giggle<=0){dz.giggle=rand(4,7);say(dz.pos.clone().setY(1.8),pick(['hihi …','hehe …','psst …']),'g',1.2);}
+    if(dz.state==='sneak'){if(!dz.goal)dz.goal=pick(WPS);if(moveTo(dz.goal[0],dz.goal[1],dSpeed*.8,dt))dz.goal=null;
+      dz.wander-=dt;if(dz.wander<=0&&made>0){dz.state='toShelf';dz.goal=[shelfSpots[(made-1)%10],-2.4];}}
+    else if(dz.state==='toShelf'){if(moveTo(dz.goal[0],dz.goal[1],dSpeed,dt)){dz.state='grab';dz.t=Math.max(.9,1.6-d*.2);say(dz.pos.clone().setY(2.2),'Hehehe …','g',1.2);}}
+    else if(dz.state==='grab'){dz.t-=dt;dz.face=lerpAng(dz.face,Math.PI,Math.min(1,dt*8));if(dz.t<=0)grab();}
+    else if(dz.state==='flee'){const w=dz.path[0];if(moveTo(w[0],w[1],dSpeed*1.2,dt)){dz.path.shift();if(!dz.path.length)escaped();}}};
+  const buh=p=>{say(p.pos.clone().setY(2.6),'BUH!','r',.8);
+    if(disguised()&&d2(p.pos,dz.pos)<1.8){unmask();return;}
+    if(fakeCd<=0){const e=F.elves.find(e=>d2(p.pos,e.m.g.position)<1.6);if(e){fakeCd=1.5;say(e.m.g.position.clone().setY(1.7),pick(['Hey! Ich bin ein ECHTER Elf!','Huch! Ich bin doch kein Grinch!']),'b',1.6);SFX.buh();}}};
+  factoryCam(0,true);showBanner('Baut die Geschenke! Haltet die Aktionstaste im Kreis.',3);
+  const hurry=hurryClock();
+  const carry=(p,obj)=>{if(p.item){p.m.g.remove(p.item);}p.item=obj;if(obj){p.m.g.add(obj);obj.position.set(0,1.95,0);}};
+  const finish=()=>{done=true;if(dz.m&&dz.state!=='run'){scene.remove(dz.m.g);dz.m=null;}dz.state='done';G.made=Math.max(1,made);G.toys=G.made;PL.forEach(p=>carry(p,null));SFX.win();
+    showBanner(made>=K?'Alle Geschenke fertig! Super!':`${G.made} Geschenk${G.made===1?'':'e'} fertig!`,2.4);F.elves.forEach((e,k)=>{if(k<4)say(e.m.g.position.clone().setY(1.6),pick(['Juhu!','Toll!','Hurra!']),'b',1.4);});
+    setTimeout(()=>fadeTo(()=>stageHub('night')),1800);};
+  stage={update(dt){if(done)return;
+      time-=dt;hurry(time);
+      movePlayers(dt,5.6,[-FX+.6,FX-.6,-FZ+.6,FZ-.6],F.colliders);
+      updDisguise(dt);
+      for(const p of PL){const s=ST[p.step],c=ctl(p.i),inRing=d2(p.pos,s)<1.15;
+        if(c.act&&!inRing)buh(p);
+        if(p.step===0&&p.wish===null&&nextWish<wishes.length)p.wish=wishes[nextWish++];
+        if(p.step===0&&p.wish===null){p.prog=0;continue;}
+        if(inRing&&c.hold){p.prog+=dt/s.t;
+          const n=Math.min(5,Math.floor(p.prog*5));bars[p.i].el.textContent=`${s.icon} ${'▮'.repeat(n)}${'▯'.repeat(5-n)}`;
+          if(Math.floor(p.prog*8)!==Math.floor((p.prog-dt/s.t)*8)){if(s.key==='build')tone(220+Math.random()*60,.06,'square',.03);else if(s.key==='paint')tone(900,.05,'sine',.02,.6);else tone(1400,.03,'triangle',.02);}
+          if(p.prog>=1){p.prog=0;
+            if(s.key==='build'){const b=mesh(new THREE.BoxGeometry(.5,.4,.4),M(0xc8955a));carry(p,b);say(p.pos.clone().setY(2.6),`${TOYNAMES[p.wish]} gebaut!`,'b',1.2);burst(p.pos.clone().setY(1.6),0xc8955a,8,2);}
+            else if(s.key==='paint'){carry(p,makeToy(p.wish));p.item.scale.setScalar(1.4);say(p.pos.clone().setY(2.6),'Schön bunt!','b',1.2);burst(p.pos.clone().setY(1.6),pick(GIFTCOLS),12,2.5);}
+            else if(s.key==='wrap'){carry(p,makePresent(pick(GIFTCOLS),.8));say(p.pos.clone().setY(2.6),'Eingepackt!','b',1.2);SFX.pick();}
+            else{carry(p,null);placeShelf();SFX.deliver();p.wish=null;}
+            p.step=(p.step+1)%4;}}
+        else if(!c.hold)p.prog=Math.max(0,p.prog-dt*.5);}
+      if(made>=K||time<=0)finish();
+    },
+    anim(dt){animFactory(F,dt,false);hudBar(1-time/total);
+      ST.forEach((s,i)=>{const want=PL.some(p=>p.step===i&&(p.wish!==null));s.ring.material.color.setHex(want?0x6bff7a:0xf2c14e);s.ring.material.opacity=want?.6+Math.sin(T*6)*.3:.35;});
+      PL.forEach(p=>{if(p.item)p.item.rotation.y+=dt;});
+      if(dz.m){const m=dz.m;m.g.position.set(dz.pos.x,Math.abs(Math.sin(dz.walk))*.05,dz.pos.z);m.g.rotation.y=dz.face;const sw=Math.sin(dz.walk)*.6;m.legs[0].rotation.x=sw;m.legs[1].rotation.x=-sw;
+        if(dz.state==='grab'){m.arms.forEach((a,i)=>a.rotation.x=-2.4+Math.sin(T*14+i)*.3);m.head.rotation.y=Math.sin(T*6)*.5;}
+        else if(dz.carry)m.arms.forEach(a=>a.rotation.x=-1.2);else{m.arms[0].rotation.x=-sw*.5;m.arms[1].rotation.x=sw*.5;m.head.rotation.y=Math.sin(T*1.7)*.6;}}
+      if(gm.g.visible){gm.g.position.set(dz.pos.x,0,dz.pos.z);gm.g.rotation.y=dz.face;animGrinch(gm,dz.walk,'scared',T);}
+      if(dz.hat){const h=dz.hat;h.t-=dt;h.v.y-=12*dt;h.o.position.addScaledVector(h.v,dt);h.o.rotation.x+=dt*8;h.o.rotation.z+=dt*5;if(h.o.position.y<.15){h.o.position.y=.15;h.v.set(0,0,0);}if(h.t<=0){scene.remove(h.o);dz.hat=null;}}
+      const s=F.santa;s.g.rotation.y=.4;s.arms[1].rotation.z=-.35;
       factoryCam(dt);updSnow(dt,new THREE.Vector3(30,0,0));}};
 }
 
@@ -713,7 +1099,7 @@ function seatPlayers(sl){PL.forEach((p,i)=>{const m=p.m.g;sl.g.add(m);m.position
 
 /* ---------- PHASE 1: village ---------- */
 function buildVillage(){
-  const L=env({bg:0x0b1633,sky:0x4a6ab0,ground:0xffffff,hemi:.55,sun:0xb8c8ff,sunI:.75,sunPos:[-20,30,18],sh:36,near:45,far:130});
+  const L=env({bg:0x070c1f,sky:0x3a5090,ground:0xffffff,hemi:.3,sun:0xa8b8f0,sunI:.42,sunPos:[-20,30,18],sh:36,near:20,far:62});
   const moon=addStars();addSnow(900,60);
   const ground=mesh(new THREE.PlaneGeometry(140,100),M(0xe8f0fa,{roughness:1}),0,0,0,false);ground.rotation.x=-Math.PI/2;scene.add(ground);
   const street=mesh(new THREE.PlaneGeometry(62,7.5),M(0xc9d6ea,{roughness:1}),0,.01,-1.2,false);street.rotation.x=-Math.PI/2;scene.add(street);
@@ -730,69 +1116,94 @@ function buildVillage(){
   const big=makeTree(2.2,true);big.position.set(0,0,-1.2);scene.add(big);colliders.push({x:0,z:-1.2,r:1.6});
   const bl=new THREE.PointLight(0xffc870,1,14);bl.position.set(0,4,0);scene.add(bl);
   for(const [x,z] of [[-12,-4.6],[12,-4.6],[-12,2.4],[12,2.4],[-24,-4.6],[24,2.4]]){const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);g.add(mesh(new THREE.CylinderGeometry(.08,.1,3.2,8),M(0x1b1b22,{metalness:.4}),0,1.6,0));g.add(mesh(new THREE.BoxGeometry(.4,.5,.4),E(0xffe2a0,1.2),0,3.3,0,false));g.add(mesh(new THREE.ConeGeometry(.35,.3,4),M(0x1b1b22),0,3.7,0));const gl=glow(0xffd98a,2.2,.6);gl.position.y=3.3;g.add(gl);colliders.push({x,z,r:.2});}
-  for(const [x,z] of [[-12,2.4],[12,-4.6]]){const pl=new THREE.PointLight(0xffd98a,.7,10);pl.position.set(x,3,z);scene.add(pl);}
+  for(const [x,z] of [[-12,2.4],[12,-4.6],[-24,-4.6],[24,2.4]]){const pl=new THREE.PointLight(0xffd98a,.8,10);pl.position.set(x,3,z);scene.add(pl);addFlick(pl);}
   const trees=[[-28,-12],[-24,11],[-10,-14],[2,-14],[12,-13],[27,-11],[29,9],[14,11],[-2,12],[-14,11],[26,-2],[-29,4]];
   trees.forEach(([x,z])=>{const t=makeTree(rand(.9,1.4));t.position.set(x,0,z);scene.add(t);colliders.push({x,z,r:.8});});
   for(const [x,z] of [[-12,-12.5],[22,10]]){const s=makeSnowman();s.position.set(x,0,z);s.rotation.y=rand(-.5,.5);scene.add(s);colliders.push({x,z,r:.55});}
   for(let k=0;k<30;k++){const x=rand(-34,34),z=pick([rand(-20,-13),rand(10,18)]);const t=makeTree(rand(1,1.7));t.position.set(x,0,z);scene.add(t);}
   return {L,houses,boxes,colliders,big,moon};
 }
-function stageP1(){
+function stageP1(res){
   clearScene();mode='play';hideOverlay();
-  const d=lvl(),V=buildVillage();
-  const target=Math.min(12,4+d*2),total=Math.max(50,80-d*6);let time=total,got=0,done=false,returning=false;
+  const d=lvl(),V=buildVillage();if(!res)planNote('p1');const PK=plan.k;
+  const target=Math.min(12,4+d*2),total=Math.max(50,80-d*6);let time=res?res.time:total,got=res?res.got:0,done=false,returning=false;
   const spot=new THREE.Vector3(-27,0,-1.2);
   const sl=makeSleigh();sl.g.position.copy(spot);sl.g.rotation.y=Math.PI;scene.add(sl.g);V.colliders.push(box(spot.x-.4,spot.z,3.6,1.6));
   const ringM=mesh(new THREE.RingGeometry(1.8,2.3,40),new THREE.MeshBasicMaterial({color:0xf2c14e,transparent:true,opacity:.8,depthWrite:false}),spot.x,.05,spot.z,false);ringM.rotation.x=-Math.PI/2;ringM.visible=false;scene.add(ringM);
   const arrow=mesh(new THREE.ConeGeometry(.4,.8,12),E(0xf2c14e,.8),spot.x,3.4,spot.z,false);arrow.rotation.x=Math.PI;arrow.visible=false;scene.add(arrow);
   PL.forEach((p,i)=>placePlayer(p,-23.5,-2.5+i*1.6,Math.PI/2));addTags();
-  const gm=makeGrinch();scene.add(gm.g);
-  const g={pos:new THREE.Vector3(26,0,-1),face:-Math.PI/2,walk:0,cool:3,w:new THREE.Vector3(10,0,-1),speed:1.8+d*.4,laugh:0,chase:false,stuck:0,last:new THREE.Vector3()};
-  const sky0=new THREE.Color(0x0b1633),sky1=new THREE.Color(0xf2a679),tmpC=new THREE.Color();
-  const wander=(far)=>{for(let k=0;k<10;k++){g.w.set(rand(-26,26),0,rand(-4.5,2.5));if(!far||PL.every(p=>d2(p.pos,g.w)>10))break;}};
+  const GR=[];
+  for(let gi=0;gi<2;gi++){const gm=makeGrinch();scene.add(gm.g);GR.push({gm,pos:new THREE.Vector3(gi?16:26,0,gi?-10:-1),face:-Math.PI/2,walk:0,cool:res?4+gi*3:3+gi*5,w:new THREE.Vector3(10,0,-1),speed:(1.8+d*.4)*(PK==='fast'?1.3:1),laugh:0,chase:false,stuck:0,last:new THREE.Vector3()});}
+  // villagers who sometimes come out of their houses
+  const doors=[];for(const x of [-18,-6,6,18])doors.push({x,z:-6.4,f:0,busy:false});
+  const VR=6.6+d*.4,VC=.5,folks=[];
+  for(let i=0;i<3;i++){const m=makePerson(i);m.g.visible=false;scene.add(m.g);
+    const cone=new THREE.Group();const sec=mesh(new THREE.CircleGeometry(VR,28,-Math.PI/2-VC,VC*2),new THREE.MeshBasicMaterial({color:0xffa020,transparent:true,opacity:.3,depthWrite:false}),0,.04,0,false);sec.rotation.x=-Math.PI/2;cone.add(sec);cone.visible=false;scene.add(cone);
+    folks.push({m,cone,sec,state:'in',t:((res?8:5)+i*rand(3,6))*(PK==='folks'?.45:1),door:null,face:0,ph:rand(0,6),pop:0});}
+  let warned=false;
+  const sky0=new THREE.Color(0x070c1f),sky1=new THREE.Color(0xf2a679),tmpC=new THREE.Color();
+  const wander=(g,far)=>{for(let k=0;k<10;k++){g.w.set(rand(-26,26),0,rand(-4.5,2.5));if(!far||PL.every(p=>d2(p.pos,g.w)>10))break;}};
   setHUD(`Runde ${G.round} · Wunschzettel`,'night','');
   const upd=()=>hudRight(`<span>${IC.letter}${got} / ${target}</span>`);upd();
   followCam(0,new THREE.Vector3(0,14,14),[-20,20],[-6,4],true);
   const guides=PL.map(p=>{const a=new THREE.Mesh(new THREE.ConeGeometry(.28,.7,3),new THREE.MeshBasicMaterial({color:p.i?0x4fe0ff:0xf2c14e,transparent:true,opacity:.8,depthWrite:false}));scene.add(a);return a;});
-  showBanner(`Sammelt ${target} Wunschzettel!`,2.4);
+  showBanner(res?'Weiter geht\'s! Sammelt die Wunschzettel!':`Sammelt ${target} Wunschzettel!`,2.4);
+  let caught=false;const hurry=hurryClock();spooky();
+  const plights=PL.map(p=>{const l=new THREE.PointLight(0xffd9a0,.7,7,1.6);scene.add(l);return l;});
   stage={update(dt){
-      if(!returning)time-=dt;
+      if(caught)return;
+      if(!returning){time-=dt;hurry(time);}
+      const dk=clamp((1-time/total-.6)/.4,0,1);
       movePlayers(dt,6.2,[-31,31,-16,14],V.colliders);
       for(const b of V.boxes){
         if(!b.letter){b.re-=dt;if(b.re<=0&&!returning)b.letter=true;}
         else if(!returning)for(const p of PL){if(p.stun<=0&&p.frozen<=0&&Math.hypot(p.pos.x-b.x,p.pos.z-b.z)<2.1){b.letter=false;b.re=rand(1.5,3);got++;upd();SFX.pick();burst(new THREE.Vector3(b.x,2.1,b.z),0xffe27a,14,2.5);say(new THREE.Vector3(b.x,2.6,b.z),'+1','g',1);break;}}
       }
+      // villagers
+      for(const f of folks){f.t-=dt;
+        if(f.state==='in'&&f.t<=0&&!returning){const free=doors.filter(o=>!o.busy&&PL.every(p=>d2(p.pos,o)>4));if(free.length){f.door=pick(free);f.door.busy=true;f.state='out';f.t=rand(8,13);f.pop=0;f.m.g.visible=f.cone.visible=true;f.m.g.position.set(f.door.x,0,f.door.z);
+          tone(300,.25,'triangle',.04,1.4);say(new THREE.Vector3(f.door.x,2.6,f.door.z),pick(['Wer ist da draußen?','Hab ich was gehört?','Hmm, ein schöner Abend …']),'',1.8);
+          if(!warned){warned=true;showBanner('Achtung, Dorfbewohner! Lasst euch nicht sehen!',2.6);}}else f.t=1;}
+        else if(f.state==='out'&&(f.t<=0||returning)){f.state='in';f.t=rand(4,9)*(1-.45*dk)*(PK==='folks'?.5:1);f.door.busy=false;f.m.g.visible=f.cone.visible=false;}
+        if(f.state==='out'){f.face=f.door.f+Math.sin((T+f.ph)*.7)*.8;
+          for(const p of PL){const dx=p.pos.x-f.door.x,dz=p.pos.z-f.door.z,dd=Math.hypot(dx,dz);if(f.pop>.6&&dd<VR&&angDiff(Math.atan2(dx,dz),f.face)<VC)p.seenBy=f;}}}
+      for(const p of PL){if(p.seenBy){p.sus=Math.min(1,(p.sus||0)+dt/1.1);if(!p.susL)p.susL=tag(()=>_t.copy(p.m.g.position).setY(2.6),'?','q');
+          if(p.sus>=1&&!caught){caught=true;scare();p.susL.el.textContent='!';p.susL.el.className='bub x';SFX.alert();const f=p.seenBy;say(new THREE.Vector3(f.door.x,2.7,f.door.z),pick(['Huch! Ein Wichtel!','Da ist jemand!','Schatz, komm schnell!']),'',2);
+            showBanner(`${heroName(p.i)} wurde gesehen! Nochmal von vorn!`,2.4);setTimeout(()=>fadeTo(()=>stageP1()),1800);return;}}
+        else{p.sus=Math.max(0,(p.sus||0)-dt*.6);if(p.sus<=0&&p.susL){dropLabel(p.susL);p.susL=null;}}
+        if(p.susL)p.susL.el.style.opacity=.4+p.sus*.6;p.seenBy=null;}
       // grinch
-      g.cool-=dt;g.laugh-=dt;g.chase=false;
+      for(const g of GR){if(caught)break;g.cool-=dt;g.laugh-=dt;g.chase=false;
       let near=PL[0],nd=1e9;PL.forEach(p=>{const dd=d2(p.pos,g.pos);if(dd<nd&&p.stun<=0){nd=dd;near=p;}});
       let tx=g.w.x,tz=g.w.z;
       if(g.cool<=0&&!returning){
-        if(nd<5){tx=near.pos.x;tz=near.pos.z;g.chase=true;}
+        if(nd<5+1.5*dk){tx=near.pos.x;tz=near.pos.z;g.chase=true;}
         else{let best=null,bd=1e9;for(const b of V.boxes)if(b.letter){const dd=Math.hypot(b.x-g.pos.x,b.z-g.pos.z);if(dd<bd){bd=dd;best=b;}}
-          if(best){tx=best.x;tz=best.z;if(bd<1.1){best.letter=false;best.re=rand(2,3.5);say(g.pos.clone().setY(2.6),'Hehe, geklaut!','g');SFX.steal();g.cool=3.5;g.laugh=1;wander(false);}}}
+          if(best){tx=best.x;tz=best.z;if(bd<1.1){best.letter=false;best.re=rand(2,3.5);say(g.pos.clone().setY(2.6),'Hehe, geklaut!','g');SFX.steal();g.cool=3.5;g.laugh=1;wander(g,false);}}}
       }
-      const sp=g.chase?g.speed*1.12:g.speed,dx=tx-g.pos.x,dz=tz-g.pos.z,dd=Math.hypot(dx,dz);
+      const sp=(g.chase?g.speed*1.12:g.speed)*(1+.35*dk),dx=tx-g.pos.x,dz=tz-g.pos.z,dd=Math.hypot(dx,dz);
       if(dd>.3){g.pos.x+=dx/dd*Math.min(dd,sp*dt);g.pos.z+=dz/dd*Math.min(dd,sp*dt);g.face=lerpAng(g.face,Math.atan2(dx,dz),Math.min(1,dt*8));g.walk+=dt*9;}
-      else if(!g.chase)wander(false);
+      else if(!g.chase)wander(g,false);
       collide(g.pos,.5,V.colliders);g.pos.x=clamp(g.pos.x,-31,31);g.pos.z=clamp(g.pos.z,-16,14);
-      if(g.last.distanceTo(g.pos)<sp*dt*.3){g.stuck+=dt;if(g.stuck>.8){g.stuck=0;g.cool=Math.max(g.cool,1);wander(false);}}else g.stuck=0;g.last.copy(g.pos);
-      if(g.cool<=0&&!returning&&nd<1&&near.stun<=0){
-        near.stun=.8;g.cool=4.5;g.laugh=1.2;wander(true);
-        if(got>0){got--;upd();say(g.pos.clone().setY(2.6),'Meins!','g');SFX.steal();burst(near.pos.clone().setY(1.4),0xffffff,8,2);}
-        else say(g.pos.clone().setY(2.6),'Grrr!','g');
-      }
-      if(!returning&&got>=target){returning=true;G.letters=got;ringM.visible=arrow.visible=true;SFX.win();showBanner('Alle Zettel! Zurück zum Schlitten!',3);say(g.pos.clone().setY(2.6),'Nein! Grrr!','g',2);}
+      if(g.last.distanceTo(g.pos)<sp*dt*.3){g.stuck+=dt;if(g.stuck>.8){g.stuck=0;g.cool=Math.max(g.cool,1);wander(g,false);}}else g.stuck=0;g.last.copy(g.pos);
+      if(g.cool<=0&&!returning&&!done&&nd<1.3&&near.stun<=0){scare();
+        caught=true;g.laugh=2;if(got>0){got--;upd();}near.stun=2;SFX.steal();burst(near.pos.clone().setY(1.4),0x9bd46c,12,2.5);
+        say(g.pos.clone().setY(2.6),'Hab dich! Ab in mein Versteck!','g',2);showBanner(`Oh nein! Der Grinch hat ${heroName(near.i)} gefangen!`,2);
+        const keep={got,time};setTimeout(()=>fadeTo(()=>stageJail(heroName(near.i),()=>stageP1(keep))),1300);
+      }}
+      if(!returning&&got>=target){returning=true;G.letters=got;ringM.visible=arrow.visible=true;SFX.win();showBanner('Alle Zettel! Zurück zum Schlitten!',3);GR.forEach(g=>say(g.pos.clone().setY(2.6),'Nein! Grrr!','g',2));}
       if(returning&&!done&&PL.some(p=>d2(p.pos,spot)<3.2)){done=true;SFX.bells();stageFly('Nach Hause in die Fabrik!',()=>stageHub('afterP1'),'home');}
       if(!returning&&!done&&time<=0){done=true;fail(1,`Die Sonne ist aufgegangen. ${lotsOfSaid()} hattet ${got} von ${target} Zetteln. Der Grinch lacht sich ins Fäustchen!`);}
     },
     anim(dt){
       const pr=clamp(1-time/total,0,1),dawn=clamp((pr-.55)/.45,0,1);
       tmpC.copy(sky0).lerp(sky1,dawn);scene.background.copy(tmpC);scene.fog.color.copy(tmpC);
-      V.L.hemi.intensity=.55+dawn*.5;V.L.dl.color.setHex(0xb8c8ff).lerp(new THREE.Color(0xffc49a),dawn);if(stars)stars.material.opacity=.9*(1-dawn);
+      V.L.hemi.intensity=.3+dawn*.7;V.L.dl.intensity=.42+dawn*.4;V.L.dl.color.setHex(0xb8c8ff).lerp(new THREE.Color(0xffc49a),dawn);if(stars)stars.material.opacity=.9*(1-dawn);
       hudBar(pr);
       for(const b of V.boxes){b.env.visible=b.gl.visible=b.letter;b.env.rotation.y+=dt*2;b.env.position.y=2.15+Math.sin(T*3+b.x)*.12;b.flag.rotation.z=b.letter?0:-1.4;}
       V.big.userData.star&&(V.big.userData.star.rotation.y+=dt);
-      gm.g.position.copy(g.pos);gm.g.rotation.y=g.face;animGrinch(gm,g.walk,g.laugh>0?'laugh':'sneak',T);
+      PL.forEach((p,i)=>plights[i].position.set(p.pos.x,2.2,p.pos.z));GR.forEach(g=>{const gm=g.gm;gm.g.position.copy(g.pos);gm.g.rotation.y=g.face;animGrinch(gm,g.walk,g.laugh>0?'laugh':'sneak',T);});
+      for(const f of folks)if(f.state==='out'){f.pop=Math.min(1,f.pop+dt*2);f.m.g.scale.setScalar(.3+.7*f.pop);f.m.g.rotation.y=f.face;f.m.head.rotation.y=Math.sin((T+f.ph)*1.3)*.2;f.cone.position.set(f.door.x,0,f.door.z);f.cone.rotation.y=f.face;f.sec.material.opacity=.15+.2*f.pop;f.cone.scale.setScalar(f.pop);}
       ringM.material.opacity=.5+Math.sin(T*5)*.3;arrow.position.y=3.4+Math.sin(T*4)*.25;animDeer(sl,T*.3);
       PL.forEach(p=>{if(p.stun>0){p.m.g.rotation.y=p.face+Math.sin(T*20)*.3;}});
       PL.forEach((p,i)=>{const a=guides[i];let best=null,bd=1e9;if(!returning)for(const b of V.boxes)if(b.letter){const dd=Math.hypot(b.x-p.pos.x,b.z-p.pos.z);if(dd<bd){bd=dd;best=b;}}
@@ -804,8 +1215,9 @@ function stageP1(){
 /* ---------- PHASE 2: night watch ---------- */
 function stageP2(){
   clearScene();mode='play';hideOverlay();
-  const d=lvl(),F=buildFactory(true);
-  const K=clamp(G.letters||5,3,10),need=Math.ceil(K/2),total=50;let time=total,done=false,scares=0;
+  const d=lvl(),F=buildFactory(true);planNote('p2');
+  if(plan.k==='dark'){F.lamps.forEach(l=>l.intensity*=.12);flick.forEach(f=>f.base*=.12);F.L.hemi.intensity*=.45;F.L.dl.intensity*=.4;}
+  const K=clamp(G.made||G.letters||5,1,10),need=Math.ceil(K/2),total=50;let time=total,done=false,scares=0;
   const toys=[];for(let i=0;i<K;i++){const x=13-6.3+i*(12.6/Math.max(1,K-1));const m=makeToy(i%5);m.position.set(x,1.06,-3.6);scene.add(m);
     const bar=new THREE.Group();bar.position.set(x,1.9,-3.6);const bg=new THREE.Mesh(new THREE.PlaneGeometry(.8,.12),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.5}));const fg=new THREE.Mesh(new THREE.PlaneGeometry(.8,.12),new THREE.MeshBasicMaterial({color:0xf2c14e}));fg.position.z=.01;bar.add(bg);bar.add(fg);bar.visible=false;scene.add(bar);
     toys.push({x,z:-2.4,type:i%5,prog:0,broken:false,m,bar,fg,bm:null});}
@@ -818,11 +1230,11 @@ function stageP2(){
   const spot=new THREE.SpotLight(0xffe08a,2.2,9+d*.8,.55,.45,1);spot.position.set(0,1.2,0);gm.g.add(spot);const st=new THREE.Object3D();st.position.set(0,0,6);gm.g.add(st);spot.target=st;
   const coneM=new THREE.Mesh(new THREE.ConeGeometry(Math.tan(.55)*(8+d*.8),8+d*.8,24,1,true),new THREE.MeshBasicMaterial({color:0xffe08a,transparent:true,opacity:.07,depthWrite:false,side:THREE.DoubleSide}));
   coneM.rotation.x=-Math.PI/2;coneM.position.set(0,1,(8+d*.8)/2);gm.g.add(coneM);
-  const vision=7.5+d*.8,cone=.55,breakTime=Math.max(2.2,5-d*.6),speed=2.2+d*.35,susTime=Math.max(.7,1.6-d*.2);
+  const vision=7.5+d*.8,cone=.55,breakTime=Math.max(2,4.3-d*.6),speed=2.6+d*.35,susTime=Math.max(.7,1.6-d*.2);
   const entries=[{x:-FX+.8,z:2,kind:'door'},{x:FX-.8,z:-6,kind:'door'}];if(d>=1)entries.push({x:6,z:-1.5,kind:'chimney'});
-  const g={state:'away',timer:7+rand(0,3),pos:new THREE.Vector3(-30,0,0),face:0,want:0,walk:0,target:null,look:0,lookT:3,throwCd:0,drop:0,laugh:0,visits:0};
+  const g={state:'away',timer:4+rand(0,2),pos:new THREE.Vector3(-30,0,0),face:0,want:0,walk:0,target:null,look:0,lookT:3,throwCd:0,drop:0,laugh:0,visits:0};
   let balls=[];
-  setHUD(`Runde ${G.round} · Wache in der Fabrik`,'night','');
+  setHUD(`Runde ${G.round} · Wache in der Fabrik`,'night','');spooky();
   const intact=()=>toys.filter(t=>!t.gone).length;let stolen=0;
   const upd=()=>hudRight(`<span>${IC.toy}${intact()} / ${K} im Regal</span><span>${IC.ghost}${stolen} geklaut</span>`);upd();
   const dropCarry=()=>{const t=g.carry;if(!t)return;g.carry=null;scene.add(t.m);t.m.position.set(t.x,1.06,-3.6);t.m.rotation.set(0,0,0);t.gone=false;t.prog=0;say(new THREE.Vector3(t.x,2.4,-3.6),'Zurück ins Regal!','b');upd();};
@@ -857,13 +1269,13 @@ function stageP2(){
           if(g.drop>0){g.drop-=dt*1.8;if(g.drop<=0)burst(g.pos.clone().setY(.2),0xffffff,12,2);break;}
           if(g.look>0){g.look-=dt;g.face=lerpAng(g.face,g.want,Math.min(1,dt*4));}
           else{g.lookT-=dt;
-            if(g.lookT<=0){g.look=1.2+d*.2;g.want=rand(-1.3,1.3);g.lookT=Math.max(1.8,4-d*.4)+rand(0,2);break;}
+            if(g.lookT<=0){g.look=1.2+d*.2;g.want=rand(-1.3,1.3);g.lookT=Math.max(1.5,3.2-d*.4)+rand(0,2);break;}
             if(!g.target||g.target.gone){let best=null,bd=1e9;for(const t of toys)if(!t.gone){const dd=Math.abs(t.x-g.pos.x)+Math.random()*4;if(dd<bd){bd=dd;best=t;}}g.target=best;if(!best){g.state='flee';break;}}
             const dx=g.target.x-g.pos.x,dz=g.target.z-g.pos.z,dd=Math.hypot(dx,dz);
             if(dd>.15){g.state='walk';g.face=lerpAng(g.face,Math.atan2(dx,dz),Math.min(1,dt*8));g.pos.x+=dx/dd*Math.min(dd,speed*dt);g.pos.z+=dz/dd*Math.min(dd,speed*dt);g.walk+=dt*8;collide(g.pos,.45,crateCols);}
             else{g.state='break';g.face=lerpAng(g.face,Math.PI,Math.min(1,dt*8));g.target.prog+=dt/breakTime;
               if(Math.random()<dt*5)burst(new THREE.Vector3(g.target.x,1.3,-3.6),0xc9b28f,2,1.5);
-              if(g.target.prog>=1){const t=g.target;t.gone=true;t.bar.visible=false;t.prog=0;gm.g.add(t.m);t.m.position.set(0,1.95,.15);t.m.rotation.set(0,0,0);g.carry=t;g.target=null;g.state='escape';g.look=0;SFX.alert();showBanner('Alarm! Der Grinch klaut ein Spielzeug!',2.4);say(g.pos.clone().setY(2.9),'Hehe, das nehm ich mit!','g');upd();}}
+              if(g.target.prog>=1){const t=g.target;t.gone=true;t.bar.visible=false;t.prog=0;gm.g.add(t.m);t.m.position.set(0,1.95,.15);t.m.rotation.set(0,0,0);g.carry=t;g.target=null;g.state='escape';g.look=0;SFX.alert();scare(.7);showBanner('Alarm! Der Grinch klaut ein Spielzeug!',2.4);say(g.pos.clone().setY(2.9),'Hehe, das nehm ich mit!','g');upd();}}
           }
           const seen=PL.find(p=>p.sus>=1&&sees(p));
           if(seen&&g.throwCd<=0){g.throwCd=1.8;g.laugh=.6;const from=g.pos.clone().add(new THREE.Vector3(0,1.4,0));const to=seen.pos.clone().setY(.8);const v=to.sub(from);const fl=v.length()/10;v.multiplyScalar(1/fl);v.y+=3*fl;
@@ -874,10 +1286,10 @@ function stageP2(){
           const seen=PL.find(p=>p.sus>=1&&sees(p));
           if(seen&&g.throwCd<=0){g.throwCd=1.8;const from=g.pos.clone().add(new THREE.Vector3(0,1.4,0));const to=seen.pos.clone().setY(.8);const v=to.sub(from);const fl=v.length()/10;v.multiplyScalar(1/fl);v.y+=3*fl;const bm=ball(.16,M(0xffffff,{roughness:.6}),from.x,from.y,from.z);scene.add(bm);balls.push({m:bm,v});}
           if(dd<.4){const t=g.carry;if(t){gm.g.remove(t.m);g.carry=null;stolen++;upd();SFX.lose();showBanner('Weg ist es! Ein Elf ruft: „Er rennt zu seiner Höhle am Eisberg!“',3.2);const el=F.elves[0];say(el.m.g.position.clone().setY(1.7),'Ich hab ihn gesehen! Zur Eisberg-Höhle!','b',3);}
-            g.state='away';g.timer=Math.max(6,12-d*1.4)+rand(0,4);PL.forEach(p=>{p.sus=0;});}}break;
+            g.state='away';g.timer=(Math.max(4.5,9-d*1.2)+rand(0,3))*(plan.k==='often'?.5:1);PL.forEach(p=>{p.sus=0;});}}break;
         case 'flee':{gm.g.visible=true;const door=entries.filter(e=>e.kind==='door').sort((a,b)=>Math.hypot(a.x-g.pos.x,a.z-g.pos.z)-Math.hypot(b.x-g.pos.x,b.z-g.pos.z))[0];
           const dx=door.x-g.pos.x,dz=door.z-g.pos.z,dd=Math.hypot(dx,dz);g.face=Math.atan2(dx,dz);g.pos.x+=dx/dd*Math.min(dd,7*dt);g.pos.z+=dz/dd*Math.min(dd,7*dt);g.walk+=dt*16;collide(g.pos,.45,crateCols);
-          if(dd<.4){g.state='away';g.timer=Math.max(6,12-d*1.4)+rand(0,4);PL.forEach(p=>{p.sus=0;});}}break;
+          if(dd<.4){g.state='away';g.timer=(Math.max(4.5,9-d*1.2)+rand(0,3))*(plan.k==='often'?.5:1);PL.forEach(p=>{p.sus=0;});}}break;
       }
       balls=balls.filter(b=>{b.v.y-=6*dt;b.m.position.addScaledVector(b.v,dt);const bp=b.m.position;
         if(F.crates.some(c=>Math.hypot(c.x-bp.x,c.z-bp.z)<1&&bp.y<1.4)){burst(bp.clone(),0xffffff,10,2);scene.remove(b.m);return false;}
@@ -900,10 +1312,10 @@ function stageP2(){
 }
 
 /* ---------- GRINCH CAVE: sneak in and steal the toys back ---------- */
-function stageCave(){
+function stageCave(res){
   clearScene();mode='play';hideOverlay();
-  const d=lvl(),n=Math.max(1,G.stolen||1);let recovered=0,done=false;const total=Math.max(50,70-d*5);let time=total;
-  const L=env({bg:0x05070f,sky:0x6a7ab0,ground:0x10141e,hemi:.65,sun:0x8fa8ff,sunI:.3,sunPos:[-10,25,15],sh:30,near:30,far:80});
+  const d=lvl(),n=Math.max(1,G.stolen||1);let recovered=res?res.recovered:0,done=false,caught=false;const total=Math.max(50,70-d*5);let time=res?res.time:total;if(!res)planNote('cave');
+  const L=env({bg:0x030409,sky:0x5a6aa0,ground:0x10141e,hemi:.4,sun:0x8fa8ff,sunI:.2,sunPos:[-10,25,15],sh:30,near:15,far:44});spooky();
   const floor=mesh(new THREE.PlaneGeometry(60,44),M(0x2c3446,{roughness:1}),0,0,0,false);floor.rotation.x=-Math.PI/2;scene.add(floor);
   const snowIn=mesh(new THREE.CircleGeometry(4.5,30),M(0xdfe9f5,{roughness:1}),-16,.02,6.5,false);snowIn.rotation.x=-Math.PI/2;scene.add(snowIn);
   const rockM=M(0x3a4258,{flatShading:true,roughness:1}),rockM2=M(0x4a5470,{flatShading:true,roughness:1}),ice=M(0x9fdcff,{flatShading:true,roughness:.2,metalness:.1,transparent:true,opacity:.85});
@@ -915,7 +1327,7 @@ function stageCave(){
   const crystals=[];
   for(const [x,z,s] of [[-10,-8,1],[0,-9.5,1.3],[11,-8.5,1.1],[15,0,1],[-15,-2,.9],[6,8.8,.9]]){const gq=new THREE.Group();gq.position.set(x,0,z);scene.add(gq);
     for(let k=0;k<4;k++){const c=mesh(new THREE.ConeGeometry(.22*s,rand(1,1.8)*s,5),E(0x5dff8a,1.1),rand(-.4,.4),.5*s,rand(-.4,.4),false);c.rotation.set(rand(-.4,.4),0,rand(-.4,.4));gq.add(c);crystals.push(c);}
-    const gl=glow(0x5dff8a,3*s,.5);gl.position.y=1;gq.add(gl);const pl=new THREE.PointLight(0x5dff8a,.9,9);pl.position.set(x,1.5,z);scene.add(pl);}
+    const gl=glow(0x5dff8a,3*s,.5);gl.position.y=1;gq.add(gl);const pl=new THREE.PointLight(0x5dff8a,.9,9);pl.position.set(x,1.5,z);scene.add(pl);addFlick(pl);}
   const hides=[];
   for(const [x,z] of [[-10,2.5],[-5,-3.5],[-1,3.5],[4,-2.5],[8.5,2.5],[-11,-4.5],[1.5,-6.5]]){const m=mesh(fuzzyGeo(1.15,1,.2,2.5),rockM2,x,.7,z);m.scale.set(1.1,.9,1);scene.add(m);hides.push({x,z});colliders.push({x,z,r:1.05});}
   // Grinch's home
@@ -924,12 +1336,12 @@ function stageCave(){
   colliders.push(box(13,-6,2.8,1.8));
   const can=mesh(new THREE.CylinderGeometry(.45,.4,1.1,14),M(0x8a95a8,{metalness:.6,roughness:.4}),15.5,.55,-3);scene.add(can);colliders.push({x:15.5,z:-3,r:.5});
   const boot=ball(.25,M(0x3a2414),9.5,.12,-8,1.8,.6,1);scene.add(boot);
-  const sign=canvasTex(512,128,(x,w,h)=>{x.fillStyle='#3d7d26';x.fillRect(0,0,w,h);x.fillStyle='#f5e663';x.font='700 58px Fredoka, Baloo 2, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('BETRETEN VERBOTEN!',w/2,h/2+3);});
+  const sign=canvasTex(512,128,(x,w,h)=>{x.fillStyle='#3d7d26';x.fillRect(0,0,w,h);x.fillStyle='#f5e663';x.font='700 58px Fredoka, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('BETRETEN VERBOTEN!',w/2,h/2+3);});
   const sg=mesh(new THREE.PlaneGeometry(3.2,.8),new THREE.MeshBasicMaterial({map:sign}),-12.5,2.4,8.2,false);sg.rotation.y=.9;scene.add(sg);scene.add(mesh(new THREE.CylinderGeometry(.06,.06,2.4),M(0x5a3a22),-12.5,1.2,8.2));
   // pile of stolen toys
   const pileC=new THREE.Vector3(12,0,-2);
   const pileRug=mesh(new THREE.CircleGeometry(1.8,30),M(0x7a4bb5),pileC.x,.02,pileC.z,false);pileRug.rotation.x=-Math.PI/2;scene.add(pileRug);
-  const pileMeshes=[];for(let i=0;i<n;i++){const t=makeToy(i%5);const a=i*2.3;t.position.set(pileC.x+Math.cos(a)*.7*(i>0),0,pileC.z+Math.sin(a)*.7*(i>0));t.rotation.y=a;scene.add(t);pileMeshes.push(t);}
+  const pileMeshes=[];for(let i=0;i<n-recovered;i++){const t=makeToy(i%5);const a=i*2.3;t.position.set(pileC.x+Math.cos(a)*.7*(i>0),0,pileC.z+Math.sin(a)*.7*(i>0));t.rotation.y=a;scene.add(t);pileMeshes.push(t);}
   const pileGlow=glow(0xffe27a,3.5,.5);pileGlow.position.set(pileC.x,1,pileC.z);scene.add(pileGlow);
   // sleigh outside the entrance
   const exitC=new THREE.Vector3(-15.5,0,6.5);
@@ -939,43 +1351,52 @@ function stageCave(){
   const pt=tag(()=>_t.copy(pileC).setY(2.2),'Spielzeuge','b');pt.edge=true;pt.show=()=>pileMeshes.length>0;
   const et=tag(()=>_t.copy(exitC).setY(1.6),'Schlitten','tag');et.edge=true;et.show=()=>PL.some(p=>p.carry);
   // Grinch on patrol
-  const gm=makeGrinch();gm.lantern.visible=true;scene.add(gm.g);
-  const vision=6.5+d*.7,cone=.55,susTime=Math.max(.8,1.7-d*.2),gs=1.8+d*.3;
-  const spot=new THREE.SpotLight(0xffe08a,2.4,vision+2,cone,.45,1);spot.position.set(0,1.2,0);gm.g.add(spot);const st=new THREE.Object3D();st.position.set(0,0,6);gm.g.add(st);spot.target=st;
-  const coneM=new THREE.Mesh(new THREE.ConeGeometry(Math.tan(cone)*vision,vision,24,1,true),new THREE.MeshBasicMaterial({color:0xffe08a,transparent:true,opacity:.08,depthWrite:false,side:THREE.DoubleSide}));coneM.rotation.x=-Math.PI/2;coneM.position.set(0,1,vision/2);gm.g.add(coneM);
+  const vision=7+d*.7,cone=.55,susTime=Math.max(.8,1.7-d*.2),gs=(2.1+d*.3)*(plan.k==='fast'?1.25:1);const hurry=hurryClock();
   const wps=[[11,-4.5,'bed'],[6,-6],[-1,-7],[-7,-1],[-6,5],[2,6.5],[9,5],[13,1]];
-  const g={pos:new THREE.Vector3(11,0,-4.5),face:0,walk:0,wp:1,look:0,want:0,nap:rand(3,5),laugh:0,zz:0,grumble:0};
+  const GS=[];
+  const mkG=(x,z,route,nap,slow)=>{const gm=makeGrinch();gm.lantern.visible=true;scene.add(gm.g);
+    const spot=new THREE.SpotLight(0xffe08a,2.4,vision+2,cone,.45,1);spot.position.set(0,1.2,0);gm.g.add(spot);const st=new THREE.Object3D();st.position.set(0,0,6);gm.g.add(st);spot.target=st;
+    const coneM=new THREE.Mesh(new THREE.ConeGeometry(Math.tan(cone)*vision,vision,24,1,true),new THREE.MeshBasicMaterial({color:0xffe08a,transparent:true,opacity:.08,depthWrite:false,side:THREE.DoubleSide}));coneM.rotation.x=-Math.PI/2;coneM.position.set(0,1,vision/2);gm.g.add(coneM);
+    GS.push({gm,spot,coneM,wps:route,slow,pos:new THREE.Vector3(x,0,z),face:0,walk:0,wp:1,look:0,want:0,nap,laugh:0,zz:0,grumble:0});};
+  mkG(11,-4.5,wps,plan.k==='awake'?0:rand(3,5),1);
+  mkG(-8,-6,[[-8,-6],[-12.5,-1],[-8,3.5],[-3,1],[2.5,-1.5],[-2,-5.5]],0,.85);
   setHUD(`Runde ${G.round} · Grinch-Höhle`,'night','');
   const upd=()=>hudRight(`<span>${IC.toy}${recovered} / ${n} zurückgeholt</span>`);upd();
   followCam(0,new THREE.Vector3(0,13,11),[-9,9],[-3,3],true);
   showBanner('Psst! Holt die Spielzeuge zurück!',2.6);
-  const awake=()=>g.nap<=0;
-  const sees=p=>{if(!awake()||p.hidden||p.stun>0)return false;const dx=p.pos.x-g.pos.x,dz=p.pos.z-g.pos.z,dd=Math.hypot(dx,dz);return dd<vision&&angDiff(Math.atan2(dx,dz),g.face)<cone;};
-  const catchP=p=>{say(g.pos.clone().setY(2.8),pick(['Raus aus meiner Höhle!','Hab dich, Zwerg!','Erwischt! Raus hier!']),'g',2);SFX.steal();g.laugh=1.2;
+  const awake=g=>g.nap<=0;
+  const sees=(p,g)=>{if(!awake(g)||p.hidden||p.stun>0)return false;const dx=p.pos.x-g.pos.x,dz=p.pos.z-g.pos.z,dd=Math.hypot(dx,dz);return dd<vision&&angDiff(Math.atan2(dx,dz),g.face)<cone;};
+  const catchP=(p,g)=>{scare();say(g.pos.clone().setY(2.8),pick(['Hab dich! Ab ins Versteck!','Erwischt! Ab ins Versteck!']),'g',2);SFX.steal();g.laugh=1.2;
     if(p.carry){p.m.g.remove(p.carry);const t=p.carry;p.carry=null;t.position.set(pileC.x+rand(-.6,.6),0,pileC.z+rand(-.6,.6));scene.add(t);pileMeshes.push(t);}
-    burst(p.pos.clone().setY(1),0x9bd46c,12,2.5);p.pos.set(exitC.x,0,exitC.z);p.stun=1.3;p.sus=0;if(p.susL){dropLabel(p.susL);p.susL=null;}say(p.pos.clone().setY(2.2),'Uff! Nochmal leiser!','b',1.8);};
+    burst(p.pos.clone().setY(1),0x9bd46c,12,2.5);p.stun=3;p.sus=0;if(p.susL){dropLabel(p.susL);p.susL=null;}
+    caught=true;showBanner(`Oh nein! Der Grinch hat ${heroName(p.i)} gefangen!`,2);const keep={recovered,time};setTimeout(()=>fadeTo(()=>stageJail(heroName(p.i),()=>stageCave(keep))),1300);};
+  if(res)showBanner('Weiter! Holt die Spielzeuge zurück!',2.4);
   stage={update(dt){
-      time-=dt;
+      if(caught)return;
+      time-=dt;hurry(time);
       movePlayers(dt,5.2,[-21,17,-11,11],colliders);
       for(const p of PL){inside(p.pos);
         p.hidden=p.stun<=0&&hides.some(c=>Math.hypot(c.x-p.pos.x,c.z-p.pos.z)<1.75);
         if(!p.carry&&p.stun<=0&&pileMeshes.length&&d2(p.pos,pileC)<1.9){const t=pileMeshes.pop();scene.remove(t);p.carry=t;p.m.g.add(t);t.position.set(0,1.75,0);t.rotation.set(0,0,0);SFX.pick();say(p.pos.clone().setY(2.6),'Hab eins! Psst …','b',1.4);}
         if(p.carry&&d2(p.pos,exitC)<2.1){p.m.g.remove(p.carry);p.carry=null;recovered++;upd();SFX.deliver();burst(exitC.clone().setY(1),0xf2c14e,16,3);say(exitC.clone().setY(2.4),'In den Schlitten!','g',1.4);}
         const moving=ctl(p.i).x||ctl(p.i).z;
-        let rate=0;if(sees(p))rate=1/susTime;else if(awake()&&p.carry&&moving&&!p.hidden&&d2(p.pos,g.pos)<3.2)rate=.35/susTime;
+        let rate=0,by=GS[0];for(const g of GS){let r=0;if(sees(p,g))r=1/susTime;else if(awake(g)&&p.carry&&moving&&!p.hidden&&d2(p.pos,g.pos)<3.2)r=.35/susTime;if(r>rate){rate=r;by=g;}}
         if(rate>0){p.sus=Math.min(1,p.sus+dt*rate);if(!p.susL)p.susL=tag(()=>_t.copy(p.m.g.position).setY(2.6),'?','q');
-          if(p.sus>=1){p.susL.el.textContent='!';p.susL.el.className='bub x';SFX.alert();catchP(p);}}
+          if(p.sus>=1){p.susL.el.textContent='!';p.susL.el.className='bub x';SFX.alert();catchP(p,by);return;}}
         else{p.sus=Math.max(0,p.sus-dt*.5);if(p.sus<=0&&p.susL){dropLabel(p.susL);p.susL=null;}}
         if(p.susL)p.susL.el.style.opacity=.4+p.sus*.6;
       }
       // grinch patrol
+      for(const g of GS){
       g.laugh-=dt;
       if(g.nap>0){g.nap-=dt;g.zz-=dt;if(g.zz<=0){g.zz=1.6;say(g.pos.clone().setY(2.2),'Z z z','z',1.6);}if(g.nap<=0){say(g.pos.clone().setY(2.6),'Hä? Was war das?','g');g.look=1.5;g.want=g.face+rand(-1.5,1.5);}}
       else if(g.look>0){g.look-=dt;g.face=lerpAng(g.face,g.want,Math.min(1,dt*3));}
-      else{const w=wps[g.wp],dx=w[0]-g.pos.x,dz=w[1]-g.pos.z,dd=Math.hypot(dx,dz);
-        if(dd>.2){g.face=lerpAng(g.face,Math.atan2(dx,dz),Math.min(1,dt*5));g.pos.x+=dx/dd*Math.min(dd,gs*dt);g.pos.z+=dz/dd*Math.min(dd,gs*dt);g.walk+=dt*8;collide(g.pos,.45,colliders);}
-        else{g.wp=(g.wp+1)%wps.length;if(w[2]==='bed'){g.nap=Math.max(2.5,6-d*.7)+rand(0,2);say(g.pos.clone().setY(2.6),'Ein kleines Nickerchen …','g');}else{g.look=rand(.8,1.8);g.want=g.face+rand(-2,2);}
+      else{const w=g.wps[g.wp],dx=w[0]-g.pos.x,dz=w[1]-g.pos.z,dd=Math.hypot(dx,dz);
+        if(Math.random()<dt*(.22+d*.05)){g.look=1.3;g.want=g.face+Math.PI;say(g.pos.clone().setY(2.6),pick(['Hm?!','Wer da?!','Ich hab was gehört!']),'g',1.3);}
+        else if(dd>.2){g.face=lerpAng(g.face,Math.atan2(dx,dz),Math.min(1,dt*5));g.pos.x+=dx/dd*Math.min(dd,gs*g.slow*dt);g.pos.z+=dz/dd*Math.min(dd,gs*g.slow*dt);g.walk+=dt*8;collide(g.pos,.45,colliders);}
+        else{g.wp=(g.wp+1)%g.wps.length;if(w[2]==='bed'&&plan.k!=='awake'){g.nap=Math.max(2,4.5-d*.6)+rand(0,1.5);say(g.pos.clone().setY(2.6),'Ein kleines Nickerchen …','g');}else{g.look=rand(.8,1.8);g.want=g.face+rand(-2,2);}
           g.grumble-=1;if(g.grumble<=0&&Math.random()<.4){g.grumble=2;say(g.pos.clone().setY(2.6),pick(['Meine Spielzeuge! Hehe.','Weihnachten? Pah!','Ich hör doch was …']),'g');}}}
+      }
       const allHome=recovered>=n;
       if(!done&&(allHome||time<=0)){done=true;G.recovered=recovered;G.toys=(G.toys||0)+recovered;
         if(G.toys<=0){setTimeout(()=>fail(4,'Ihr habt kein Spielzeug zurückgeholt, und ohne Spielzeug gibt es keine Geschenke. Schleicht von Fels zu Fels und versucht es nochmal!'),600);G.toys=0;return;}
@@ -986,19 +1407,114 @@ function stageCave(){
       hudBar(1-time/total);
       crystals.forEach((c,i)=>c.material.emissiveIntensity=.9+Math.sin(T*2+i)*.3);
       ringM.material.opacity=.5+Math.sin(T*5)*.3;pileGlow.material.opacity=pileMeshes.length?.5:0;
-      gm.g.position.set(g.pos.x,0,g.pos.z);gm.g.rotation.y=g.face;
-      const aw=awake();spot.visible=coneM.visible=gm.lantern.visible=aw;
+      for(const g of GS){const gm=g.gm;gm.g.position.set(g.pos.x,0,g.pos.z);gm.g.rotation.y=g.face;
+      const aw=awake(g);g.spot.visible=g.coneM.visible=gm.lantern.visible=aw;
       if(!aw){gm.g.rotation.y=g.face;gm.head.rotation.x=.5;}else gm.head.rotation.x=0;
-      animGrinch(gm,aw&&g.look<=0?g.walk:0,g.laugh>0?'laugh':'sneak',T);
+      animGrinch(gm,aw&&g.look<=0?g.walk:0,g.laugh>0?'laugh':'sneak',T);}
       PL.forEach(p=>{if(p.carry)p.carry.rotation.y+=dt;});
       const mid=followCam(dt,new THREE.Vector3(0,13,11),[-9,9],[-3,3]);
     }};
+}
+
+/* ---------- Grinch's hideout: find the way out ---------- */
+function stageJail(who,back){
+  clearScene();mode='play';hideOverlay();
+  const d=lvl(),C=Math.min(10,6+d),R=5,S=3.2,WH=1.3;
+  const L=env({bg:0x050904,sky:0x7ab880,ground:0x14200f,hemi:.42,sun:0xc8ffd0,sunI:.25,sunPos:[-6,25,10],sh:26,near:14,far:42});spooky();
+  const W=C*S,H=R*S,ox=-W/2,oz=-H/2;
+  const fl=mesh(new THREE.PlaneGeometry(W+12,H+8),M(0x37402c,{roughness:1}),0,0,0,false);fl.rotation.x=-Math.PI/2;scene.add(fl);
+  for(let i=0;i<40;i++){const pb=mesh(SPHlo,M(0x4a5a3a,{roughness:1}),rand(ox,ox+W),0,rand(oz,oz+H),false);pb.scale.set(rand(.1,.3),.05,rand(.1,.3));scene.add(pb);}
+  const cell=(c,r)=>r*C+c,EW=Array(C*R).fill(true),SW=Array(C*R).fill(true),vis=Array(C*R).fill(false);
+  const start=[0,R-1],goal=[C-1,0];
+  const st=[start];vis[cell(...start)]=true;
+  while(st.length){const [c,r]=st[st.length-1];const nb=[[c+1,r],[c-1,r],[c,r+1],[c,r-1]].filter(([a,b])=>a>=0&&a<C&&b>=0&&b<R&&!vis[cell(a,b)]);
+    if(!nb.length){st.pop();continue;}const [a,b]=pick(nb);if(a>c)EW[cell(c,r)]=false;else if(a<c)EW[cell(a,b)]=false;else if(b>r)SW[cell(c,r)]=false;else SW[cell(a,b)]=false;vis[cell(a,b)]=true;st.push([a,b]);}
+  for(let k=0;k<Math.round(C*R*.12);k++){const c=Math.floor(rand(0,C-1)),r=Math.floor(rand(0,R-1));if(Math.random()<.5)EW[cell(c,r)]=false;else SW[cell(c,r)]=false;}
+  const open=(c,r)=>{const o=[];if(c<C-1&&!EW[cell(c,r)])o.push([c+1,r]);if(c>0&&!EW[cell(c-1,r)])o.push([c-1,r]);if(r<R-1&&!SW[cell(c,r)])o.push([c,r+1]);if(r>0&&!SW[cell(c,r-1)])o.push([c,r-1]);return o;};
+  const prev={},q=[start];prev[cell(...start)]=-1;while(q.length){const [c,r]=q.shift();if(c===goal[0]&&r===goal[1])break;for(const [a,b] of open(c,r)){const k=cell(a,b);if(prev[k]===undefined){prev[k]=cell(c,r);q.push([a,b]);}}}
+  const path=[];for(let k=cell(...goal);k!==-1&&k!==undefined;k=prev[k])path.unshift(k);
+  const cx=c=>ox+(c+.5)*S,cz=r=>oz+(r+.5)*S;
+  const wallM=M(0x4c6b3c,{flatShading:true,roughness:1}),topM=M(0x6fae4a,{roughness:1}),cols=[];
+  const wall=(x,z,w,dd)=>{scene.add(mesh(new THREE.BoxGeometry(w,WH,dd),wallM,x,WH/2,z));const t=mesh(new THREE.BoxGeometry(w+.08,.12,dd+.08),topM,x,WH+.04,z,false);scene.add(t);cols.push(box(x,z,w,dd));};
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){if(c<C-1&&EW[cell(c,r)])wall(ox+(c+1)*S,cz(r),.5,S+.5);if(r<R-1&&SW[cell(c,r)])wall(cx(c),oz+(r+1)*S,S+.5,.5);}
+  wall(0,oz,W+.5,.5);wall(0,oz+H,W+.5,.5);wall(ox,0,.5,H+.5);wall(ox+W,oz+S+(H-S)/2,.5,H-S+.5);
+  // green crystals on random walls, torches
+  for(let i=0;i<8;i++){const c=Math.floor(rand(0,C)),r=Math.floor(rand(0,R));const g=new THREE.Group();g.position.set(cx(c)+rand(-1,1),0,cz(r)+rand(-1,1));
+    if(path.includes(cell(c,r))&&i%2)continue;for(let k=0;k<3;k++){const cr=mesh(new THREE.ConeGeometry(.15,rand(.5,.9),5),E(0x5dff8a,1),rand(-.25,.25),.3,rand(-.25,.25),false);cr.rotation.set(rand(-.4,.4),0,rand(-.4,.4));g.add(cr);}scene.add(g);}
+  const torches=[];for(const [c,r] of [[0,0],[C-1,R-1],[Math.floor(C/2),2]]){const tl=new THREE.PointLight(0xffb060,.8,9,1.5);tl.position.set(cx(c),2,cz(r));scene.add(tl);const fg=glow(0xffa040,1.2,.8);fg.position.copy(tl.position);scene.add(fg);torches.push(tl);}
+  // broken cage at the start
+  for(let k=0;k<7;k++){const a=-Math.PI*.15+k/6*Math.PI*.9;scene.add(mesh(new THREE.CylinderGeometry(.05,.05,1.8,6),M(0x8a95a8,{metalness:.6,roughness:.4}),cx(0)+Math.cos(a)*1.25,.9,cz(R-1)-Math.sin(a)*1.25));}
+  // the sleeping grinch in a dead end
+  const dead=[];for(let r=0;r<R;r++)for(let c=0;c<C;c++){const k=cell(c,r);if(!path.includes(k)&&open(c,r).length===1&&c+(R-1-r)>3)dead.push([c,r]);}
+  const gm=makeGrinch();const gp=dead.length?pick(dead):[Math.floor(C/2),0];const BEDP=new THREE.Vector3(cx(gp[0]),0,cz(gp[1]));gm.g.position.copy(BEDP);gm.g.rotation.y=rand(0,6);gm.head.rotation.x=.5;scene.add(gm.g);gm.lantern.visible=false;
+  const gbed=mesh(new THREE.BoxGeometry(2,.3,1.3),M(0x3d7d26),BEDP.x,.15,BEDP.z);scene.add(gbed);
+  const G2={selfT:rand(18,30),state:'sleep',pos:BEDP.clone(),face:gm.g.rotation.y,walk:0,next:null,bored:0,laugh:0,mutter:0};let noise=0;
+  const cellOf=v=>[clamp(Math.floor((v.x-ox)/S),0,C-1),clamp(Math.floor((v.z-oz)/S),0,R-1)];
+  const stepToward=(from,to)=>{const s0=cell(...from),t0=cell(...to);if(s0===t0)return to;const pv={};pv[s0]=-1;const qq=[from];
+    while(qq.length){const [c,r]=qq.shift();if(cell(c,r)===t0)break;for(const [a,b] of open(c,r)){const k=cell(a,b);if(pv[k]===undefined){pv[k]=cell(c,r);qq.push([a,b]);}}}
+    if(pv[t0]===undefined)return from;let k=t0;while(pv[k]!==s0)k=pv[k];return [k%C,Math.floor(k/C)];};
+  const cellDist=(a,b)=>{const s0=cell(...a),t0=cell(...b);const dd={};dd[s0]=0;const qq=[a];while(qq.length){const [c,r]=qq.shift();const k=cell(c,r);if(k===t0)return dd[k];for(const [x,y] of open(c,r)){const kk=cell(x,y);if(dd[kk]===undefined){dd[kk]=dd[k]+1;qq.push([x,y]);}}}return 99;};
+  // exit
+  const EX=new THREE.Vector3(ox+W+1.1,0,cz(0));
+  const arch=new THREE.Group();arch.position.set(ox+W,0,cz(0));scene.add(arch);
+  for(const s of [-1,1])arch.add(mesh(new THREE.BoxGeometry(.6,2.6,.6),wallM,0,1.3,s*(S/2)));
+  arch.add(mesh(new THREE.BoxGeometry(.6,.5,S+.6),wallM,0,2.7,0));
+  const sun=glow(0xfff1b0,5,.8);sun.position.set(1.6,1.2,0);arch.add(sun);const el=new THREE.PointLight(0xfff1c0,1.2,8);el.position.set(1.5,1.5,0);arch.add(el);
+  const exT=canvasTex(512,128,(x,w,h)=>{x.fillStyle='#2f9a52';x.fillRect(0,0,w,h);x.fillStyle='#fff';x.font='700 64px Fredoka, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('AUSGANG',w/2,h/2+4);});
+  const exS=new THREE.Group();exS.position.set(ox+W+.4,3.3,cz(0));exS.rotation.x=-.7;scene.add(exS);exS.add(mesh(new THREE.PlaneGeometry(2.6,.65),new THREE.MeshBasicMaterial({map:exT}),0,0,0,false));
+  const out=mesh(new THREE.PlaneGeometry(4,S),M(0xeef4fb,{roughness:1}),ox+W+2,.01,cz(0),false);out.rotation.x=-Math.PI/2;scene.add(out);
+  // hint crumbs along the way out (shown later)
+  const crumbs=[];path.forEach((k,i)=>{if(i===0)return;const c=k%C,r=Math.floor(k/C);const m=ball(.14,E(0xfff07a,1.2),cx(c),.15,cz(r),1,1,1,true);m.castShadow=false;m.visible=false;scene.add(m);crumbs.push(m);});
+  PL.forEach((p,i)=>placePlayer(p,cx(0)+(PL.length>1?(i?.6:-.6):0),cz(R-1),Math.PI/2));addTags();
+  setHUD(`Grinchs Versteck`,null,'');
+  const noiseHUD=()=>{const n=Math.round(clamp(noise,0,1)*5);hudRight(G2.state==='sleep'?`<span>${n>=3?'🔊':'🤫'} Lärm ${'▮'.repeat(n)}${'▯'.repeat(5-n)}</span>`:G2.state==='chase'?'<span>😱 Der Grinch ist wach!</span>':'<span>🥱 Der Grinch wird müde …</span>');};noiseHUD();
+  const off=new THREE.Vector3(0,12,8.5),bx=[Math.min(0,ox+7),Math.max(0,-ox-7)],bz=[oz+3,-oz-3];followCam(0,off,bx,bz,true);
+  showBanner(`Der Grinch hat ${who} gefangen!`,2.6);
+  setTimeout(()=>{if(stage===jail)showBanner('Psst! Der Grinch schläft. Aktionstaste halten = schleichen!',3.2);},2700);
+  const backToCage=()=>{scare();SFX.steal();say(G2.pos.clone().setY(2.8),pick(['Zurück in den Käfig!','Hab euch! Ab in den Käfig!']),'g',2.2);G2.laugh=1.5;
+    PL.forEach((p,i)=>{burst(p.pos.clone().setY(1),0x9bd46c,10,2.4);p.pos.set(cx(0)+(PL.length>1?(i?.6:-.6):0),0,cz(R-1));p.stun=1;p.sus=0;});G2.state='home';G2.next=null;noise=0;showBanner('Erwischt! Zurück in den Käfig!',2);};
+  let t=0,hint=false,done=false;
+  const jail=stage={update(dt){t+=dt;
+      PL.forEach(p=>{p.sneak=ctl(p.i).hold;p.hidden=p.sneak;});
+      movePlayers(dt,5.6,[ox+.4,ox+W+2.6,oz+.4,oz+H-.4],cols);
+      if(G2.state==='sleep')PL.forEach(p=>collide(p.pos,.4,[{x:BEDP.x,z:BEDP.z,r:.9}]));
+      // noise wakes the grinch
+      if(G2.state==='sleep'){let add=0;PL.forEach(p=>{const c=ctl(p.i),mv=(c.x||c.z)&&p.stun<=0;const dd=d2(p.pos,G2.pos);if(mv&&!p.sneak&&dd<8.5)add+=(1-dd/8.5)*.9+.12;});
+        noise=add>0?noise+dt*add*.8*(1+d*.15):Math.max(0,noise-dt*.15);
+        if(noise>.5&&G2.mutter<=0){G2.mutter=4;say(G2.pos.clone().setY(2.3),pick(['Hmm …?','Mmpf … wer …?','*schnarch* … hä?']),'g',1.6);}G2.mutter-=dt;
+        G2.selfT-=dt;if(noise>=1||G2.selfT<=0){G2.selfT=rand(20,32);scare(.7);G2.state='chase';G2.bored=0;G2.next=null;gm.head.rotation.x=0;gm.lantern.visible=true;SFX.alert();say(G2.pos.clone().setY(2.9),'WER IST DA?!','g',2);showBanner('Oh nein! Der Grinch ist aufgewacht! Schnell weg!',2.4);}}
+      else{const gc=cellOf(G2.pos);let target;
+        if(G2.state==='chase'){let best=null,bd=99;PL.forEach(p=>{const dd=cellDist(gc,cellOf(p.pos));if(dd<bd){bd=dd;best=p;}});
+          if(bd>4||PL.every(p=>p.sneak&&bd>1))G2.bored+=dt;else G2.bored=Math.max(0,G2.bored-dt*.5);
+          if(G2.bored>8){G2.state='home';G2.next=null;say(G2.pos.clone().setY(2.8),'Gähn … ich leg mich wieder hin.','g',2);}
+          target=best?cellOf(best.pos):gc;
+          if(best&&bd<=0){const dx=best.pos.x-G2.pos.x,dz=best.pos.z-G2.pos.z,dd=Math.hypot(dx,dz);if(dd>.05){const sp=Math.min(dd,(3.1+d*.3)*dt);G2.pos.x+=dx/dd*sp;G2.pos.z+=dz/dd*sp;G2.face=lerpAng(G2.face,Math.atan2(dx,dz),Math.min(1,dt*8));G2.walk+=dt*9;}G2.next=null;}
+          if(best&&d2(best.pos,G2.pos)<.9&&best.stun<=0){backToCage();return;}}
+        else target=cellOf(BEDP);
+        if(!(G2.state==='chase'&&target&&cell(...target)===cell(...gc))){
+          if(!G2.next){const nc=stepToward(gc,target);G2.next=new THREE.Vector3(cx(nc[0]),0,cz(nc[1]));}
+          const dx=G2.next.x-G2.pos.x,dz=G2.next.z-G2.pos.z,dd=Math.hypot(dx,dz),sp=(G2.state==='chase'?3.1+d*.3:2)*dt;
+          if(dd<.08){G2.next=null;if(G2.state==='home'&&cell(...gc)===cell(...cellOf(BEDP))&&d2(G2.pos,BEDP)<.1){G2.state='sleep';noise=0;gm.lantern.visible=false;gm.head.rotation.x=.5;showBanner('Puh, der Grinch schläft wieder.',2);}}
+          else{G2.pos.x+=dx/dd*Math.min(dd,sp);G2.pos.z+=dz/dd*Math.min(dd,sp);G2.face=lerpAng(G2.face,Math.atan2(dx,dz),Math.min(1,dt*8));G2.walk+=dt*9;}}
+      }
+      noiseHUD();
+      if(!hint&&t>30){hint=true;crumbs.forEach(c=>c.visible=true);showBanner('Tipp: Folgt den goldenen Krümeln!',2.6);SFX.pick();}
+      if(!done&&PL.some(p=>p.pos.x>ox+W+.6)){done=true;SFX.win();showBanner('Geschafft! Ihr seid entkommen!',2);PL.forEach(p=>say(p.pos.clone().setY(2.3),'Frei!','g',1.6));setTimeout(()=>fadeTo(back),1400);}
+    },
+    anim(dt){torches.forEach((l,i)=>l.intensity=.7+Math.sin(T*9+i*2)*.12+Math.sin(T*13+i)*.06);
+      gm.g.position.copy(G2.pos);gm.g.rotation.y=G2.face;G2.laugh-=dt;
+      if(G2.state==='sleep'){animGrinch(gm,0,'sneak',T);gm.head.rotation.x=.5;if(Math.floor(T/1.8)!==Math.floor((T-dt)/1.8))say(gm.g.position.clone().setY(2.2),'Z z z','z',1.6);}
+      else animGrinch(gm,G2.walk,G2.laugh>0?'laugh':'sneak',T);
+      PL.forEach(p=>{if(p.stun>0)p.m.g.rotation.y=p.face+Math.sin(T*20)*.3;});
+      crumbs.forEach((c,i)=>c.position.y=.15+Math.sin(T*4+i*.7)*.06);
+      followCam(dt,off,bx,bz);}};
 }
 
 /* ---------- PHASE 3: Christmas Eve ---------- */
 function stageP3(){
   clearScene();mode='play';hideOverlay();
   const d=lvl();
+  planNote('p3');
   const L=env({bg:0x0b1633,sky:0x4a6ab0,ground:0xffffff,hemi:.6,sun:0xb8c8ff,sunI:.8,sunPos:[-15,30,15],sh:30,near:40,far:110});
   addStars();addSnow(900,60);
   const n=Math.max(1,G.toys||3);let sack=n,delivered=0;const need=Math.ceil(n/2);let done=false;
@@ -1012,7 +1528,7 @@ function stageP3(){
     if(wants){const e=new THREE.Group();e.add(mesh(new THREE.BoxGeometry(.7,.48,.05),M(0xffffff,{roughness:.4}),0,0,0,false));const se=mesh(new THREE.CylinderGeometry(.1,.1,.04,14),M(0xd23a3a),0,-.03,.04,false);se.rotation.x=Math.PI/2;e.add(se);e.position.set(info.chim.x,info.chim.top+1.3,info.chim.z);scene.add(e);const gl=glow(0xffe27a,2.4,.8);gl.position.copy(e.position);scene.add(gl);info.env=e;info.gl=gl;
       const ring=mesh(new THREE.RingGeometry(.55,.7,24),new THREE.MeshBasicMaterial({color:0xffe27a,transparent:true,opacity:.8,depthWrite:false,side:THREE.DoubleSide}),info.chim.x,info.chim.top+.15,info.chim.z,false);ring.rotation.x=-Math.PI/2;scene.add(ring);info.ring=ring;}
     houses.push(info);x+=rand(8,11);}
-  const gp=Math.min(.7,.35+d*.1);
+  const gp=Math.min(.75,.45+d*.1);
   houses.forEach((h,i)=>{if(i>0&&!h.wants&&Math.random()<gp){const gm=makeGrinch();gm.g.position.set(h.x-.9,h.wallH+h.roofH-.05,h.z);gm.g.rotation.y=-Math.PI/2;scene.add(gm.g);h.grinch=gm;}});
   if(!houses.some(h=>h.grinch)){const h=houses.find((h,i)=>i>0&&!h.wants);if(h){const gm=makeGrinch();gm.g.position.set(h.x-.9,h.wallH+h.roofH-.05,h.z);gm.g.rotation.y=-Math.PI/2;scene.add(gm.g);h.grinch=gm;}}
   const end=x+6;
@@ -1047,7 +1563,7 @@ function stageP3(){
           const r=roofAt(h,p.x,p.z);if(r>0&&p.y<r){scene.remove(gf.m);burst(p.clone(),0xffffff,10,2);if(h.wants&&!h.got)say(p.clone().setY(r+1.5),'Daneben!','r',1.2);return false;}}
         if(p.y<0){scene.remove(gf.m);burst(p.clone().setY(.1),0xffffff,8,1.5);return false;}return true;});
       for(const h of houses){if(!h.grinch)continue;const ahead=h.x-S.x;
-        if(ahead>4&&ahead<22){h.throwT-=dt;if(h.throwT<=0){h.throwT=Math.max(1.1,2.3-d*.3)+rand(0,.7);
+        if(ahead>4&&ahead<22){h.throwT-=dt;if(h.throwT<=0){h.throwT=(Math.max(.9,1.8-d*.3)+rand(0,.6))*(plan.k==='snow'?.55:1);
           const from=new THREE.Vector3(h.x-.9,h.wallH+h.roofH+1.4,h.z);const tt=(ahead)/(10+speed);const to=new THREE.Vector3(S.x+speed*tt,S.y+.5,S.z);const v=to.sub(from).multiplyScalar(1/tt);v.y+=3*tt;
           const bm=ball(.2,M(0xffffff,{roughness:.6}),from.x,from.y,from.z);scene.add(bm);balls.push({m:bm,v});if(Math.random()<.4)say(from.clone().setY(from.y+1),'Na warte!','g');}}}
       balls=balls.filter(b=>{b.v.y-=6*dt;b.m.position.addScaledVector(b.v,dt);const bp=b.m.position;
@@ -1098,6 +1614,17 @@ function drawElfin2D(c,x,y,s){c.save();c.translate(x,y);c.scale(s,s);
   f('#2a1b14',()=>{c.arc(4,-47,1.5,0,TAU);c.moveTo(-2,-47);c.arc(-2,-47,1.5,0,TAU);});
   f('#d23a3a',()=>{c.moveTo(-10,-54);c.quadraticCurveTo(-6,-70,-16,-77);c.quadraticCurveTo(3,-73,10,-54);});
   f('#fff',()=>{c.arc(-16,-77,3.8,0,TAU);});c.fillStyle='#fff';c.fillRect(-11.5,-57,23,5);c.restore();}
+function drawElf2D(c,x,y,s){c.save();c.translate(x,y);c.scale(s,s);
+  const f=(col,fn)=>{c.fillStyle=col;c.beginPath();fn();c.fill();};
+  c.fillStyle='#fff';c.fillRect(-7,-15,5,13);c.fillRect(2,-15,5,13);c.fillStyle='#2f6fd0';for(let i=0;i<3;i++){c.fillRect(-7,-15+i*4.5,5,2.2);c.fillRect(2,-15+i*4.5,5,2.2);}
+  f('#5a3a22',()=>{c.ellipse(-4,-2,5.5,3,0,0,TAU);c.ellipse(5,-2,5.5,3,0,0,TAU);});
+  f('#2f6fd0',()=>{c.moveTo(-9,-38);c.lineTo(9,-38);c.lineTo(12,-14);c.lineTo(-12,-14);});
+  c.fillStyle='#3a2414';c.fillRect(-12,-22,24,4);c.fillStyle='#f2c14e';c.fillRect(-2.5,-22.5,5,5);
+  f('#f6cfa8',()=>{c.moveTo(8,-50);c.lineTo(19,-57);c.lineTo(9,-43);c.moveTo(-8,-50);c.lineTo(-17,-56);c.lineTo(-9,-43);});
+  f('#f6cfa8',()=>c.arc(0,-47,10.5,0,TAU));f('#8a5a32',()=>c.ellipse(0,-54,9,3,0,0,Math.PI));
+  f('#2a1b14',()=>{c.arc(4,-47,1.5,0,TAU);c.moveTo(-2,-47);c.arc(-2,-47,1.5,0,TAU);});
+  f('#9a6fc9',()=>{c.moveTo(-10,-54);c.quadraticCurveTo(-4,-72,8,-78);c.quadraticCurveTo(6,-66,10,-54);});
+  f('#fff',()=>{c.arc(8,-78,3.8,0,TAU);});c.fillStyle='#fff';c.fillRect(-11.5,-57,23,5);c.restore();}
 function drawGinger2D(c,x,y,s){c.save();c.translate(x,y);c.scale(s,s);const B='#c07a3c',D='#7d4a22';c.lineCap='round';
   for(const [col,w] of [[D,11],[B,8]]){c.strokeStyle=col;c.lineWidth=w;c.beginPath();c.moveTo(-5,-22);c.lineTo(-7,-5);c.moveTo(5,-22);c.lineTo(7,-5);c.moveTo(-8,-36);c.lineTo(-18,-28);c.moveTo(8,-36);c.lineTo(18,-28);c.stroke();}
   c.fillStyle=B;c.strokeStyle=D;c.lineWidth=2;c.beginPath();c.ellipse(0,-30,11,13,0,0,TAU);c.fill();c.stroke();c.beginPath();c.arc(0,-51,11.5,0,TAU);c.fill();c.stroke();
@@ -1106,13 +1633,13 @@ function drawGinger2D(c,x,y,s){c.save();c.translate(x,y);c.scale(s,s);const B='#
 function showTitle(){
   hud.hidden=true;dialogOpen=false;dlg.hidden=true;
   titleScene();
-  const pl=(i)=>`<div class="pl p${i+1}" ${i===1&&G.players<2?'hidden':''}><h3>Spieler ${i+1}</h3><div class="picks">${['elfin','ginger'].map(c=>`<button class="pick" type="button" data-p="${i}" data-c="${c}" aria-pressed="${G.chars[i]===c}"><canvas width="110" height="130"></canvas>${c==='elfin'?'Elfin':'Lebkuchenmann'}</button>`).join('')}</div><p class="small">${i===0?'Laufen: <span class="keys">W A S D</span> · Aktion: <span class="keys">Leertaste</span>':'Laufen: <span class="keys">Pfeiltasten</span> · Aktion: <span class="keys">Enter</span>'}</p></div>`;
+  const pl=(i)=>`<div class="pl p${i+1}" ${i===1&&G.players<2?'hidden':''}><h3>Spieler ${i+1}</h3><div class="picks">${['elfin','elf','ginger'].map(c=>`<button class="pick" type="button" data-p="${i}" data-c="${c}" aria-pressed="${G.chars[i]===c}"><canvas width="110" height="130"></canvas>${c==='elfin'?'Lili<small>die Elfin</small>':c==='elf'?ELFNAME+'<small>der Elf</small>':'Benni<small>der Lebkuchenmann</small>'}</button>`).join('')}</div><p class="small">${i===0?'Laufen: <span class="keys">W A S D</span> · Aktion: <span class="keys">Leertaste</span>':'Laufen: <span class="keys">Pfeiltasten</span> · Aktion: <span class="keys">Enter</span>'}</p></div>`;
   show(`<p class="eyebrow">Ein Weihnachtsspiel gegen den Grinch</p><h2>Rettet Heiligabend!</h2>
   <p>Der Chef Weihnachtsmann braucht Hilfe! Sammelt Wunschzettel im Dorf, beschützt nachts die Fabrik und verteilt an Heiligabend die Geschenke.</p>
   <p><b>Wie viele spielen?</b> <span class="seg" role="group"><button type="button" data-n="1" aria-pressed="${G.players===1}">1 Spieler</button><button type="button" data-n="2" aria-pressed="${G.players===2}">2 Spieler</button></span></p>
   <div class="cols">${pl(0)}${pl(1)}</div>
   <div class="btns"><button class="btn green" type="button" data-primary>Los geht's!</button></div>`);
-  overlay.querySelectorAll('.pick').forEach(b=>{const cx=b.querySelector('canvas').getContext('2d');(b.dataset.c==='elfin'?drawElfin2D:drawGinger2D)(cx,55,124,1.45);
+  overlay.querySelectorAll('.pick').forEach(b=>{const cx=b.querySelector('canvas').getContext('2d');(b.dataset.c==='elfin'?drawElfin2D:b.dataset.c==='elf'?drawElf2D:drawGinger2D)(cx,55,124,1.45);
     b.onclick=()=>{const i=+b.dataset.p;G.chars[i]=b.dataset.c;overlay.querySelectorAll(`.pick[data-p="${i}"]`).forEach(x=>x.setAttribute('aria-pressed',x.dataset.c===b.dataset.c));};});
   overlay.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{G.players=+b.dataset.n;overlay.querySelectorAll('[data-n]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.n===b.dataset.n));overlay.querySelector('.pl.p2').hidden=G.players<2;});
   overlay.querySelector('[data-primary]').onclick=()=>{G.round=1;G.stars=0;G.letters=0;G.toys=0;createPlayers();hideOverlay();fadeTo(()=>stageHub('start'));};
@@ -1121,7 +1648,7 @@ function titleScene(){
   clearScene();const V=buildVillage();
   const gm=makeGrinch();gm.g.position.set(3,0,3.5);gm.g.rotation.y=-.4;scene.add(gm.g);
   const e=makeElfin(false);e.g.position.set(-2.2,0,3.5);e.g.rotation.y=.5;scene.add(e.g);
-  const gi=makeGinger(false);gi.g.position.set(-.8,0,4.2);gi.g.rotation.y=.3;scene.add(gi.g);
+  const gi=makeGinger(false);gi.g.position.set(-.8,0,4.2);gi.g.rotation.y=.3;scene.add(gi.g);const eh=makeElfHero(false);eh.g.position.set(.9,0,4.4);eh.g.rotation.y=-.1;scene.add(eh.g);
   const s=makeSanta();s.g.position.set(-4,0,2.4);s.g.rotation.y=.6;scene.add(s.g);
   V.boxes.forEach(b=>b.letter=true);
   stage={update(){},anim(dt){const a=T*.08;cam.position.set(Math.sin(a)*14,6.5,Math.cos(a)*14+2);cam.lookAt(0,1.8,1);animGrinch(gm,0,'laugh',T);s.arms[1].rotation.z=-2.3+Math.sin(T*5)*.3;
@@ -1134,6 +1661,9 @@ let T=0,last=performance.now();
 function loop(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
   if(stage){if(mode==='play'&&!dialogOpen)stage.update(dt);stage.anim(dt);}
+  if(spookyOn&&mode==='play'&&!dialogOpen){spookyT-=dt;if(spookyT<=0){spookyT=rand(5,10);spookySound();}}
+  for(const f of flick){if(f.off>0){f.off-=dt;f.l.intensity=f.base*.12;}else{if(Math.random()<dt*.5)f.off=rand(.05,.35);f.l.intensity=f.base*(.85+Math.random()*.15);}}
+  if(shakeA>0){shakeA=Math.max(0,shakeA-dt*.9);cam.position.x+=(Math.random()-.5)*shakeA;cam.position.y+=(Math.random()-.5)*shakeA;}
   updParts(dt);updLabels(dt);
   if(bannerT>0){bannerT-=dt;if(bannerT<=0)banner.classList.remove('on');}
   R.render(scene,cam);hits.clear();
@@ -1143,5 +1673,4 @@ showTitle();
 requestAnimationFrame(loop);
 })();
 </script>
-
 </body></html>
