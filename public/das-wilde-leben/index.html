@@ -141,7 +141,7 @@ body.two #hud2{max-width:calc(50% - 90px)}
   <div class="card">
     <h1>Das wilde Leben</h1>
     <h2>Dschungel, See und Stadt 🌴💧🏙️</h2>
-    <p>Du bist Tippi 🐭, eine kleine, schnelle Maus. Sammle alle Sterne ⭐ und pass auf die Tierfänger auf! Finde die wilden Tiere 🐿️🐒🦒🐍🐆🦜🐸🐘🐢🐅🦍🦥🦎🦦🦛🌙: Dann kannst du auch sie sein! Deine Mäusehöhle ist im großen Wasserfall 🌊🏠. Da bist du sicher.</p>
+    <p>Du bist Tippi 🐭, eine kleine, schnelle Maus. Sammle alle Sterne ⭐ und pass auf die Tierfänger auf! Finde die wilden Tiere 🐿️🐒🦒🐍🐆🦜🐸🐘🐢🐅🦍🦥🦎🦦🦛🐨🐈‍⬛: Dann kannst du auch sie sein! Deine Mäusehöhle ist im großen Wasserfall 🌊🏠. Da bist du sicher.</p>
     <div class="keys">
       <span><kbd>Shift</kbd></span><span>gedrückt halten: schnell rennen 💨</span>
       <span>🌳 Dicker Baum</span><span>dagegen laufen: klettern!</span>
@@ -230,7 +230,7 @@ function textPlane(text, w, h, opts = {}){
 }
 
 // world size
-const ZB = -14, ZF = 14, JZ = 70, END_X = 375, CITY0 = 398, CITY1 = 640;
+const ZB = -14, ZF = 14, JZ = 112, END_X = 375, CITY0 = 398, CITY1 = 640;
 const HOME = {x: 505, z: -7.4};
 // the giant lake: the meadow opens towards the front between LZ.x0 and LZ.x1
 const LAKE = {x: 292, z: 29, rx: 19, rz: 9, deep: .5, isle: 2.6};
@@ -247,6 +247,14 @@ function riverD(x, z){ if (x < 184 || x > 226 || z < -3 || z > 80) return 99; le
   return best; }
 const riverX = (z) => RIVER.pts.reduce((a, b) => Math.abs(b[1] - z) < Math.abs(a[1] - z) ? b : a)[0];
 const BRIDGES = [];
+// the far jungle (z 72..112): bamboo forest, the big gorge, the giant tree, the swamp
+const BAMBOO = {x0: 12, x1: 92, z0: 73, z1: 110};
+const inBamboo = (x, z) => x > BAMBOO.x0 && x < BAMBOO.x1 && z > BAMBOO.z0 && z < BAMBOO.z1;
+const GORGE = {x0: 100, x1: 190, H: 7};
+const hRidge = (z) => z < 74 ? 0 : z < 86 ? 7*(z - 74)/12 : z < 88 ? 7 : z < 96 ? 0 : z < 98 ? 7 : z < 110 ? 7*(110 - z)/12 : 0;
+const SWAMP = {x: 258, z: 91, rx: 25, rz: 14, start: [229.5, 91]};
+const inSwampE = (x, z, k = 1) => ((x - SWAMP.x)/(SWAMP.rx*k))**2 + ((z - SWAMP.z)/(SWAMP.rz*k))**2 < 1;
+const GIANT = {x: 212, z: 96};
 const onBridge = (x, z) => BRIDGES.some(b => x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1);
 const isDeep = (x, z) => (lakeE(x, z) < LAKE.deep && !onIsle(x, z)) || (z > 5 && riverD(x, z) < RIVER.deep && !onBridge(x, z));
 // wild animals: where they live (trees are kept away from these spots)
@@ -265,6 +273,8 @@ const WILD = [
   {kind: 'schildkroete', x: 198, z: 22, r: 1.5}, {kind: 'frosch', x: 212.5, z: 19, r: 1.5}, {kind: 'frosch', x: 194, z: 50, r: 1.5}, {kind: 'nilpferd', x: 298, z: 31.5, r: 2.5}, {kind: 'nilpferd', x: 285, z: 28, r: 2},
   {kind: 'nachtaffe', x: 96, z: 52, r: 4, night: true}, {kind: 'nachtaffe', x: 168, z: 46, r: 4, night: true}, {kind: 'nachtaffe', x: 344, z: 60, r: 4, night: true},
   {kind: 'papagei', x: 142, z: 61, r: 3}, {kind: 'papagei', x: 236, z: 50, r: 3},
+  {kind: 'koala', x: 28, z: 84, r: 3}, {kind: 'koala', x: 46, z: 96, r: 3}, {kind: 'koala', x: 66, z: 80, r: 3}, {kind: 'koala', x: 82, z: 98, r: 3}, {kind: 'koala', x: 36, z: 106, r: 2},
+  {kind: 'panther', x: 150, z: 92, r: 6}, {kind: 'affe', x: 216, z: 101, r: 3}, {kind: 'krokodil', x: 270, z: 90, r: 1}, {kind: 'nachtaffe', x: 208, z: 101, r: 3, night: true},
   {kind: 'tiger', x: 62, z: 56, r: 4}, {kind: 'chamaeleon', x: 122, z: 50, r: 2}, {kind: 'gorilla', x: 252, z: 56, r: 3}, {kind: 'affe', x: 332, z: 50, r: 3}, {kind: 'eich', x: 30, z: 45, r: 3},
   {kind: 'tukan', x: 588.6, z: -5.8, captive: [150, 22], cr: 1.1}, {kind: 'gorilla', x: 616, z: -5.6, captive: [160, 14], cr: 1.3},
   {kind: 'loewe', x: 508.6, z: -5.8, captive: [352, 26], cr: 1.25}, {kind: 'zebra', x: 501.4, z: -5.8, captive: [120, 27], cr: 1.25},
@@ -1025,6 +1035,111 @@ function den(dx, dz){
   DENS.push({x: dx, z: dz, x0: dx - 3, x1: dx + 3, z0: dz - 2.5, z1: dz + 1.6, roofM, roof});
 }
 den(74, 60); den(250, 64);
+
+// ---------- THE BIG GORGE: two mountains you can walk up, a rope bridge on top ----------
+{
+  const {x0, x1, H} = GORGE;
+  // walkable slopes = thin steps (each lower than a little step-up)
+  for (let z = 74; z < 110; z += .5){ const h = hRidge(z + .25); if (h > .05) addSolid(x0, x1, z, z + .5, 0, h); }
+  // the visible mountains (a bumpy low-poly surface on top of the steps)
+  const zs = []; for (let z = 73.6; z <= 110.4; z += .5) zs.push(z); [87.99, 88, 95.99, 96].forEach(v => zs.push(v)); zs.sort((a, b) => a - b);
+  const xs = [x0 - .01]; for (let x = x0; x <= x1; x += 2) xs.push(x); xs.push(x1 + .01);
+  const pos = [], col = [], idx = [], c = new T.Color();
+  zs.forEach((z, j) => xs.forEach((x, i) => { const edge = i === 0 || i === xs.length - 1; let h = edge ? 0 : (z === 88 || z === 96 ? 0 : hRidge(z === 87.99 ? 87.9 : z === 95.99 ? 96.1 : z));
+      if (h > .3 && !edge) h += (Math.sin(x*1.7 + z*.9) + Math.cos(x*.6 - z*1.3))*.12;
+      pos.push(x, h, z); const steep = (z > 87.5 && z < 88.5) || (z > 95.5 && z < 96.5) || edge;
+      c.set(steep ? 0x8d8a80 : h > 6.5 ? 0x5a9a48 : 0x4f8a3f).offsetHSL(0, 0, ((i*7 + j*13) % 10)*.006); col.push(c.r, c.g, c.b); }));
+  const W = xs.length;
+  for (let j = 0; j < zs.length - 1; j++) for (let i = 0; i < W - 1; i++){ const a = j*W + i; idx.push(a, a + W, a + 1, a + 1, a + W, a + W + 1); }
+  const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new T.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
+  const mtn = new T.Mesh(g, new T.MeshStandardMaterial({vertexColors: true, flatShading: true, roughness: .95, side: T.DoubleSide})); mtn.receiveShadow = true; mtn.castShadow = true; scene.add(mtn);
+  // cliff rocks along the gorge walls, rocks on the gorge floor
+  for (let x = x0 + 2; x < x1; x += 3.2){ [88.4, 95.6].forEach(z => { const r = mesh(new T.DodecahedronGeometry(.8 + rnd()*.7, 0), M(0x7f7c72, {flatShading: true}), x + rnd(), .4 + rnd()*4.5, z); r.scale.z = .5; }); }
+  for (let x = x0 + 4; x < x1; x += 7) mesh(new T.DodecahedronGeometry(.5 + rnd()*.5, 0), M(0x9aa395, {flatShading: true}), x, .3, 89.5 + rnd()*5);
+  // trees on the mountain tops
+  for (let x = x0 + 5; x < x1 - 3; x += 11 + rnd()*5){ if (Math.abs(x - 145) < 7) continue; tree(x, 87 - rnd()*.6, 5 + rnd()*2, true, H); tree(x + 4, 97 + rnd()*.6, 5 + rnd()*2, true, H); }
+  // rope bridge over the gorge
+  const bx = 145; box(2.4, .2, 9.2, 0x9a6a3e, bx, H - .1, 92);
+  for (let z = 88; z <= 96; z += .55) box(2.4, .05, .4, 0x6b4430, bx, H + .02, z);
+  [-1.15, 1.15].forEach(o => { for (let z = 88; z <= 96.1; z += 1.6) box(.1, 1, .1, 0x6b4430, bx + o, H + .5, z); box(.06, .06, 8.6, 0xd9c08a, bx + o, H + 1, 92); });
+  addSolid(bx - 1.2, bx + 1.2, 87.5, 96.5, H - .3, H); addSolid(bx - 1.25, bx - 1.1, 88, 96, H, H + 1.1); addSolid(bx + 1.1, bx + 1.25, 88, 96, H, H + 1.1);
+  addStar(bx, H + 1, 92);
+  hangCourse([[151, 86.6], [151, 97.4]], H + 3.8);
+  // stars: down in the gorge and up on the mountains
+  [[108, 92], [130, 91], [160, 93], [182, 92]].forEach(([x, z]) => addStar(x, 1, z));
+  [[115, 87], [172, 87], [120, 97], [178, 97]].forEach(([x, z]) => addStar(x, H + 1, z));
+  addFood('beeren', 138, 0, 92); addFood('apfel', 168, H, 86.8);
+  { const wood = M(0xc9a26b), tx = canvasTex(256, 96, (g) => { g.fillStyle = '#e8c48a'; g.fillRect(0, 0, 256, 96); g.strokeStyle = '#7a5230'; g.lineWidth = 10; g.strokeRect(0, 0, 256, 96);
+      g.fillStyle = '#5a3a1a'; g.font = '800 34px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.fillText('Große Schlucht 🏔️', 128, 60); });
+    mesh(new T.CylinderGeometry(.15, .15, 3, 6), M(0x7a5230), x0 - 3, 1.5, 91); mesh(new T.BoxGeometry(3.2, 1.1, .15), [wood, wood, wood, wood, new T.MeshStandardMaterial({map: tx}), wood], x0 - 3, 2.8, 91); }
+}
+
+// ---------- THE GIANT TREE: only monkeys can climb all the way up ----------
+function giantTree(x, z){ trackTree(x, z + 3, () => {
+  const r = 2.4, h = 24, bark = M(0x6b4430);
+  mesh(new T.CylinderGeometry(r*.85, r*1.25, h, 14), bark, x, h/2, z);
+  for (let i = 0; i < 6; i++){ const a = i*1.05 + .3, rt = mesh(new T.ConeGeometry(.8, 3.2, 6), bark, x + Math.cos(a)*(r + .6), .7, z + Math.sin(a)*(r + .6)); rt.rotation.set(Math.sin(a)*.9, 0, -Math.cos(a)*.9); }
+  for (let y = 3; y < h; y += 3.4){ const ring = mesh(new T.TorusGeometry(r*1.05 - y*.012, .08, 5, 16), M(0x5a3a22), x, y, z); ring.rotation.x = Math.PI/2; }
+  addSolid(x - r, x + r, z - r, z + r, 0, h - .4, {trunk: true});
+  // a big platform up top with a railing
+  mesh(new T.CylinderGeometry(4.8, 4.6, .5, 18), M(0x9a6a3e), x, h - .25, z);
+  for (let i = 0; i < 18; i++){ const a = i/18*Math.PI*2; box(.12, .9, .12, 0x6b4430, x + Math.cos(a)*4.6, h + .45, z + Math.sin(a)*4.6); }
+  addSolid(x - 4.4, x + 4.4, z - 4.4, z + 4.4, h - .4, h);
+  for (let i = 0; i < 8; i++){ const a = i*.79; mesh(new T.IcosahedronGeometry(3.6 + (i % 3)*.9, 0), M(leafCols[i % 4], {flatShading: true}), x + Math.cos(a)*5.2, h + 4.4 + (i % 2)*1.4, z + Math.sin(a)*5.2 - 1); }
+  mesh(new T.IcosahedronGeometry(5, 0), M(leafCols[1], {flatShading: true}), x, h + 7.8, z - 1);
+  const t = {x, z, r, h, giant: true};
+  [[1, 6], [-1, 10], [1, 14], [-1, 18]].forEach(([d, y]) => { const b = treeBranch(x + d*r*.85, z, d, y, 5.6); b.tree = t; addStar(x + d*(r + 4.4), y - .5, z); });
+  [[-2, 0], [2, 0], [0, -2.4]].forEach(([a, b]) => addStar(x + a, h + 1, z + b));
+  climbTrees.push(t); });
+  const pl = textPlane('Riesenbaum 🌳 nur für Affen 🐒', 4.6, .7, {bg: '#fff8e7'}); pl.position.set(x, 3.2, z + 2.55); scene.add(pl);
+}
+giantTree(GIANT.x, GIANT.z);
+
+// ---------- THE SWAMP: only hop from stone to stone! ----------
+const SWAMP_STONES = [];
+{
+  const sw = mesh(new T.CircleGeometry(1, 40), new T.MeshStandardMaterial({color: 0x5b5a2c, roughness: .35}), SWAMP.x, .035, SWAMP.z); sw.rotation.x = -Math.PI/2; sw.scale.set(SWAMP.rx, SWAMP.rz, 1); sw.castShadow = false; sw.receiveShadow = true;
+  const sw2 = mesh(new T.RingGeometry(.92, 1.06, 40), M(0x4a3c22), SWAMP.x, .03, SWAMP.z); sw2.rotation.x = -Math.PI/2; sw2.scale.set(SWAMP.rx, SWAMP.rz, 1);
+  for (let i = 0; i < 26; i++){ const a = rnd()*6.28, k = rnd()*.85, blob = mesh(new T.CircleGeometry(1 + rnd()*1.8, 10), M(rnd() < .5 ? 0x4a4a22 : 0x6a6a36), SWAMP.x + Math.cos(a)*SWAMP.rx*k, .04, SWAMP.z + Math.sin(a)*SWAMP.rz*k); blob.rotation.x = -Math.PI/2; blob.castShadow = false; }
+  const stone = (x, z) => { const m = mesh(new T.CylinderGeometry(.7, .85, .5, 8), M([0x9aa395, 0x8d8a80, 0xa8a89a][SWAMP_STONES.length % 3], {flatShading: true}), x, .2, z);
+    addSolid(x - .55, x + .55, z - .55, z + .55, 0, .45); SWAMP_STONES.push([x, z]); };
+  const path = (pts) => { for (let i = 0; i < pts.length - 1; i++){ const [ax, az] = pts[i], [bx, bz] = pts[i + 1], L = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.round(L/2.4));
+      for (let k = i ? 1 : 0; k <= n; k++){ const f = k/n; stone(ax + (bx - ax)*f + (rnd() - .5)*.4, az + (bz - az)*f + (rnd() - .5)*.4); } } };
+  path([[233, 91], [238, 88.5], [243, 92], [248, 89], [253.5, 91.5]]);
+  path([[261.5, 93.5], [265, 97.5], [270, 95.5], [274, 99.5], [279, 97.5], [282.5, 100]]);
+  path([[257, 94.5], [255, 98.5], [258, 102.5]]); path([[259, 87.5], [263, 84], [268, 85]]);
+  // the island in the middle with treasure
+  mesh(new T.CylinderGeometry(3, 3.3, .5, 14), M(0x7a6a3a, {flatShading: true}), 258, .2, 91); addSolid(256, 260, 89, 93, 0, .45);
+  mesh(new T.CylinderGeometry(.5, .6, .8, 8), M(0x8a5a2e), 258, .85, 91); addStar(258, 2, 91); addStar(256.6, 1.2, 92.2); addFood('beeren', 259.3, .45, 90);
+  addStar(258, 1.4, 102.5); addStar(268, 1.4, 85); addStar(248, 1.4, 89); addStar(274, 1.4, 99.5);
+  // reeds and dead trees around the swamp
+  for (let i = 0; i < 60; i++){ const a = i/60*6.28 + rnd()*.1, k = .95 + rnd()*.12, x = SWAMP.x + Math.cos(a)*SWAMP.rx*k, z = SWAMP.z + Math.sin(a)*SWAMP.rz*k;
+    if (Math.hypot(x - SWAMP.start[0], z - SWAMP.start[1]) < 3 || x > 281) continue;
+    for (let j = 0; j < 3; j++){ const h = 1 + rnd(); mesh(new T.CylinderGeometry(.03, .04, h, 4), M(0x6a7a3a), x + (j - 1)*.18, h/2, z + (rnd() - .5)*.3); }
+    if (j3(i)) mesh(new T.CylinderGeometry(.06, .06, .3, 5), M(0x6b3a1a), x, 1.6, z); }
+  function j3(i){ return i % 3 === 0; }
+  [[240, 82], [276, 84], [246, 100], [268, 103]].forEach(([x, z]) => { mesh(new T.CylinderGeometry(.25, .45, 5, 6), M(0x5a4a3a), x, 2.5, z);
+    [[.8, 3.5, .7], [-.9, 4.2, -.6]].forEach(([a, y, rz]) => { const br = mesh(new T.CylinderGeometry(.08, .15, 2, 5), M(0x5a4a3a), x + a*.6, y, z); br.rotation.z = rz; }); });
+  { const wood = M(0xc9a26b), tx = canvasTex(256, 96, (g) => { g.fillStyle = '#e8c48a'; g.fillRect(0, 0, 256, 96); g.strokeStyle = '#7a5230'; g.lineWidth = 10; g.strokeRect(0, 0, 256, 96);
+      g.fillStyle = '#4a4a1a'; g.font = '800 30px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.fillText('Sumpf! 🪨 Nur auf', 128, 42); g.fillText('die Steine hüpfen!', 128, 76); });
+    mesh(new T.CylinderGeometry(.15, .15, 3, 6), M(0x7a5230), 228, 1.5, 88); mesh(new T.BoxGeometry(3.2, 1.1, .15), [wood, wood, wood, wood, new T.MeshStandardMaterial({map: tx}), wood], 228, 2.8, 88); }
+  // frogs sit on stones
+  [SWAMP_STONES[3], SWAMP_STONES[12]].forEach(([x, z]) => WILD.push({kind: 'frosch', x, z, r: 0, perch: .45}));
+}
+
+// ---------- the bamboo forest sign ----------
+{ const wood = M(0xc9a26b), tx = canvasTex(256, 96, (g) => { g.fillStyle = '#e8c48a'; g.fillRect(0, 0, 256, 96); g.strokeStyle = '#7a5230'; g.lineWidth = 10; g.strokeRect(0, 0, 256, 96);
+    g.fillStyle = '#3a5a1a'; g.font = '800 32px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.fillText('Bambuswald 🎋', 128, 44); g.font = '700 24px "Baloo 2", sans-serif'; g.fillText('hier wohnen Koalas', 128, 78); });
+  mesh(new T.CylinderGeometry(.15, .15, 3, 6), M(0x7a5230), 52, 1.5, 71.5); mesh(new T.BoxGeometry(3.2, 1.1, .15), [wood, wood, wood, wood, new T.MeshStandardMaterial({map: tx}), wood], 52, 2.8, 71.5);
+  [[30, 90], [62, 84], [78, 102], [44, 104]].forEach(([x, z]) => addStar(x, 1, z)); addFood('apfel', 70, 0, 92); }
+
+// ---------- more trees in the far jungle ----------
+{ let gi = 0;
+  const okT = (x, z) => !inBamboo(x, z) && !(x > 96 && x < 194) && Math.hypot(x - GIANT.x, z - GIANT.z) > 9 && !inSwampE(x, z, 1.2) && Math.hypot(x - SWAMP.start[0], z - SWAMP.start[1]) > 5 &&
+    !solids.some(s => s.y0 < 2 && x + 2.4 > s.x0 && x - 2.4 < s.x1 && z + 2.4 > s.z0 && z - 2.4 < s.z1) && !stars.some(s => Math.hypot(s.x - x, s.z - z) < 3) && riverD(x, z) > 7;
+  for (let x = 5; x < END_X - 4; x += 3.4) for (const [z0, dz] of [[72, 19], [91, 19]]){ const z = z0 + rnd()*dz; if (okT(x, z)) (gi++ % 3 === 1 ? crookedTree : tree)(x, z, 8 + rnd()*5); }
+  for (let x = 196; x < END_X - 6; x += 16 + rnd()*8){ const z = 74 + rnd()*34; if (!okT(x, z)) continue; if (gi++ % 2) climbTree(x, z, 10 + rnd()*2, 4.5 + rnd(), true); else { bush(x, z); addStar(x + 2, 1, z); } }
+}
 const denAt = () => !p.inHouse && p.y < 2 && DENS.find(d => p.x > d.x0 && p.x < d.x1 && p.z > d.z0 && p.z < d.z1);
 
 // ---------- more trees: fill free spots in the jungle ----------
@@ -1199,24 +1314,26 @@ function makeCroc(){
   g.userData = {body, legs, legPhase: [0, Math.PI, Math.PI, 0], legRate: 4, segs, eyes, tail: null, bob: 0};
   scene.add(g); return g;
 }
-function makeCheetah(lion, tiger){
-  const g = new T.Group(), fur = M(lion ? 0xd9a64e : tiger ? 0xe8862a : 0xe8b04a), belly = M(0xf6e2b8), black = M(0x1a1410);
+function makeCheetah(lion, tiger, panther){
+  const g = new T.Group(), fur = M(panther ? 0x22222a : lion ? 0xd9a64e : tiger ? 0xe8862a : 0xe8b04a), belly = M(panther ? 0x2e2e38 : 0xf6e2b8), black = M(0x1a1410);
   const body = new T.Group(); g.add(body);
   mesh(new T.SphereGeometry(.4, 16, 10), fur, 0, .78, 0, body).scale.set(1.6, .7, .65);
   if (tiger) for (let i = 0; i < 9; i++){ const x = -.5 + i*.12; [-1, 1].forEach(s => { const st = mesh(new T.BoxGeometry(.05, .3, .04), black, x, .86, s*.22, body); st.rotation.x = s*.5; }); mesh(new T.BoxGeometry(.05, .04, .3), black, x, 1.06, 0, body); }
-  if (!lion && !tiger) for (let i = 0; i < 16; i++){ const a = i*2.4, x = Math.cos(a)*.55, z = Math.sin(a)*.24; mesh(new T.SphereGeometry(.05, 6, 4), black, x, .9 + ((i*.31) % 1)*.1, z + Math.sign(z)*.04, body); }
+  if (!lion && !tiger && !panther) for (let i = 0; i < 16; i++){ const a = i*2.4, x = Math.cos(a)*.55, z = Math.sin(a)*.24; mesh(new T.SphereGeometry(.05, 6, 4), black, x, .9 + ((i*.31) % 1)*.1, z + Math.sign(z)*.04, body); }
   mesh(new T.SphereGeometry(.24, 14, 10), fur, .72, 1.0, 0, body).scale.set(1.1, .95, 1);
   mesh(new T.SphereGeometry(.12, 10, 8), belly, .9, .95, 0, body);
   mesh(new T.SphereGeometry(.04, 6, 5), black, 1.0, .98, 0, body);
   const eyes = [-1, 1].map(s => mesh(new T.SphereGeometry(.04, 8, 6), black, .88, 1.07, s*.1, body));
+  if (panther) [-1, 1].forEach(s => mesh(new T.SphereGeometry(.055, 8, 6), new T.MeshStandardMaterial({color: 0xd8f03a, emissive: 0xb8d020, emissiveIntensity: .7}), .87, 1.07, s*.1, body));
   if (lion){ const mane = M(0x8a4a1f); for (let i = 0; i < 14; i++){ const a = i/14*Math.PI*2; mesh(new T.SphereGeometry(.15, 8, 6), mane, .62, 1.0 + Math.sin(a)*.27, Math.cos(a)*.27, body); } mesh(new T.SphereGeometry(.24, 10, 8), mane, .55, 1.02, 0, body); }
-  [-1, 1].forEach(s => { if (!lion && !tiger){ const tm = mesh(new T.BoxGeometry(.02, .14, .025), black, .91, .98, s*.11, body); tm.rotation.z = .3; }
+  [-1, 1].forEach(s => { if (!lion && !tiger && !panther){ const tm = mesh(new T.BoxGeometry(.02, .14, .025), black, .91, .98, s*.11, body); tm.rotation.z = .3; }
     mesh(new T.ConeGeometry(.07, .14, 6), fur, .66, 1.22, s*.13, body); });
   const tail = mesh(new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(-.6, .82, 0), new T.Vector3(-1.0, .7, 0), new T.Vector3(-1.3, .55, 0), new T.Vector3(-1.45, .7, 0)]), 16, .045, 6), fur, 0, 0, 0, body);
   const legs = [[.42, .15], [.42, -.15], [-.42, .15], [-.42, -.15]].map(([x, z]) => { const pv = new T.Group(); pv.position.set(x, .7, z); body.add(pv);
     mesh(new T.CylinderGeometry(.07, .05, .66, 6), fur, 0, -.33, 0, pv); mesh(new T.SphereGeometry(.07, 6, 5), belly, .03, -.66, 0, pv); return pv; });
   if (lion){ mesh(new T.SphereGeometry(.09, 8, 6), M(0x6b3a17), -1.45, .7, 0, body); body.scale.setScalar(1.15); }
   if (tiger){ mesh(new T.SphereGeometry(.13, 10, 8), M(0xffffff), .86, .93, 0, body); body.scale.setScalar(1.2); }
+  if (panther) body.scale.setScalar(1.1);
   g.userData = {body, legs, legPhase: [0, Math.PI, Math.PI, 0], legRate: 4, tail, eyes, bob: .05};
   scene.add(g); return g;
 }
@@ -1324,6 +1441,19 @@ function makeParrot(){
   g.userData.wings.forEach(w => w.children.forEach(m => { m.material = blue; }));
   return g;
 }
+function makeKoala(){
+  const g = new T.Group(), fur = M(0x9a9aa2), light = M(0xe8e8ee), black = M(0x1a1a1e);
+  const body = new T.Group(); g.add(body);
+  mesh(new T.SphereGeometry(.38, 14, 10), fur, 0, .45, 0, body).scale.set(1.05, 1, .95);
+  mesh(new T.SphereGeometry(.24, 12, 8), light, .2, .42, 0, body).scale.set(.6, 1, .8);
+  mesh(new T.SphereGeometry(.3, 14, 10), fur, .22, .92, 0, body);
+  mesh(new T.SphereGeometry(.11, 10, 8), black, .48, .9, 0, body).scale.set(.8, 1.15, .85);
+  [-1, 1].forEach(s => { mesh(new T.SphereGeometry(.17, 10, 8), fur, .14, 1.12, s*.3, body).scale.set(.5, 1, 1); mesh(new T.SphereGeometry(.12, 10, 8), light, .18, 1.12, s*.3, body).scale.set(.4, .85, .85); });
+  const eyes = [-1, 1].map(s => mesh(new T.SphereGeometry(.04, 8, 6), black, .44, 1.02, s*.13, body));
+  const legs = [[.18, .2], [.18, -.2], [-.15, .2], [-.15, -.2]].map(([x, z]) => { const pv = new T.Group(); pv.position.set(x, .3, z); body.add(pv); mesh(new T.CylinderGeometry(.09, .08, .3, 7), fur, 0, -.15, 0, pv); mesh(new T.SphereGeometry(.09, 7, 5), black, .03, -.3, 0, pv); return pv; });
+  g.userData = {body, legs, legPhase: [0, Math.PI, Math.PI, 0], legRate: 2.6, eyes, bob: .04};
+  scene.add(g); return g;
+}
 function makeElephant(){
   const g = new T.Group(), grey = M(0x9a9aa6), dark = M(0x7c7c88), pink = M(0xe8b4c0), white = M(0xfffaf0), black = M(0x161616);
   const body = new T.Group(); g.add(body);
@@ -1379,6 +1509,10 @@ const ANIMALS = {
     can: 'Deine großen Augen sehen im Dunkeln! In der Nacht ist es für dich hell. Und du kannst hangeln. 🌙', make: makeNightMonkey, iih: 'Oh, ein Nachtaffe!'},
   papagei: {emoji: '🦜', nom: 'ein Papagei', acc: 'einen Papagei', walk: 4.5, run: 7.5, jump: 9, climb: 0, PR: .32, PH: 1, hide: true, fly: true,
     can: 'Du kannst fliegen! Drück immer wieder die Sprungtaste. Und du bist so bunt! 🌈', make: makeParrot, iih: 'Ein Papagei! Hallo, hallo!'},
+  koala: {emoji: '🐨', nom: 'ein Koala', acc: 'einen Koala', walk: 3.8, run: 6.5, jump: 9, climb: 5.5, PR: .38, PH: .9, hide: true,
+    can: 'Du bist kuschelig und kletterst gut. Im Bambuswald bist du gut versteckt! 🎋', make: makeKoala, iih: 'Oh, ein süßer Koala!'},
+  panther: {emoji: '🐈‍⬛', nom: 'ein schwarzer Panther', acc: 'einen schwarzen Panther', walk: 7.5, run: 14, jump: 13, climb: 5, PR: .5, PH: 1.3, hide: true, cat: true, shadow: true,
+    can: 'Du bist schwarz wie ein Schatten! Bleib im Dschungel kurz still: Dann sieht dich keiner. Und du springst super hoch. 🌑', make: () => makeCheetah(false, false, true), iih: 'Hilfe, ein Panther!'},
   otter: {emoji: '🦦', nom: 'ein Otter', acc: 'einen Otter', walk: 5, run: 8.5, jump: 10, climb: 0, PR: .35, PH: .6, hide: true, deep: true, swim: true, swimFast: true, drinks: true,
     can: 'Du bist ein super Schwimmer! Im Wasser flitzt du ganz schnell. 🌊', make: makeOtter, iih: 'Oh, ein Otter!'},
   nilpferd: {emoji: '🦛', nom: 'ein Nilpferd', acc: 'ein Nilpferd', walk: 4, run: 7, jump: 6, climb: 0, PR: .95, PH: 1.9, hide: false, deep: true, swim: true, big: true, strong: true, waterCamo: true, drinks: true,
@@ -1386,7 +1520,7 @@ const ANIMALS = {
   krokodil: {emoji: '🐊', nom: 'ein Krokodil', acc: 'das Krokodil', walk: 4, run: 7, jump: 7, climb: 0, PR: .45, PH: .55, hide: true, deep: true, swim: true, swimFast: true, waterCamo: true,
     can: 'Im Wasser bist du super schnell, und keiner sieht dich! 🌊', make: makeCroc, iih: 'Hilfe, ein Krokodil!'}
 };
-const ORDER = ['maus', 'eich', 'affe', 'giraffe', 'schlange', 'gepard', 'tukan', 'frosch', 'elefant', 'loewe', 'zebra', 'krokodil', 'schildkroete', 'tiger', 'gorilla', 'faultier', 'chamaeleon', 'otter', 'nilpferd', 'nachtaffe', 'papagei'];
+const ORDER = ['maus', 'eich', 'affe', 'giraffe', 'schlange', 'gepard', 'tukan', 'frosch', 'elefant', 'loewe', 'zebra', 'krokodil', 'schildkroete', 'tiger', 'gorilla', 'faultier', 'chamaeleon', 'otter', 'nilpferd', 'nachtaffe', 'papagei', 'koala', 'panther'];
 const CHAMO_LEAF = new T.Color(0x3f9a3a);
 function animateAnimal(g, o){
   const u = g.userData;
@@ -1466,9 +1600,9 @@ function burst(x, y, z, colors, n = 14, sp = 5, g = 9, geo = pGeo){
 
 // ---------- jungle plants: lots of big leaves, ferns, lianas and flowers (instanced, so it stays fast) ----------
 {
-  const ok = (x, z, m) => riverD(x, z) > RIVER.w/2 + 1.3 && lakeE(x, z) > 1.3 && Math.hypot(x - POOL.x, z - POOL.z) > POOL.r + 1 && !(x > 176 && x < 234 && z < -1) &&
+  const ok = (x, z, m) => riverD(x, z) > RIVER.w/2 + 1.3 && !inSwampE(x, z, 1.04) && lakeE(x, z) > 1.3 && Math.hypot(x - POOL.x, z - POOL.z) > POOL.r + 1 && !(x > 176 && x < 234 && z < -1) &&
     !solids.some(s => s.y0 < 1.5 && x + m > s.x0 && x - m < s.x1 && z + m > s.z0 && z - m < s.z1) && !BRIDGES.some(b => x > b.x0 - 1 && x < b.x1 + 1 && z > b.z0 - 1 && z < b.z1 + 1);
-  const N = 7000, leaves = new T.InstancedMesh(new T.SphereGeometry(1, 7, 4), new T.MeshStandardMaterial({color: 0xffffff, roughness: .8, flatShading: true}), N);
+  const N = 11000, leaves = new T.InstancedMesh(new T.SphereGeometry(1, 7, 4), new T.MeshStandardMaterial({color: 0xffffff, roughness: .8, flatShading: true}), N);
   const m4 = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), v = new T.Vector3(), sc = new T.Vector3(), col = new T.Color();
   const LCOL = [0x2f7a34, 0x3c8f3f, 0x24692c, 0x4fa04a, 0x1f5a2a, 0x5cae52];
   let li = 0;
@@ -1478,8 +1612,8 @@ function burst(x, y, z, colors, n = 14, sp = 5, g = 9, geo = pGeo){
   const flowers = new T.InstancedMesh(new T.SphereGeometry(.13, 6, 4), new T.MeshStandardMaterial({color: 0xffffff, roughness: .6, emissive: 0x220000}), 700); let fi = 0;
   const FCOL = [0xff4f6d, 0xff9a3d, 0xffd23f, 0xff6fd0, 0xffffff, 0xc78bff];
   const lianas = new T.InstancedMesh(new T.CylinderGeometry(.04, .05, 1, 5), new T.MeshStandardMaterial({color: 0x3d7a34, roughness: .9}), 900); let vi = 0;
-  for (let tries = 0; tries < 5200 && li < N - 12; tries++){
-    const x = 1 + rnd()*373, z = -13.4 + rnd()*82.8; if (!ok(x, z, .35)) continue;
+  for (let tries = 0; tries < 7400 && li < N - 1500; tries++){
+    const x = 1 + rnd()*373, z = -13.4 + rnd()*124.6; if (!ok(x, z, .35)) continue;
     const kind = rnd(), c = LCOL[(rnd()*LCOL.length) | 0];
     if (kind < .45){ const k = 5 + (rnd()*3 | 0), big = .65 + rnd()*.5; for (let i = 0; i < k; i++) leaf(x, .05, z, i/k*6.28 + rnd()*.4, .25 + rnd()*.55, big*(.8 + rnd()*.4), big*.34, c); }
     else if (kind < .8){ const k = 7 + (rnd()*3 | 0); for (let i = 0; i < k; i++) leaf(x, .05, z, i/k*6.28 + rnd()*.3, .45 + rnd()*.35, .55 + rnd()*.35, .1, 0x3d9a5b); }
@@ -1492,8 +1626,21 @@ function burst(x, y, z, colors, n = 14, sp = 5, g = 9, geo = pGeo){
     for (let i = 0; i < n && vi < 900; i++){ const lx = tr.x + (rnd() - .5)*3.4, lz = tr.z + (rnd() - .5)*3, top = 8.5 + rnd()*2, len = 2 + rnd()*2.6;
       m4.compose(v.set(lx, top - len/2, lz), q.setFromEuler(e.set((rnd() - .5)*.12, 0, (rnd() - .5)*.12)), sc.set(1, len, 1)); lianas.setMatrixAt(vi++, m4);
       for (let k = 0; k < 3; k++) leaf(lx, top - len*(.3 + k*.25), lz, rnd()*6.28, -.3, .22, .1, 0x4fa04a); } }
+  // the bamboo forest
+  const NB = 950, bam = new T.InstancedMesh(new T.CylinderGeometry(.09, .11, 1, 6), new T.MeshStandardMaterial({color: 0xffffff, roughness: .6}), NB); let bi = 0;
+  const knots = new T.InstancedMesh(new T.CylinderGeometry(.13, .13, .08, 6), new T.MeshStandardMaterial({color: 0x5f8f34}), NB*3); let ki = 0;
+  const BCOL = [0x8cc04f, 0x7bb34a, 0x9fcf5a, 0x6fa040, 0xa8d060];
+  for (let tries = 0; tries < 4000 && bi < NB; tries++){
+    const x = BAMBOO.x0 + rnd()*(BAMBOO.x1 - BAMBOO.x0), z = BAMBOO.z0 + rnd()*(BAMBOO.z1 - BAMBOO.z0);
+    if (solids.some(s => s.y0 < 1.5 && x + .3 > s.x0 && x - .3 < s.x1 && z + .3 > s.z0 && z - .3 < s.z1) || stars.some(s => Math.hypot(s.x - x, s.z - z) < 1.2)) continue;
+    const h = 5 + rnd()*5, tx = (rnd() - .5)*.08, tz = (rnd() - .5)*.08;
+    m4.compose(v.set(x, h/2, z), q.setFromEuler(e.set(tx, 0, tz)), sc.set(1, h, 1)); bam.setMatrixAt(bi, m4); bam.setColorAt(bi, col.set(BCOL[bi % 5])); bi++;
+    for (let k = 1; k <= 3 && ki < NB*3; k++){ m4.makeTranslation(x + tz*-h*k/4, h*k/4, z + tx*h*k/4); knots.setMatrixAt(ki++, m4); }
+    for (let k = 0; k < 3; k++) leaf(x, h*(.7 + k*.12), z, rnd()*6.28, -.25, .55, .09, 0x7bb34a);
+  }
+  bam.count = bi; knots.count = ki;
   leaves.count = li; flowers.count = fi; lianas.count = vi;
-  [leaves, flowers, lianas].forEach(im => { im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; im.receiveShadow = true; im.castShadow = false; im.frustumCulled = false; scene.add(im); });
+  [leaves, flowers, lianas, bam, knots].forEach(im => { im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; im.receiveShadow = true; im.castShadow = false; im.frustumCulled = false; scene.add(im); });
 }
 
 // ---------- game state ----------
@@ -1502,7 +1649,7 @@ let avatars = {}; for (const k of ORDER){ avatars[k] = ANIMALS[k].make(); avatar
 const buddyMouse = makeMouse(true); buddyMouse.visible = false;
 let kind = 'maus', A = ANIMALS.maus, buddy = null;
 const unlocked = new Set(['maus']);
-const WSPEED = {otter: 2.2, nilpferd: .7, nachtaffe: 1.6, papagei: 1.2, tiger: 2.5, gorilla: 1.6, faultier: .4, chamaeleon: 1, schildkroete: .8, loewe: 2, zebra: 2.2, krokodil: 1, eich: 3.4, affe: 2.4, giraffe: 1.3, schlange: 1.3, maus: 3, gepard: 4.5, tukan: 1.5, frosch: 2, elefant: 1};
+const WSPEED = {koala: .8, panther: 2.6, otter: 2.2, nilpferd: .7, nachtaffe: 1.6, papagei: 1.2, tiger: 2.5, gorilla: 1.6, faultier: .4, chamaeleon: 1, schildkroete: .8, loewe: 2, zebra: 2.2, krokodil: 1, eich: 3.4, affe: 2.4, giraffe: 1.3, schlange: 1.3, maus: 3, gepard: 4.5, tukan: 1.5, frosch: 2, elefant: 1};
 const wilds = WILD.map(w => { const g = ANIMALS[w.kind].make();
   const bub = new T.Sprite(new T.SpriteMaterial({map: BUB.hallo, transparent: true, depthTest: false})); bub.position.y = ANIMALS[w.kind].PH + 1; bub.scale.set(3.4, 1.05, 1); bub.visible = false; bub.renderOrder = 10; g.add(bub);
   const o = Object.assign({}, w, {g, bub, hx: w.x, hz: w.z, y: w.perch || 0, ang: rnd()*6, tx: w.x, tz: w.z, wait: rnd()*2, moving: false, walk: 0, drink: false, say: -10});
@@ -1537,7 +1684,7 @@ function makeRescueCage(w){
   addStar(w.x - r*.55, 1.6, w.z - r*.4); w.star = stars[stars.length - 1];
 }
 let zzz = new T.Sprite(new T.SpriteMaterial({map: BUB.zz, transparent: true, depthTest: false})); zzz.scale.set(1.5, 1, 1); zzz.visible = false; zzz.renderOrder = 11; scene.add(zzz);
-const CATCHER_PATHS = [[[40,48],[95,62]], [[232,44],[262,62]], [[318,54],[368,44]], [[120,40],[170,58]], [[50,20],[95,30]], [[185,18],[235,30]], [[330,30],[368,18]], [[78,-6],[100,6]], [[117,-8],[141,9]], [[158,7],[184,-6]], [[275,-8],[315,8]], [[345,8],[368,-8]], [[410,4.5],[495,-4.5]], [[535,4.5],[630,-4.5]], [[628,9],[548,4.5]]];
+const CATCHER_PATHS = [[[22,80],[88,104]], [[298,78],[362,104]], [[40,48],[95,62]], [[232,44],[262,62]], [[318,54],[368,44]], [[120,40],[170,58]], [[50,20],[95,30]], [[185,18],[235,30]], [[330,30],[368,18]], [[78,-6],[100,6]], [[117,-8],[141,9]], [[158,7],[184,-6]], [[275,-8],[315,8]], [[345,8],[368,-8]], [[410,4.5],[495,-4.5]], [[535,4.5],[630,-4.5]], [[628,9],[548,4.5]]];
 const catchers = CATCHER_PATHS.map(([a, b]) => ({a, b, g: makeCatcher(), x: 0, z: 0, ang: 0, state: 'patrol', t: 0, cool: 0, walk: 0, tgt: 1, patrolT: 0}));
 const PEOPLE = [[[402, 4.6], [519, 4.6], 0x4fb8dc, 0x3b2a1a], [[519, -6.6], [402, -6.6], 0xe8455a, 0xe0b04a], [[405, 12.5], [510, 12.5], 0x7ccf6b, 0x222222], [[500, -4.6], [415, -4.6], 0xc78bff, 0x8a4b2a], [[528, 4.6], [636, 4.6], 0xff8a3d, 0x5a3a1a], [[636, -6.6], [528, -6.6], 0x7fd0ff, 0xd9a64e], [[556, 12.5], [632, 12.5], 0xffd23f, 0x222222]];
 const people = PEOPLE.map(([a, b, shirt, hair]) => ({a, b, g: makePerson({shirt, hair, pants: 0x34495e}), x: a[0], z: a[1], ang: 0, walk: 0, tgt: 1, scared: 0, say: 0}));
@@ -1695,7 +1842,7 @@ function markSprite(n, col){ const c = document.createElement('canvas'); c.width
   const s = new T.Sprite(new T.SpriteMaterial({map: new T.CanvasTexture(c), transparent: true, depthTest: false})); s.scale.set(.8, .8, 1); s.renderOrder = 12; s.visible = false; scene.add(s); return s; }
 P1.pickEl = document.getElementById('pick1'); P2.pickEl = document.getElementById('pick2');
 // the animal menu: pick any animal you have found, right in the middle of the game
-const SHORT = {maus: 'Maus', eich: 'Eichhörnchen', affe: 'Affe', giraffe: 'Giraffe', schlange: 'Schlange', gepard: 'Gepard', tukan: 'Tukan', frosch: 'Frosch', elefant: 'Elefant', loewe: 'Löwe', zebra: 'Zebra', krokodil: 'Krokodil', schildkroete: 'Schildkröte', tiger: 'Tiger', gorilla: 'Gorilla', faultier: 'Faultier', chamaeleon: 'Chamäleon', otter: 'Otter', nilpferd: 'Nilpferd', nachtaffe: 'Nachtaffe', papagei: 'Papagei'};
+const SHORT = {maus: 'Maus', eich: 'Eichhörnchen', affe: 'Affe', giraffe: 'Giraffe', schlange: 'Schlange', gepard: 'Gepard', tukan: 'Tukan', frosch: 'Frosch', elefant: 'Elefant', loewe: 'Löwe', zebra: 'Zebra', krokodil: 'Krokodil', schildkroete: 'Schildkröte', tiger: 'Tiger', gorilla: 'Gorilla', faultier: 'Faultier', chamaeleon: 'Chamäleon', otter: 'Otter', nilpferd: 'Nilpferd', nachtaffe: 'Nachtaffe', papagei: 'Papagei', koala: 'Koala', panther: 'Panther'};
 const PCOLS = 5;
 function openPick(P){ if (titleOn || stOf(P) === 'title') return; P.pick.open = true; P.pick.idx = ORDER.indexOf(P === cur ? kind : P.kind); for (const k in P.keys) P.keys[k] = false; sfx.poof(); drawPick(P); }
 function closePick(P){ P.pick.open = false; P.pickEl.hidden = true; }
@@ -1968,15 +2115,27 @@ function updatePlayer(dt, t){
     if (A.climb && Math.hypot(ix, iz) > .3) for (const c of climbTrees){
       const dx = p.x - c.x, dz = p.z - c.z, d = Math.hypot(dx, dz);
       if (d < c.r + PR + .35 && p.y < c.h - 1.2 && -(ix*dx + iz*dz)/d > .5){
+        if (c.giant && !A.hang){ if (!(flags.giantNoT > t)){ flags.giantNoT = t + 5; toast('🌳 Auf den Riesenbaum können nur Affen klettern! 🐒 Drück Q und werde ein Affe.', 4); } continue; }
+        if (c.giant && !flags.giantMsg){ flags.giantMsg = true; toast('🐒 Hoch auf den Riesenbaum! Ganz oben warten Sterne.', 4); }
         p.climb = c; p.vy = 0; if (!flags.climbMsg){ flags.climbMsg = true; toast('🧗 Du kletterst! Weiter zum Baum drücken = hoch, weg = runter, Leertaste = abspringen.', 5); } break; }
     }
     if (!flags.hangHint && !p.inHouse && HANG.some(b => b.course && Math.hypot(p.x - (b.ax + b.bx)/2, p.z - (b.az + b.bz)/2) < 7)){ flags.hangHint = true;
       toast(A.hang ? '🌳 Hangel-Äste! Spring hoch und halt dich fest!' : '🌳 Hangel-Äste! Nur Affen 🐒, Gorillas 🦍 und Faultiere 🦥 können hangeln. Drück Q!', 5); }
     if (!flags.climbHint && climbTrees.some(c => Math.hypot(p.x - c.x, p.z - c.z) < 4) && !p.inHouse){ flags.climbHint = true; toast('🌳 Ein dicker Baum! Lauf dagegen, dann kletterst du hoch.', 4); }
-    const speed = Math.hypot(p.vx, p.vz), b = bushAt();
-    const inBush = b && A.hide && speed < .6 && p.onGround, camo = (A.camo && !p.inHouse && p.onGround && speed < .3 && !inWater()) || (A.shell && !p.inHouse && p.onGround && speed < .3);
+    if (!p.inHouse && !p.climb && !p.hang && p.onGround && p.y < .1 && inSwampE(p.x, p.z) && !fading){
+      sfx.splash(); burst(p.x, .3, p.z, [0x5a4a2a, 0x7a6a3a], 12, 3); toast('🟤 Platsch! Im Sumpf bleibt man stecken. Hüpf nur von Stein zu Stein!', 3.5);
+      fadeTo(() => { Object.assign(p, {x: SWAMP.start[0], y: 0, z: SWAMP.start[1], ang: 0}); }); }
+    if (!p.inHouse){
+      if (!flags.swampHint && Math.hypot(p.x - SWAMP.start[0], p.z - SWAMP.start[1]) < 9){ flags.swampHint = true; toast('🪨 Ein Sumpf! Hüpf nur von Stein zu Stein, sonst bleibst du stecken!', 4.5); }
+      if (!flags.gorgeHint && p.z > 72 && p.x > GORGE.x0 - 6 && p.x < GORGE.x1 + 6){ flags.gorgeHint = true; toast('🏔️ Die große Schlucht! Lauf die Berge hinauf. Oben ist eine Hängebrücke!', 4.5); }
+      if (!flags.giantHint && Math.hypot(p.x - GIANT.x, p.z - GIANT.z) < 11){ flags.giantHint = true; toast(A.hang ? '🌳 Der Riesenbaum! Lauf dagegen, dann kletterst du hinauf!' : '🌳 Der Riesenbaum! Nur Affen 🐒 können da hinaufklettern.', 4.5); }
+      if (!flags.bambooHint && inBamboo(p.x, p.z)){ flags.bambooHint = true; toast('🎋 Der Bambuswald! Hier wohnen Koalas. Bleib still, dann bist du versteckt.', 4.5); }
+    }
+    const speed = Math.hypot(p.vx, p.vz), b = bushAt() || (!p.inHouse && p.y < .3 && inBamboo(p.x, p.z) ? {x: p.x, z: p.z, bamboo: true} : null);
+    const inBush = b && A.hide && speed < .6 && p.onGround, camo = (A.camo && !p.inHouse && p.onGround && speed < .3 && !inWater()) || (A.shadow && !p.inHouse && p.x < END_X && p.onGround && speed < .3) || (A.shell && !p.inHouse && p.onGround && speed < .3);
     if (inBush || camo){ p.still += dt; if (p.still > (inBush ? .25 : A.quickCamo ? .3 : .6) && !p.hidden){ p.hidden = true; sfx.hide();
         if (inBush){ burst(b.x, 1, b.z, [0x4caf62, 0x2b8a3e], 8, 3); if (!flags.hidOnce){ flags.hidOnce = true; toast('Psst! 🤫 Jetzt sieht dich keiner.', 3); } }
+        else if (A.shadow){ if (!flags.shadowMsg){ flags.shadowMsg = true; toast('🐈‍⬛ Schwarz wie ein Schatten! Jetzt sieht dich keiner.', 3); } }
         else if (A.shell){ if (!flags.shellMsg){ flags.shellMsg = true; toast('🐢 Schwupp, in den Panzer! Jetzt kann dich keiner fangen.', 3); } }
         else if (A.quickCamo){ if (!flags.chamoMsg){ flags.chamoMsg = true; toast('🦎 Zack, grün wie ein Blatt! Jetzt sieht dich keiner.', 3); } }
         else if (!flags.camoMsg){ flags.camoMsg = true; toast('🐍 Getarnt! Eine stille Schlange sieht keiner.', 3); } } }
@@ -1984,7 +2143,7 @@ function updatePlayer(dt, t){
     { const dn = denAt(); if (dn && A.cat){ if (!p.hidden) sfx.hide(); p.hidden = true; if (!flags.denMsg){ flags.denMsg = true; toast(`${A.emoji} Du verkriechst dich in der Raubkatzen-Höhle! Hier findet dich kein Tierfänger.`, 4); } }
       else if (dn && !flags.denNo){ flags.denNo = true; toast('🐆 Das ist die Höhle der Raubkatzen! Nur Gepard, Löwe und Tiger können sich hier verstecken.', 4.5); } }
     if (A.waterCamo && inWater()){ p.hidden = true; if (!flags.crocMsg){ flags.crocMsg = true; toast('🐊 Pssst! Im Wasser sieht dich keiner.', 3); } }
-    if (b && !A.hide && !flags.bigBush){ flags.bigBush = true; toast('😄 Eine Giraffe ist viel zu groß für den Busch!', 3); }
+    if (b && !b.bamboo && !A.hide && !flags.bigBush){ flags.bigBush = true; toast('😄 Eine Giraffe ist viel zu groß für den Busch!', 3); }
     // drink in the lake or the pool
     p.drinkCD = Math.max(0, p.drinkCD - dt);
     if (inWater() && p.onGround && speed < .3){ p.drinkT += dt;
@@ -2084,7 +2243,7 @@ function updatePlayer(dt, t){
     }
     if (!flags.bush && bushAt()){ flags.bush = true; toast('Ein Busch! Bleib still stehen, dann bist du versteckt. 🙈', 4); }
     if (!flags.catcher && p.x > 68 && !p.inHouse){ flags.catcher = true; toast(isTouch ? '👀 Achtung, Tierfänger! Halte 💨 zum schnell Rennen.' : '👀 Achtung, Tierfänger! Halte Shift zum schnell Rennen.', 4.5); }
-    if (!flags.wf && p.x > 185 && p.x < 230 && !p.inHouse){ flags.wf = true; toast('🌊 Der große Wasserfall! Lauf hinein, da ist deine Mäusehöhle!', 4.5); }
+    if (!flags.wf && p.x > 185 && p.x < 230 && p.z < 20 && !p.inHouse){ flags.wf = true; toast('🌊 Der große Wasserfall! Lauf hinein, da ist deine Mäusehöhle!', 4.5); }
     if (!flags.cave && p.z < ZB - .5 && !p.inHouse){ flags.cave = true; toast('🚪 Da ist deine Tür. Lauf hinein!', 3.5); }
     if (!flags.lake && lakeE(p.x, p.z) < 1.6 && !p.inHouse){ flags.lake = true; toast('💧 Der Riesen-See! Stell dich ins Wasser und halt still: Dann trinkst du.', 4.5); }
     if (!flags.stairs && p.inHouse && p.x > HW.stairX && p.x < HW.x1){ flags.stairs = true; toast('🪜 Eine Treppe! Oben ist ein Badezimmer und ein großes Bett.', 4); }
@@ -2374,7 +2533,10 @@ function camWant(t){
   if (p.inHouse) return want.set(p.x, p.y + (p.inTree ? 2.9 : 3.6) + hh*.3, p.z + (p.inTree ? 6.2 : 7.6) + hh*.4);
   if (p.z < ZB - .3) return want.set(p.x, p.y + 3.6 + hh*.4, p.z + 8.5 + hh*.5);
   if (p.climb) return want.set(p.x, p.y + 4.5, p.z + 11);
-  return want.set(p.x, p.y + 6.5 + hh*.6, p.z + 12 + hh*.8);
+  if (p.x > GORGE.x0 - 2 && p.x < GORGE.x1 + 2 && p.z > 87 && p.z < 97 && p.y < 6) return want.set(p.x, p.y + 12 + hh*.6, Math.min(p.z + 4.5, 95.2));
+  want.set(p.x, p.y + 6.5 + hh*.6, p.z + 12 + hh*.8);
+  if (want.x > GORGE.x0 - 1 && want.x < GORGE.x1 + 1) want.y = Math.max(want.y, hRidge(want.z) + 2.5);
+  return want;
 }
 const lookY = () => p.y + 1 + Math.max(0, PH - 1)*.5;
 function snapCam(){ camPos.copy(camWant(0)); camLook.set(p.x, lookY(), p.z - 1.5); }
