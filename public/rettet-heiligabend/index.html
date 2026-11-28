@@ -422,6 +422,42 @@ function makeElf(i){
   return {g,legs,arms,head,ham};
 }
 
+/* ---------- KOHLENKLAUS: the super villain (kids' design: evil anti-Santa in black, red eyes, sack of coal) ---------- */
+function makeKohlenklaus(){
+  const g=new THREE.Group(),coat=M(0x1d1b24,{roughness:.75}),fur=M(0x5a5662,{roughness:1}),furF=M(0x45424c,{flatShading:true,roughness:1}),blk=M(0x0b0b0e),skin=M(0xb7ada3),coal=M(0x141416,{flatShading:true,roughness:.5,metalness:.2});
+  const eyeM=new THREE.MeshStandardMaterial({color:0xff2a1a,emissive:0xff2a1a,emissiveIntensity:1.6,roughness:.3});
+  const body=new THREE.Group();g.add(body);
+  const legs=[],arms=[];
+  for(const s of [-1,1]){const pv=new THREE.Group();pv.position.set(.2*s,.6,0);pv.add(mesh(new THREE.CylinderGeometry(.11,.11,.4,10),coat,0,-.2,0));pv.add(ball(.15,blk,0,-.48,.06,1,.6,1.5));body.add(pv);legs.push(pv);}
+  body.add(ball(.58,coat,0,1.05,0,1,1.08,.9));
+  const hem=mesh(new THREE.TorusGeometry(.46,.08,8,26),fur,0,.6,0);hem.rotation.x=Math.PI/2;body.add(hem);
+  body.add(mesh(new THREE.BoxGeometry(.13,.85,.06),fur,0,1.05,.5));
+  const belt=mesh(new THREE.TorusGeometry(.57,.07,8,28),M(0x7a1010),0,1.0,0);belt.rotation.x=Math.PI/2;belt.scale.y=.9;body.add(belt);
+  const buckle=mesh(new THREE.BoxGeometry(.24,.18,.06),eyeM,0,1.0,.54);body.add(buckle);
+  for(const s of [-1,1]){const pv=new THREE.Group();pv.position.set(.54*s,1.4,0);pv.add(mesh(new THREE.CylinderGeometry(.11,.1,.52,10),coat,0,-.26,0));const cf=mesh(new THREE.TorusGeometry(.1,.045,6,14),fur,0,-.52,0);cf.rotation.x=Math.PI/2;pv.add(cf);pv.add(ball(.11,blk,0,-.62,0));pv.rotation.z=.35*s;body.add(pv);arms.push(pv);}
+  const lump=mesh(new THREE.DodecahedronGeometry(.17),coal,0,-.78,0);arms[1].add(lump);lump.visible=false;
+  const lumpGlow=glow(0xff5a20,.7,.6);lumpGlow.position.copy(lump.position);arms[1].add(lumpGlow);lumpGlow.visible=false;
+  const head=new THREE.Group();head.position.y=1.86;body.add(head);
+  head.add(ball(.28,skin,0,0,0));
+  const beard=mesh(fuzzyGeo(.32,2,.12,14),furF,0,-.22,.08);beard.scale.set(1.05,1.25,.7);head.add(beard);
+  head.add(ball(.07,M(0x6e5a55),0,0,.28));
+  for(const s of [-1,1]){head.add(ball(.05,eyeM,.1*s,.08,.235,1.2,.8,.6));const eg=glow(0xff2a1a,.35,.85);eg.position.set(.1*s,.08,.3);head.add(eg);
+    const br=mesh(new THREE.BoxGeometry(.15,.045,.05),blk,.1*s,.17,.25);br.rotation.z=-.5*s;head.add(br);
+    const mu=ball(.1,furF,.1*s,-.08,.26,1.4,.55,.6);mu.rotation.z=.45*s;head.add(mu);}
+  const grin=smile(.09,.018,M(0x2a0606));grin.rotation.z=Math.PI;grin.position.set(0,-.17,.27);grin.scale.set(1.2,.8,1);head.add(grin);
+  const hat=new THREE.Group();hat.position.set(0,.18,-.02);hat.rotation.set(-.35,0,-.25);head.add(hat);
+  hat.add(mesh(new THREE.ConeGeometry(.3,.7,22),coat,0,.35,0));hat.add(ball(.09,eyeM,0,.72,0));
+  const hb=mesh(new THREE.TorusGeometry(.29,.08,8,24),fur);hb.rotation.x=Math.PI/2;hat.add(hb);
+  const sack=new THREE.Group();sack.position.set(0,1.35,-.6);sack.rotation.x=-.25;body.add(sack);
+  sack.add(ball(.5,M(0x2b2620,{roughness:1}),0,0,0,1,1.2,.85));
+  for(let i=0;i<7;i++){const c=mesh(new THREE.DodecahedronGeometry(rand(.1,.16)),coal,rand(-.25,.25),.55+rand(0,.12),rand(-.2,.2));c.rotation.set(rand(0,3),rand(0,3),0);sack.add(c);}
+  const rope=mesh(new THREE.TorusGeometry(.2,.03,6,16),M(0x6b5a3a),0,.48,0);rope.rotation.x=Math.PI/2;sack.add(rope);
+  // smoke cloud he floats on
+  const cloud=new THREE.Group();g.add(cloud);for(let i=0;i<7;i++){const a=i/7*TAU;cloud.add(ball(rand(.35,.5),M(0x2e2c33,{roughness:1}),Math.cos(a)*.55,.12,Math.sin(a)*.55,1,.55,1));}
+  g.scale.setScalar(1.5);
+  return {g,body,legs,arms,head,lump,lumpGlow,eyeM,cloud,grin};
+}
+
 /* ================= world helpers ================= */
 let parts=[],labels=[],snow=null,stars=null,stage=null;
 const labelLayer=document.getElementById('labels');
@@ -519,8 +555,15 @@ function hudBar(p){const f=hud.querySelector('.fill');if(f)f.style.width=(clamp(
 let bannerT=0;function showBanner(t,dur=2.2){banner.textContent=t;banner.classList.add('on');bannerT=dur;}
 function fadeTo(fn){fadeEl.classList.add('on');setTimeout(()=>{try{fn();}finally{setTimeout(()=>fadeEl.classList.remove('on'),60);}},480);}
 let dQueue=[],dDone=null;
-function dialog(lines,done){dQueue=lines.slice();dDone=done;dialogOpen=true;dlg.hidden=false;dline.textContent=dQueue.shift();SFX.bells();}
-function advanceDialog(){if(!dialogOpen)return;if(dQueue.length){dline.textContent=dQueue.shift();tone(660,.08,'triangle',.04);}else{dialogOpen=false;dlg.hidden=true;hits.clear();const f=dDone;dDone=null;f&&f();}}
+const dPortrait=dlg.querySelector('.portrait'),dName=dlg.querySelector('.dtext b'),santaPortrait=dPortrait.innerHTML;
+const KKSVG='<svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="#4a2a2a"/><path d="M20 44 Q28 4 70 8 Q90 12 86 30 L80 44Z" fill="#1d1b24"/><circle cx="86" cy="30" r="7" fill="#ff2a1a"/><rect x="16" y="40" width="68" height="12" rx="6" fill="#5a5662"/><circle cx="50" cy="62" r="20" fill="#b7ada3"/><path d="M28 66 Q50 104 72 66 Q62 80 50 78 Q38 80 28 66Z" fill="#45424c"/><circle cx="42" cy="58" r="3.6" fill="#ff2a1a"/><circle cx="58" cy="58" r="3.6" fill="#ff2a1a"/><path d="M35 50 L47 54 M65 50 L53 54" stroke="#0b0b0e" stroke-width="3.5" stroke-linecap="round"/><path d="M40 70 Q50 76 60 70" stroke="#2a0606" stroke-width="3" fill="none"/></svg>';
+function setLine(raw){let who='s',t=raw;const m=/^@([kh])\|/.exec(raw);if(m){who=m[1];t=raw.slice(3);}
+  dline.textContent=t;if(dlg.dataset.who===who)return;dlg.dataset.who=who;
+  if(who==='s'){dPortrait.innerHTML=santaPortrait;dName.textContent='Chef Weihnachtsmann';dPortrait.style.borderColor='';}
+  else if(who==='k'){dPortrait.innerHTML=KKSVG;dName.textContent='Kohlenklaus';dPortrait.style.borderColor='#1d1b24';}
+  else{const c=document.createElement('canvas');c.width=c.height=100;c.style.width='100%';c.style.height='100%';const x=c.getContext('2d');x.fillStyle='#d8ecff';x.fillRect(0,0,100,100);const fn={elfin:drawElfin2D,elf:drawElf2D,ginger:drawGinger2D}[G.chars[0]];if(fn)fn(x,50,118,1.4);dPortrait.innerHTML='';dPortrait.appendChild(c);dName.textContent=teamName();dPortrait.style.borderColor='#2f6fd0';}}
+function dialog(lines,done){dQueue=lines.slice();dDone=done;dialogOpen=true;dlg.hidden=false;setLine(dQueue.shift());SFX.bells();}
+function advanceDialog(){if(!dialogOpen)return;if(dQueue.length){setLine(dQueue.shift());tone(660,.08,'triangle',.04);}else{dialogOpen=false;dlg.hidden=true;hits.clear();const f=dDone;dDone=null;f&&f();}}
 document.getElementById('dnext').onclick=advanceDialog;
 function show(html){overlay.innerHTML=`<div class="panel">${html}</div>`;overlay.hidden=false;mode='menu';const b=overlay.querySelector('[data-primary]');if(b)setTimeout(()=>{try{b.focus({preventScroll:true});}catch(e){}},60);}
 function hideOverlay(){overlay.hidden=true;overlay.innerHTML='';}
@@ -936,7 +979,8 @@ function orders(kind){
   const d=lvl(),t=Math.min(12,4+d*2),K=clamp(G.letters||5,3,10);
   if(kind==='start'&&G.round===1)return['Ho, ho, ho! Willkommen in meiner Weihnachtsfabrik, '+names()+'!','Ich bin hier der Chef. Schaut mal, wie fleißig meine Elfen arbeiten!','Aber der Grinch will Weihnachten verderben. Darum brauche ich '+(G.players===2?'euch':'dich')+'.',`Erster Auftrag: Fliegt mit dem Schlitten ins Dorf und sammelt ${t} Wunschzettel ein, bevor die Sonne aufgeht.`,'Übrigens: Oben im 2. Stock ist '+(G.players===2?'eure':'deine')+' Wohnung mit Bett. Da kommt man nur mit der Lebkuchenbahn hin. Sie hält vorne am Bahnhof.','Der Schlitten steht rechts am großen Tor. Ab mit euch!'];
   if(kind==='start')return[`Ho, ho, ho! Runde ${G.round}, ein neues Weihnachten beginnt!`,'Passt auf: Der Grinch ist frecher und schneller geworden.',`Auftrag: Holt ${t} Wunschzettel aus dem Dorf. Der Schlitten wartet am Tor!`];
-  if(kind==='afterP1')return[`${G.letters} Wunschzettel! Wunderbar gemacht!`,'Und heute baut ihr die Geschenke selbst! Für jeden Wunschzettel ein Geschenk.','So geht es: 1. an der Werkbank bauen, 2. am Farbtisch anmalen, 3. am Packtisch einpacken, 4. ins Regal stellen.','Stellt euch in den Kreis und haltet die Aktionstaste gedrückt. Schafft ihr alle, bevor es Abend wird?','Und passt gut auf: Wenn ein Elf sich komisch benimmt und zum Regal schleicht … geht hin und ruft BUH! Los!'];
+  if(kind==='afterP1')return[`${G.letters} Wunschzettel! Wunderbar gemacht!`,'Jetzt ist Mittag. Zeit für eine Pause mit Lebkuchen und heißem Kakao …'];
+  if(kind==='work')return['Und jetzt zurück an die Arbeit: Heute baut ihr die Geschenke selbst! Für jeden Wunschzettel ein Geschenk.','So geht es: 1. an der Werkbank bauen, 2. am Farbtisch anmalen, 3. am Packtisch einpacken, 4. ins Regal stellen.','Stellt euch in den Kreis und haltet die Aktionstaste gedrückt. Schafft ihr alle, bevor es Abend wird?','Und passt gut auf: Wenn ein Elf sich komisch benimmt und zum Regal schleicht … geht hin und ruft BUH! Los!'];
   if(kind==='night')return[`${G.made} Geschenk${G.made===1?'':'e'} im Regal! Das habt ihr toll gemacht!`,'Ich gehe jetzt ins Bett. Ihr haltet Wache! Vielleicht schleicht sich der Grinch herein.','Er kommt nur selten. Versteckt euch hinter den großen Geschenkkisten. Seine Laterne zeigt, wohin er schaut.','Wenn er nah ist und euch nicht sieht, drückt die Aktionstaste und ruft BUH! Dann rennt er weg.','Und wenn er ein Spielzeug klaut: schnell hinterher und BUH! Dann lässt er es fallen.'];
   if(kind==='alarm')return['Guten Morgen! … Oh nein! ALARM!',`Der Grinch hat heute Nacht ${G.stolen} ${G.stolen>1?'Spielzeuge':'Spielzeug'} geklaut!`,'Ein Elf hat ihn gesehen. Hier ist der Hinweis: Seine Höhle ist im Eisberg hinter dem Dorf, dort wo die grünen Kristalle leuchten.','Fliegt hin und holt die Spielzeuge still und heimlich zurück. Der Grinch darf euch nicht sehen!','Schleicht euch von Fels zu Fels und tragt ein Spielzeug nach dem anderen zum Schlitten. Ab zum Schlitten!'];
   if(kind==='afterP2')return[G.recovered?`Ihr habt ${G.recovered} ${G.recovered>1?'Spielzeuge':'Spielzeug'} aus der Grinch-Höhle zurückgeholt! Jetzt haben wir ${G.toys}.`:`Guten Morgen! Alle ${G.toys} Spielzeuge sind noch da. Gut aufgepasst!`,'Und heute ist Heiligabend! Meine Elfen haben alle Geschenke in den Schlitten geladen.','Fliegt über das Dorf und werft sie in die Schornsteine der Häuser mit hellen Fenstern. Der Ring auf den Dächern zeigt, wo sie landen.','Ab zum Schlitten!'];
@@ -958,7 +1002,7 @@ function stageHub(kind,back){
   if(back){ringM.visible=arrow.visible=!!goal;showBanner(goal?'Zurück in der Fabrik!':'Zurück in der Fabrik!',1.6);}
   setHUD(`Runde ${G.round} · Weihnachtsfabrik`,null,`<span>${IC.gift}${G.stars} verteilt</span>`);
   const afterDialog=()=>{
-    if(kind==='afterP1'){fadeTo(stageWork);return;}
+    if(kind==='afterP1'){fadeTo(stageBoss);return;}
     if(kind==='night'){fadeTo(stageP2);return;}
     if(kind==='afterP3'){G.round++;G.letters=0;G.toys=0;G.made=0;G.stolen=0;G.recovered=0;setHUD(`Runde ${G.round} · Weihnachtsfabrik`,null,`<span>${IC.gift}${G.stars} verteilt</span>`);dialog(orders('start'),afterDialog);return;}
     goal=kind==='afterP2'?'p3':kind==='alarm'?'cave':'p1';G.hubGoal=goal;ringM.visible=arrow.visible=true;showBanner('Lauft zum Schlitten am Tor!');
@@ -978,6 +1022,99 @@ function stageHub(kind,back){
       ringM.material.opacity=.5+Math.sin(T*5)*.3;arrow.position.y=3.4+Math.sin(T*4)*.25;animDeer(sl,T*.3);stRing.material.opacity=goal?.5+Math.sin(T*5)*.3:.15;pf.upd(dt);
       if(!PL.length)return;if(!riding&&(dialogOpen||!goal))PL.forEach(p=>animPlayer(p,false));
       factoryCam(dt,false,7);updSnow(dt,new THREE.Vector3(30,0,0));}};
+}
+
+/* ---------- MIDDAY ALARM: Kohlenklaus attacks the factory ---------- */
+function stageBoss(){
+  clearScene();mode='play';hideOverlay();
+  const d=lvl(),F=buildFactory(false);addSnow(500,60);
+  PL.forEach((p,i)=>placePlayer(p,-3+i*1.4,4.6,Math.PI));addTags();factoryCam(0,true);
+  setHUD(`Runde ${G.round} · Mittag in der Fabrik`,null,'');
+  const S=F.santa;S.g.position.set(-7,0,6.2);S.g.rotation.y=.6;
+  const K=makeKohlenklaus();K.g.visible=false;scene.add(K.g);
+  const kt=tag(()=>_t.copy(K.g.position).setY(K.g.position.y+4.1),'Kohlenklaus','x');kt.show=()=>K.g.visible&&phase!=='gone';
+  // alarm lamps
+  const beacons=[];for(const x of [-14,0,14]){const b=ball(.3,new THREE.MeshStandardMaterial({color:0x661010,emissive:0xff1a1a,emissiveIntensity:0}),x,6.2,-FZ+.5);scene.add(b);beacons.push(b);}
+  const alarmL=new THREE.PointLight(0xff2020,0,60);alarmL.position.set(0,7,0);scene.add(alarmL);
+  // smoke
+  const smoke=[];const puff=(pos,n=10,sz=1)=>{for(let i=0;i<n;i++){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0x1a1820,transparent:true,opacity:.9,depthWrite:false}));sp.position.copy(pos).add(new THREE.Vector3(rand(-.6,.6),rand(0,1.6),rand(-.6,.6)));sp.scale.setScalar(rand(.8,1.6)*sz);scene.add(sp);smoke.push({sp,v:new THREE.Vector3(rand(-1,1),rand(.6,1.8),rand(-1,1)),t:rand(.8,1.4)});}};
+  const runners=[];const DOORS=[new THREE.Vector3(-FX+.8,0,2),new THREE.Vector3(FX-.8,0,-6)];
+  const hpMax=(G.players===2?6:5)+Math.min(3,d);let hp=hpMax,phase='calm',t=2.6,sirenT=0,sirenK=0,throwT=2.5,inv=0,angry=false,done=false;
+  const kpos=new THREE.Vector3(FX-.8,0,-6),kgoal=new THREE.Vector3();let kface=-Math.PI/2,kwalk=0,poofT=0,spin=0;
+  const lumps=[];
+  const hudHP=()=>hudRight(`<span>Kohlenklaus ${'<b style="color:#ff4a3a">●</b>'.repeat(hp)}${'<b style="opacity:.3">●</b>'.repeat(hpMax-hp)}</span>`);
+  showBanner('Mittagspause … alles ist ruhig.',2.4);
+  const startAlarm=()=>{phase='alarm';t=2.8;scare(.5);showBanner('ALARM! ALARM!',2.6);
+    F.elves.forEach(e=>{const door=DOORS.reduce((a,b)=>d2(a,e.m.g.position)<d2(b,e.m.g.position)?a:b);runners.push({m:e.m,door,sp:rand(5,6.5),gone:false,said:Math.random()<.4});});
+    F.elves.length=0;say(S.g.position.clone().setY(2.8),'Was ist denn hier los?!','r',2);};
+  const enter=()=>{phase='enter';t=2.6;K.g.visible=true;kpos.set(FX-.8,0,-6);puff(kpos.clone(),24,1.4);scare(.8);SFX.lose();
+    [196,185,175,165].forEach((f,i)=>tone(f,.25,'sawtooth',.05,.9,i*.2));};
+  const pickGoal=()=>{let best=null,bs=-1;for(let k=0;k<8;k++){const c=new THREE.Vector3(rand(-12,13),0,pick([rand(-1.6,-.4),rand(4,7)]));let md=1e9;PL.forEach(p=>md=Math.min(md,d2(p.pos,c)));if(md>bs){bs=md;best=c;}}kgoal.copy(best);};
+  const talk=()=>{phase='talk';dialog(['WAS ZUM TEUFEL HAST DU DENN HIER VERLOREN?','@k|HAHAHA! Ich bin KOHLENKLAUS! Ich vernichte Weihnachten für IMMER!','@k|Statt Geschenken bekommen alle Kinder nur noch KOHLE! HAHAHA!','@h|STOP! Also, das geht zu weit!',`Verjagt ihn, ${teamName()}! Lauft hin und ruft BUH! Aber passt auf seine Kohlen auf!`],
+    ()=>{phase='fight';pickGoal();hudHP();showBanner('Verjagt Kohlenklaus! Lauft hin und ruft BUH!',2.8);});};
+  const throwAt=(p,off)=>{const to=p.pos.clone();to.x+=off.x;to.z+=off.z;to.x=clamp(to.x,-FX+1,FX-1);to.z=clamp(to.z,-FZ+1,FZ-1);
+    const from=kpos.clone().setY(3.3);const ring=mesh(new THREE.RingGeometry(.55,.85,28),new THREE.MeshBasicMaterial({color:0xff3020,transparent:true,opacity:.8,depthWrite:false}),to.x,.06,to.z,false);ring.rotation.x=-Math.PI/2;scene.add(ring);
+    const m=mesh(new THREE.DodecahedronGeometry(.22),M(0x141416,{flatShading:true}),from.x,from.y,from.z);const gl=glow(0xff5a20,.9,.7);m.add(gl);scene.add(m);
+    lumps.push({m,ring,from,to,t:0,tf:Math.max(.75,1.15-d*.1)});};
+  const defeat=()=>{phase='gone';done=true;t=0;SFX.win();scare(.4);showBanner('Kohlenklaus ist verjagt! HURRA!',3);say(kpos.clone().setY(5),'Ich komme WIEDEEER!','x',2.6);
+    lumps.forEach(l=>{scene.remove(l.m);scene.remove(l.ring);});lumps.length=0;
+    runners.forEach(r=>{r.back=true;r.gone=false;r.m.g.visible=true;r.m.g.position.copy(r.door);});
+    setTimeout(()=>{if(stage!==bossStage)return;dialog(['Puh! Ihr habt Kohlenklaus verjagt! Ihr seid echte Helden!',...orders('work')],()=>fadeTo(stageWork));},3200);};
+  const flashEl=document.getElementById('flash');
+  let bossStage;bossStage=stage={kpos,update(dt){
+      t-=dt;inv-=dt;
+      if(phase==='calm'){if(t<=0)startAlarm();}
+      else if(phase==='alarm'){if(t<=0)enter();}
+      else if(phase==='enter'){const tx=5,tz=-.5;const dx=tx-kpos.x,dz=tz-kpos.z,dd=Math.hypot(dx,dz);if(dd>.1){kpos.x+=dx/dd*Math.min(dd,3.2*dt);kpos.z+=dz/dd*Math.min(dd,3.2*dt);kwalk+=dt*6;}
+        kface=lerpAng(kface,Math.atan2(PL[0].pos.x-kpos.x,PL[0].pos.z-kpos.z),Math.min(1,dt*4));
+        if(t<=0&&dd<=.1){K.g.position.copy(kpos);talk();}}
+      if(phase==='alarm'||phase==='enter'||phase==='calm')PL.forEach(p=>animPlayer(p,false));
+      if(phase==='fight'){
+        movePlayers(dt,5.6,[-FX+.6,FX-.6,-FZ+.6,FZ-.6],F.colliders);
+        if(poofT>0){poofT-=dt;if(poofT<=0){pickGoal();kpos.copy(kgoal);puff(kpos.clone(),16,1.1);K.g.visible=true;pickGoal();say(kpos.clone().setY(4.6),pick(['Hier bin ich! HAHA!','Kuckuck! HAHAHA!','Mich kriegt ihr nie!']),'r',1.4);}}
+        else{const sp=(angry?3.4:2.5)+d*.3;const dx=kgoal.x-kpos.x,dz=kgoal.z-kpos.z,dd=Math.hypot(dx,dz);
+          let near=1e9;PL.forEach(p=>near=Math.min(near,d2(p.pos,kpos)));
+          if(dd<.3||(near<3&&Math.random()<dt*1.2))pickGoal();else{kpos.x+=dx/dd*sp*dt;kpos.z+=dz/dd*sp*dt;kwalk+=dt*sp*2;}
+          const tgt=PL.reduce((a,b)=>d2(a.pos,kpos)<d2(b.pos,kpos)?a:b);kface=lerpAng(kface,Math.atan2(tgt.pos.x-kpos.x,tgt.pos.z-kpos.z),Math.min(1,dt*6));
+          throwT-=dt;if(throwT<=0){throwT=(angry?1.3:2.1)-Math.min(.6,d*.15)+rand(0,.5);const v=pick(PL.filter(p=>p.stun<=0).length?PL.filter(p=>p.stun<=0):PL);
+            const mv=ctl(v.i),lead=1.1;throwAt(v,{x:mv.x*lead,z:mv.z*lead});if(angry){throwAt(v,{x:rand(-2.5,2.5),z:rand(-2.5,2.5)});if(d>=1)throwAt(v,{x:rand(-2.5,2.5),z:rand(-2.5,2.5)});}
+            if(Math.random()<.45)say(kpos.clone().setY(4.6),pick(['Nimm DAS!','Kohle für alle!','HAHAHA!','Fang!']),'r',1.2);}
+          for(const p of PL){const c=ctl(p.i);if(c.act){say(p.pos.clone().setY(2.6),'BUH!','r',.8);
+            if(inv<=0&&d2(p.pos,kpos)<2.3){hp--;inv=1;hudHP();SFX.buh();setTimeout(()=>SFX.flee(),120);burst(kpos.clone().setY(2.2),0x222226,18,3.5);
+              if(hp<=0){defeat();break;}
+              say(kpos.clone().setY(4.6),pick(['AUA! Lass das!','Grrr! Na wartet!','Neiiin! Meine Kohle!']),'r',1.4);
+              if(!angry&&hp<=Math.ceil(hpMax/2)){angry=true;K.eyeM.emissiveIntensity=3.2;showBanner('Kohlenklaus wird WÜTEND!',2.4);scare(.5);}
+              puff(kpos.clone(),14,1.1);K.g.visible=false;poofT=.7;lumps.forEach(l=>{});}}}}
+      }
+      // coal lumps
+      for(let i=lumps.length-1;i>=0;i--){const l=lumps[i];l.t+=dt;const k=Math.min(1,l.t/l.tf);l.m.position.lerpVectors(l.from,l.to,k);l.m.position.y=l.from.y*(1-k)+.2*k+Math.sin(k*Math.PI)*3.2;l.m.rotation.x+=dt*9;l.ring.material.opacity=.4+k*.5;l.ring.scale.setScalar(1.3-k*.5);
+        if(k>=1){burst(l.to.clone().setY(.3),0x1a1a1e,12,2.6);tone(120,.15,'square',.04,.5);
+          for(const p of PL)if(p.stun<=0&&d2(p.pos,l.to)<.95){p.stun=1.4;scare(.3);say(p.pos.clone().setY(2.6),pick(['Autsch!','Igitt, Kohle!','Aua!']),'b',1.2);burst(p.pos.clone().setY(1.2),0x333333,10,2);}
+          scene.remove(l.m);scene.remove(l.ring);lumps.splice(i,1);}}
+    },
+    anim(dt){animFactory(F,dt,false);
+      const on=phase!=='calm'&&!(phase==='gone'&&t<-3);if(phase==='gone')t-=0;
+      const fl=on&&Math.sin(T*9)>0;beacons.forEach(b=>b.material.emissiveIntensity=fl?2.5:.2);alarmL.intensity=on?(fl?1.6:.3):0;
+      if(phase==='alarm'||phase==='enter'){flashEl.style.transition='none';flashEl.style.opacity=fl?'.55':'0';}else if(phase==='talk'&&flashEl.style.opacity==='0.55'){flashEl.style.opacity='0';}
+      if(phase==='alarm'||phase==='enter'){sirenT-=dt;if(sirenT<=0){sirenT=.42;sirenK^=1;tone(sirenK?880:660,.36,'square',.025);}}
+      runners.forEach(r=>{if(r.gone)return;const g=r.m.g,tx=r.back?r.home.x:r.door.x,tz=r.back?r.home.z:r.door.z;const dx=tx-g.position.x,dz=tz-g.position.z,dd=Math.hypot(dx,dz);
+        if(!r.home)r.home=g.position.clone();
+        if(dd<.3){if(r.back){r.gone=true;g.rotation.y=Math.PI;say(g.position.clone().setY(1.6),pick(['Hurra!','Juhu!','Danke!']),'b',1.2);}else{r.gone=true;g.visible=false;}return;}
+        g.position.x+=dx/dd*r.sp*dt;g.position.z+=dz/dd*r.sp*dt;g.position.y=Math.abs(Math.sin(T*16))*.08;g.rotation.y=Math.atan2(dx,dz);const s=Math.sin(T*18)*.9;r.m.legs[0].rotation.x=s;r.m.legs[1].rotation.x=-s;r.m.arms.forEach(a=>a.rotation.x=-2.6+Math.sin(T*18)*.3);
+        if(r.said&&!r.back){r.said=false;say(g.position.clone().setY(1.6),pick(['Hilfe!','Aaah!','Lauft!','Rette sich wer kann!']),'b',1.4);}});
+      // santa
+      S.arms[1].rotation.z=dialogOpen?-2.3+Math.sin(T*6)*.3:(phase==='calm'?-.35:-2.6);S.head.rotation.x=dialogOpen?Math.sin(T*8)*.05:0;
+      if(phase!=='calm')S.g.rotation.y=lerpAng(S.g.rotation.y,Math.atan2(kpos.x-S.g.position.x,kpos.z-S.g.position.z),Math.min(1,dt*3));
+      // villain
+      if(phase==='gone'){spin+=dt;K.g.visible=true;K.g.position.y+=dt*(2+spin*4);K.g.rotation.y+=dt*(6+spin*8);K.g.scale.setScalar(1.5*Math.max(.05,1-spin*.35));if(Math.random()<dt*14)puff(K.g.position.clone(),1,.8);}
+      else{K.g.position.set(kpos.x,.35+Math.sin(T*2.2)*.12,kpos.z);K.g.rotation.y=kface;const s=Math.sin(kwalk)*.5;K.legs[0].rotation.x=s;K.legs[1].rotation.x=-s;
+        const laugh=dialogOpen||phase==='enter';K.body.rotation.z=laugh?Math.sin(T*18)*.05:0;K.arms[0].rotation.x=laugh?-2.4+Math.sin(T*14)*.3:-.3;
+        const wind=phase==='fight'&&throwT<.5;K.arms[1].rotation.x=wind?-2.8:(laugh?-2.4+Math.cos(T*14)*.3:-.3);K.lump.visible=K.lumpGlow.visible=wind;
+        if(inv>0&&phase==='fight')K.g.visible=poofT<=0&&Math.sin(T*40)>-.5;
+        if(K.g.visible&&Math.random()<dt*5)puff(K.g.position.clone().setY(.1),1,.6);}
+      for(let i=smoke.length-1;i>=0;i--){const o=smoke[i];o.t-=dt;o.sp.position.addScaledVector(o.v,dt);o.sp.material.opacity=Math.max(0,o.t)*.7;o.sp.scale.multiplyScalar(1+dt*.6);if(o.t<=0){scene.remove(o.sp);smoke.splice(i,1);}}
+      PL.forEach(p=>{if(p.stun>0)p.m.g.rotation.y=p.face+Math.sin(T*20)*.3;});
+      factoryCam(dt);updSnow(dt,new THREE.Vector3(30,0,0));}};
 }
 
 /* ---------- WORKSHOP: make the presents yourselves ---------- */
